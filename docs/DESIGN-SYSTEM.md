@@ -1,9 +1,9 @@
-# Design System — Initial Conclusions
+# Design System
 
-This document captures what can be reliably derived from the two visual inputs supplied at
-project start: the official Renvura brand assets (`assets/`) and the layout reference
-(`resources/reference-theme.png`). It is a starting direction, not a finished system — expect it
-to be extended once real UI gets built in Phase 3+.
+Status: **Phase 3 — Global storefront design system implemented.** Sections 1–2 below are the
+original Phase 1 visual-research conclusions (kept as historical record — still accurate).
+Sections 3 onward now describe what's actually built, not just planned. See
+`docs/ARCHITECTURE.md` for where these components live in the folder structure.
 
 ## 1. Brand assets (`assets/`)
 
@@ -71,46 +71,157 @@ Observed structural pattern, top to bottom:
   warranty) need more visual weight than a jewelry site typically gives them, since that's a
   bigger purchase-decision factor for BD gadget/beauty shoppers than for jewelry.
 
-## 3. Typography direction
+## 3. Design tokens (implemented — `src/app/globals.css`)
 
-- The wordmark uses a bold, geometric sans — pair body/UI type with a clean geometric or
-  humanist sans (the current scaffold uses Geist via `next/font/google`, which fits this
-  direction reasonably well as a placeholder).
-- The reference theme's headline type is a large serif/display face for hero moments. Whether
-  Renvura adopts a display serif for hero headlines (echoing the reference's premium editorial
-  feel) or stays all-sans (echoing the logo's geometric sans) is an open decision for Phase 3 —
-  not decided here.
-- Strong hierarchy: large hero headline → small letter-spaced eyebrow/section labels (as seen in
-  both the logo's "AUTHORITY · REFINED" caption and the reference's section labels) → simple,
-  restrained product-card typography (title, price — no clutter).
+HeroUI v3 themes entirely through CSS custom properties (see
+`node_modules/@heroui/styles/dist/themes/default/variables.css`). Rather than fighting that or
+wrapping every HeroUI component, `globals.css` overrides the semantic tokens HeroUI itself reads —
+every HeroUI component (Button, Chip, SearchField, Drawer, focus rings, …) is rethemed for free.
 
-## 4. Spacing direction
+**Color tokens:**
 
-- Generous, consistent vertical rhythm between sections (the reference never crowds sections
-  together).
-- Wide gutters in product grids over cramming more columns in.
-- Let photography breathe — full-bleed or near-full-bleed hero and promo sections rather than
-  boxed-in imagery.
-Exact spacing scale (4px/8px base, section padding values, etc.) will be defined in Phase 3 when
-the global layout is actually built, using Tailwind's default scale as the starting point.
+| Token | Light value | Dark value | Used for |
+|---|---|---|---|
+| `--background` / `--foreground` | white / `brand-navy` | `brand-navy` / `brand-cream` | Page background/text |
+| `--accent` / `--accent-foreground` | `brand-navy` / `brand-cream` | `brand-gold` / `brand-navy` | Primary buttons, links, focus rings — see note below |
+| `--border` | navy-tinted 12% hairline | cream-tinted 16% hairline | Card/input borders |
+| `--brand-navy` / `--brand-cream` / `--brand-gold` | `#11253C` / `#F7F1E5` / `#CDAF80` | (same, primitives don't change) | Brand-locked surfaces (announcement bar, footer) |
 
-## 5. Light/dark usage
+Dark mode swaps the accent from navy to gold: a navy button would be invisible on a navy
+background, and gold-on-navy is already the exact treatment used in `assets/appicon-dark.png` and
+`assets/logo-dark.png`, so it's a brand-faithful fix rather than an arbitrary one. Gold is still
+only ever the *accent* in dark mode — never a fill color — so "don't overuse gold" holds in both
+themes.
 
-- `next-themes` (class-based) is wired up in `src/components/layout/providers.tsx`, defaulting to
-  light mode — commerce sites generally default to light, and light is where product photography
-  reads best.
-- Dark mode exists primarily so the dark brand assets (navy backgrounds) have a correct home, and
-  for user preference — it is not the primary experience.
-- Tailwind tokens `--color-background` / `--color-foreground` already flip between cream-ish/navy
-  and navy/cream via the `.dark` class (see `src/app/globals.css`) as the starting point; product
-  imagery and card surfaces will need their own review once real components exist.
+**Typography scale** (`--text-display/h1/h2/h3/body/small/price/label`): fluid `clamp()` sizes so
+components don't need per-breakpoint text overrides. One font family throughout (Geist Sans, via
+`next/font/google`, wired in `src/app/layout.tsx`) — the "open decision" from Phase 1 (whether to
+add a display serif) is resolved as **no**: a second family added complexity without a concrete
+need, and Geist's geometric character already echoes the wordmark's geometric sans. Revisit only
+if a specific hero moment genuinely needs it.
 
-## 6. UI principles carried into Phase 3+
+| Class | Approx. size (mobile → desktop) | Use |
+|---|---|---|
+| `text-display` | 36px → 56px | Largest hero-style moments (none built yet — Phase 4) |
+| `text-h1` | 30px → 44px | Page-level heading |
+| `text-h2` | 24px → 32px | Section heading |
+| `text-h3` | 20px → 24px | Card/subsection heading |
+| `text-body` | 16px | Default paragraph copy |
+| `text-small` | 14px | Meta info, captions, nav links |
+| `text-price` | 18px → 22px, semibold, tabular-nums | Selling price emphasis |
+| `text-label` | 12px, uppercase, wide tracking | Eyebrows, category labels, badges |
 
-- Server Components by default; interactivity is the exception, not the default.
-- HeroUI v3 components as the base primitives (buttons, inputs, etc.) — customize via Tailwind
-  classes/`tailwind-variants`, don't fork or reimplement HeroUI components.
-- Conversion-focused means: clear price, clear CTA, clear delivery/COD trust signals near the
+**Shadow**: one `shadow-card` token (soft, navy-tinted, low-opacity) for product cards and similar
+raised surfaces — not a generic Tailwind `shadow-lg`, which reads flatter/greyer against the warm
+cream/navy palette.
+
+**Container & section rhythm**: no CSS tokens for these — `src/components/layout/Container.tsx`
+(`max-w-7xl`, responsive `px-4/6/8` gutters) and `Section.tsx` (`py-10 sm:py-14 lg:py-20`) are the
+single source of truth instead, so "container width" and "section spacing" are one component
+decision each, not a value repeated per page.
+
+## 4. Component rules (implemented)
+
+**Logo usage**: the brand PNGs are opaque lockups (a navy or cream rectangle is baked into the
+file, not a transparent cutout — confirmed by sampling alpha=255 at the background pixels in
+Phase 1). That makes the "pick the variant by the background it sits on" rule literal, not just
+aesthetic:
+- Header (white/light background) → `logo-light.png` (cream lockup, blends acceptably against a
+  near-white header).
+- Footer (navy background, by design — see below) → `logo-dark.png` (navy lockup, blends exactly).
+
+**Header** (`src/components/layout/Header.tsx`): sticky, translucent+blurred white background,
+navy-tinted hairline bottom border. Desktop (`lg:` / 1024px+): full nav row + inline search.
+Below that: hamburger + search-trigger icon that both open one shared mobile drawer (see Mobile
+behavior below). Wishlist/account icons hide below `md:` (768px) to keep the mobile bar from
+crowding; cart stays visible at every size since users expect to reach it from anywhere.
+
+**Footer** (`Footer.tsx`): the one section besides the announcement bar that's deliberately
+navy/dark — footers conventionally read as "grounding" the page, it's the correct home for the
+dark logo lockup, and it gives gold a legitimate, restrained place to appear (column headings,
+divider dot) without touching the main light storefront. Structure: Brand / Shop / Customer
+Service / Information / Payment, per the brief. Payment methods are listed as plain text (no
+bKash/Nagad/Rocket logo assets exist, and none should be implied to be official brand marks) with
+an explicit note that mobile-wallet payments are processed manually — never implies API/gateway
+integration that doesn't exist. Nothing reads from `brand.contact`/`brand.social` (still
+placeholder "TODO: ..." values) — the footer links to `/contact` etc. instead of inlining an email
+or phone number, so there's nothing to leak once those routes exist.
+
+**AnnouncementBar** (`AnnouncementBar.tsx`): navy background, cream text, a small gold truck icon
+— the same gold-on-navy pairing as the footer, in miniature. Content is a `message` prop
+(default: "Cash on Delivery Available Nationwide") — never a hardcoded promotion/discount claim.
+
+**ProductCard** (`src/components/ecommerce/ProductCard.tsx`): only renders fields the `Product`
+actually has. Deliberate omissions: no ratings/review counts (no such data exists), no
+"Best Seller"/"Trending" badges (nothing in the data model supports them yet — see
+`src/components/ecommerce/Badges.tsx`, which only implements "In Stock" / "Out of Stock" / a
+computed "Sale −X%"). The card shows the **Out of Stock** badge as an exception overlay; "in
+stock" is the unflagged default rather than a badge on every card, to keep cards from feeling
+noisy. Add to Cart / Buy Now are disabled (not hidden) whenever `pricing.sellingPrice` is `null`
+or the item is out of stock — real business logic (you can't buy something with no price), not a
+throwaway placeholder, and it'll naturally start working once Phase 7/8 wire up real cart/checkout
+and products get real prices.
+
+**Price** (`Price.tsx`): uses the Phase 2 `formatBDT`/`calculateDiscountPercentage` utilities
+directly. Renders "Price unavailable" — never `wholesalePrice` — when `sellingPrice` is `null`;
+`wholesalePrice` is Renvura's cost, not a customer price, and showing it would be exactly the kind
+of fabricated-looking data this project avoids. Since no product has a `sellingPrice` yet (Phase 2
+status), every real `ProductCard` on `/ui-preview` currently and correctly shows "Price
+unavailable" — that's expected, not a bug.
+
+## 5. Mobile behavior (implemented)
+
+`src/components/layout/MobileNav.tsx` is one module (not scattered files) because the hamburger
+button, the search-trigger button, and the drawer all need to share one open/close state — done
+via a small context + HeroUI's `useOverlayState()`, exposed as `MobileNavProvider` /
+`MobileMenuTrigger` / `MobileSearchTrigger` / `MobileDrawer`. The drawer itself is HeroUI's
+`Drawer` (react-aria `Modal`/`Dialog` underneath), which gives focus trapping, Escape-to-close,
+and focus return for free — not reimplemented by hand. It contains, in order: logo + close button,
+the same `SearchBar` used on desktop, vertical `NavLinks`, and wishlist/account/cart icons in the
+footer — so mobile users reach every primary action from one place.
+
+**"Offers" nav item**: has no real destination yet (no promo-page content to show, and none should
+be invented), so `src/config/navigation.ts` marks it `href: null` and `NavLinks.tsx` renders it as
+an inert, non-interactive `<span>` with a small "Soon" pill instead of a dead/fake link. This is
+the one place in the UI that intentionally uses low-contrast text below the normal minimum — WCAG
+1.4.3 explicitly exempts text that's part of an inactive UI component, and looking clearly
+de-emphasized is the point.
+
+**Category nav links** (Electronics & Gadgets, Health & Beauty, Shop) *do* point to real intended
+paths (`/electronics-gadgets`, `/health-beauty`, `/shop`) even though those pages don't exist until
+Phase 5 — that's normal, expected nav scaffolding, not a bug; Next.js doesn't require `<Link>`
+targets to resolve at build time.
+
+## 6. Accessibility notes specific to this phase
+
+- Every icon-only button has a real `aria-label` (and product-specific ones on `ProductCard`'s
+  wishlist/cart/buy buttons, since a page with many cards would otherwise have many identically
+  "Add to Cart"-labeled controls).
+- Muted/secondary text uses a minimum of 70% foreground opacity (verified ≈5.8:1 on white,
+  ≈7.4:1 for cream-on-navy) — several earlier draft values (40–60%) were checked against WCAG AA
+  and replaced; see git history on this file's components if tuning colors further.
+- Icon-link tap targets are 44×44px (`IconLinkButton`), not the smaller 40px default, for mobile
+  ergonomics.
+- The product image inside `ProductCard` is a second, `aria-hidden`/`tabIndex={-1}` link to the
+  same destination as the title — avoids two identical tab stops per card while keeping the image
+  clickable for pointer users.
+
+## 7. Temporary route: `/ui-preview`
+
+`src/app/ui-preview/page.tsx` exists **only** to visually verify this design system (typography,
+buttons, badges, Price states, real `ProductCard`s from Phase 2 data, container/section rhythm)
+since the real homepage isn't built until Phase 4. It's marked `robots: { index: false, follow:
+false }` and carries an on-page notice. **Remove or gate this route before production
+deployment** — it is not, and must never become, part of the public site.
+
+## 8. UI principles carried forward
+
+- Server Components by default — only 4 files in `src/components/` are Client Components
+  (`SearchBar`, `MobileNav`, `NavLinks`, `providers`), each for a concrete reason (react-aria
+  interactivity, shared overlay state, `usePathname`, theme context).
+- HeroUI v3 primitives (Button, Chip, SearchField, Drawer) retheme via CSS tokens, not forks —
+  customize via `className`/props, never copy-paste HeroUI internals.
+- Conversion-focused means clear price, clear CTA, clear delivery/COD trust signals near the
   point of decision — not just "looks premium."
-- Accessible by default: rely on HeroUI/React Aria's accessibility primitives, don't strip them
-  out for a custom look.
+- Accessible by default: rely on HeroUI/React Aria's primitives, don't strip them out for a
+  custom look.

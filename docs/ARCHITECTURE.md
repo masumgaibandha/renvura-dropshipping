@@ -1,9 +1,9 @@
 # Architecture
 
-Status: **Phase 2 — Product data model**. This document describes the architecture put in place
-during project initialization and product data modeling, and the architecture the codebase is
-being kept ready for. See `docs/PRODUCT-ROADMAP.md` for phasing and `docs/PRODUCT-DATA.md` for
-the extracted catalog itself.
+Status: **Phase 3 — Global storefront design system**. This document describes the architecture
+put in place so far, and the architecture the codebase is being kept ready for. See
+`docs/PRODUCT-ROADMAP.md` for phasing, `docs/PRODUCT-DATA.md` for the extracted catalog, and
+`docs/DESIGN-SYSTEM.md` for the visual/component system itself.
 
 ## Stack
 
@@ -38,11 +38,13 @@ renvura-dropshipping/
 │                                 electronics-gadgets/x699-turbo-fan/image-1.jpg
 ├── src/
 │   ├── app/                    App Router routes, layouts, metadata
+│   │   └── ui-preview/           TEMPORARY design-system preview route — see docs/DESIGN-SYSTEM.md §7
 │   ├── components/
-│   │   ├── ui/                  Generic/design-system primitives (buttons, inputs, cards…)
-│   │   ├── layout/               Header, footer, providers, page shells
-│   │   └── ecommerce/            Product cards, grids, cart/wishlist UI, etc.
-│   ├── config/                    Static config (brand.ts, site-wide constants)
+│   │   ├── ui/                  icons.tsx, IconLinkButton.tsx — small generic primitives
+│   │   ├── layout/               Container, Section, AnnouncementBar, Header, Footer, StoreShell,
+│   │   │                          NavLinks, MobileNav, providers
+│   │   └── ecommerce/            ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
+│   ├── config/                    brand.ts, navigation.ts
 │   ├── data/                       categories.ts, products.ts — verified seed data (Phase 2)
 │   ├── hooks/                      Client-side React hooks
 │   ├── lib/                         Framework-agnostic utilities (validate-product.ts), DB/client setup
@@ -103,6 +105,28 @@ MongoDB is **not connected yet** — `src/models/` defines the schemas but nothi
 The service functions (`getProductBySlug`, `getProductsByCategory`, etc.) are written so that
 swapping the implementation to query `ProductModel` later doesn't require changing any caller.
 
+## UI component layer (Phase 3 — done)
+
+`src/app/layout.tsx` wraps every route in `StoreShell` (`AnnouncementBar` → `Header` → `<main>` →
+`Footer`), so individual pages never re-declare site chrome — a page component only needs to
+return its own content. Full rules and rationale for each piece are in `docs/DESIGN-SYSTEM.md`;
+the architectural point here is the client/server split:
+
+- Only 4 files under `src/components/` are Client Components: `SearchBar.tsx` (react-aria
+  `SearchField` needs it), `MobileNav.tsx` (shared drawer open/close state), `NavLinks.tsx`
+  (`usePathname()`-driven active link styling), and `providers.tsx` (theme context). Everything
+  else — `Header`, `Footer`, `ProductCard`, `Price`, `Badges`, `AnnouncementBar`, `Container`,
+  `Section`, `IconLinkButton` — is a Server Component, even where it renders HeroUI components
+  that are themselves Client Components internally (Next.js allows a Server Component to import
+  and render a Client Component directly; the boundary starts at the child, not the parent).
+- `ProductCard`/`Price`/`Badges` read the real `Product` type from Phase 2 and render nothing
+  they can't verify (no ratings, no invented badges, "Price unavailable" instead of showing
+  `wholesalePrice` as if it were a customer price). Add to Cart / Buy Now are disabled based on
+  real state (`sellingPrice === null` or out of stock), not stubbed with fake handlers.
+- HeroUI is rethemed via CSS custom properties in `src/app/globals.css` (see
+  `docs/DESIGN-SYSTEM.md` §3), not forked or wrapped — `Button`, `Chip`, `SearchField`, `Drawer`
+  are used directly from `@heroui/react` throughout.
+
 ## Bangladesh-specific concerns baked into the architecture
 
 - Currency formatting centralized (via `src/config/brand.ts` currency config) rather than
@@ -130,7 +154,10 @@ per-route later.
 
 ## Explicitly deferred (not built yet)
 
-Catalog/category pages, search/filter/sort, cart, wishlist, guest checkout, customer accounts,
-COD/online payment flows, order tracking, reviews, coupons, related products, and the admin
-dashboard are all deferred to later phases per `docs/PRODUCT-ROADMAP.md`. The folder structure
-above exists to receive them without restructuring.
+The homepage itself, catalog/category listing pages, product detail pages, cart, checkout,
+customer accounts, and the admin dashboard are all deferred to later phases per
+`docs/PRODUCT-ROADMAP.md`. Phase 3 built the **UI foundation** several of these will reuse
+(`ProductCard`, `Price`, `SearchBar`, `Header`/`Footer` chrome) but deliberately stopped short of
+real behavior: search doesn't search, Add to Cart doesn't add to a cart, wishlist doesn't persist.
+The folder structure above exists to receive that logic without restructuring — it plugs into
+`src/services/` once there's something real to call.

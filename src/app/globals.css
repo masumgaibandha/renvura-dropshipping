@@ -3,19 +3,48 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Renvura design tokens.
+ *
+ * HeroUI themes entirely through CSS custom properties (see
+ * node_modules/@heroui/styles/dist/themes/default/variables.css) — the
+ * overrides below retheme every HeroUI component without touching its
+ * source. See docs/DESIGN-SYSTEM.md for the reasoning behind each choice.
+ */
 :root {
   --background: #ffffff;
   --foreground: #11253c;
 
-  /* Renvura brand tokens, sampled from assets/ (see docs/DESIGN-SYSTEM.md) */
+  /* Renvura brand primitives, sampled from assets/ (see docs/DESIGN-SYSTEM.md) */
   --brand-navy: #11253c;
   --brand-cream: #f7f1e5;
   --brand-gold: #cdaf80;
+
+  /* Primary interactive color: navy, per brand direction. */
+  --accent: var(--brand-navy);
+  --accent-foreground: var(--brand-cream);
+
+  /* Subtle navy-tinted hairline border instead of HeroUI's neutral gray default. */
+  --border: color-mix(in oklab, var(--brand-navy) 12%, white);
+
+  /* Soft, premium card shadow, exposed as the `shadow-card` utility below. */
+  --card-shadow: 0 1px 2px rgba(17, 37, 60, 0.04), 0 12px 24px -16px rgba(17, 37, 60, 0.18);
 }
 
 .dark {
-  --background: #11253c;
-  --foreground: #f7f1e5;
+  --background: var(--brand-navy);
+  --foreground: var(--brand-cream);
+
+  /*
+   * Navy accent buttons would be invisible on a navy background, so dark
+   * mode swaps the interactive color to gold — still restrained (it's only
+   * the accent, not a fill color) and matches the gold-on-navy treatment
+   * already used in assets/appicon-dark.png and assets/logo-dark.png.
+   */
+  --accent: var(--brand-gold);
+  --accent-foreground: var(--brand-navy);
+
+  --border: color-mix(in oklab, var(--brand-cream) 16%, transparent);
 }
 
 @theme inline {
@@ -24,8 +53,50 @@
   --color-brand-navy: var(--brand-navy);
   --color-brand-cream: var(--brand-cream);
   --color-brand-gold: var(--brand-gold);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --shadow-card: var(--card-shadow);
+
+  /*
+   * Typography scale. Sizes fluid-scale between mobile and desktop via
+   * clamp() so components don't need per-breakpoint text-size overrides.
+   * See docs/DESIGN-SYSTEM.md for the full rationale.
+   */
+  --text-display: clamp(2.25rem, 1.9rem + 1.5vw, 3.5rem);
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+
+  --text-h1: clamp(1.875rem, 1.6rem + 1vw, 2.75rem);
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -0.015em;
+  --text-h1--font-weight: 600;
+
+  --text-h2: clamp(1.5rem, 1.35rem + 0.6vw, 2rem);
+  --text-h2--line-height: 1.15;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+
+  --text-h3: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  --text-h3--line-height: 1.2;
+  --text-h3--font-weight: 600;
+
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
+
+  --text-price: clamp(1.125rem, 1rem + 0.4vw, 1.375rem);
+  --text-price--line-height: 1.2;
+  --text-price--font-weight: 600;
+
+  --text-label: 0.75rem;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
 }
 
 body {

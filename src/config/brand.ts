@@ -79,13 +79,15 @@ export const brand = {
     cream: "#F7F1E5",
     gold: "#CDAF80",
   },
-
-  categories: {
-    initial: [
-      { slug: "electronics", label: "Electronics & Gadgets" },
-      { slug: "health-beauty", label: "Health & Beauty" },
-    ],
-  },
 } as const;
+
+/**
+ * A brand config value that hasn't been supplied yet (still a "TODO: ..."
+ * placeholder). Use this before rendering any brand.contact/social value
+ * to a page — never show a literal "TODO: ..." string to a user.
+ */
+export function isConfigured(value: string): boolean {
+  return !value.startsWith("TODO");
+}
 
 export type Brand = typeof brand;

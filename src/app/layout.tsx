@@ -4,6 +4,7 @@ import clsx from "clsx";
 import "./globals.css";
 
 import { Providers } from "@/components/layout/providers";
+import { StoreShell } from "@/components/layout/StoreShell";
 import { brand } from "@/config/brand";
 
 const geistSans = Geist({
@@ -34,9 +35,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={clsx(geistSans.variable, geistMono.variable, "h-full antialiased")}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full">
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          {children}
+          <StoreShell>{children}</StoreShell>
         </Providers>
       </body>
     </html>

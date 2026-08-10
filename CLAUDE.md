@@ -5,8 +5,9 @@ Guidance for Claude Code (and any future session/agent) working in this reposito
 ## What Renvura is
 
 Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phase 1
-(foundation) and Phase 2 (product data model) are complete; no storefront UI (homepage, catalog
-pages, cart, checkout, admin) is built yet.
+(foundation), Phase 2 (product data model), and Phase 3 (global storefront design system) are
+complete. The reusable UI (header, footer, product cards, price/badges) exists, but no actual
+pages (homepage, catalog, product detail, cart, checkout, admin) are built yet.
 
 **Business model:**
 - A supplier provides products and wholesale pricing (source data currently captured as
@@ -50,11 +51,12 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - Import alias `@/*` maps to `src/*`.
 - Folder layout (see `docs/ARCHITECTURE.md` for the full rationale):
   ```
-  src/app/                 routes (App Router)
-  src/components/ui/       generic/design-system primitives
-  src/components/layout/   header, footer, providers, shells
-  src/components/ecommerce/ product cards, grids, cart UI, etc.
-  src/config/               brand.ts and other static config
+  src/app/                 routes (App Router); ui-preview/ is TEMPORARY — see below
+  src/components/ui/       icons.tsx, IconLinkButton.tsx — small generic primitives
+  src/components/layout/   Container, Section, AnnouncementBar, Header, Footer, StoreShell,
+                             NavLinks, MobileNav, providers
+  src/components/ecommerce/ ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
+  src/config/               brand.ts, navigation.ts
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
   src/lib/                   framework-agnostic utilities (validate-product.ts), DB/client setup
@@ -103,10 +105,40 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - Production copies live in `public/brand/` (same filenames). Reference them via
   `src/config/brand.ts` (`brand.assets.*`), not hardcoded paths, so there's one place to update.
 - Pick the light/dark variant based on the background it sits on; never stretch or distort;
-  preserve proportions.
+  preserve proportions. The logo PNGs are opaque lockups (a solid navy/cream rectangle is baked
+  into the file), so this isn't just aesthetic — `logo-dark.png` only blends seamlessly on a navy
+  surface. Concretely: `Header` (light) uses `logo-light.png`; `Footer` (navy by design) uses
+  `logo-dark.png`.
 - Derived brand colors (sampled directly from the asset pixels, not guessed):
-  navy `#11253C`, cream `#F7F1E5`, gold `#CDAF80`. See `docs/DESIGN-SYSTEM.md`. Don't overuse gold
-  or navy — the interface should read as clean and commerce-focused, not jewelry/luxury pastiche.
+  navy `#11253C`, cream `#F7F1E5`, gold `#CDAF80`. Don't overuse gold or navy — the interface
+  should read as clean and commerce-focused, not jewelry/luxury pastiche. Concretely: navy is the
+  primary accent (buttons, links, focus rings) in light mode; gold takes over as the accent only
+  in dark mode (navy-on-navy would be invisible) and otherwise stays restrained to footer headings,
+  small icons, and dividers — never a fill/background color. See `docs/DESIGN-SYSTEM.md` §3.
+
+## UI / storefront component rules
+
+- `docs/DESIGN-SYSTEM.md` is the source of truth for tokens, typography, and every shared
+  component's rules (Header, Footer, AnnouncementBar, ProductCard, Price, Badges, mobile nav) —
+  read it before adding to or changing any of them, and update it when you do.
+- `ProductCard`/`Price`/`Badges` only render fields the `Product` type actually has verified data
+  for. Never add ratings, review counts, "Best Seller"/"Trending"/"Hot" badges, or fake discount
+  badges — if the data model doesn't support a claim, don't display it.
+- `Price` never displays `pricing.wholesalePrice` to a customer — that's Renvura's cost, not a
+  selling price. When `sellingPrice` is `null` it renders "Price unavailable", which is the
+  correct/expected state for every current product until Phase 2's pricing gap is resolved.
+- `src/app/ui-preview/` is a **temporary, noindex, dev-only** route for visually verifying the
+  design system. It must be removed or gated before production deployment — never link to it from
+  real pages, and don't treat its existence as permission to skip building real pages later.
+
+## Design system contrast rule
+
+Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
+light backgrounds, `text-brand-cream/70`+ on the navy footer) — verified against WCAG AA
+(≈5.8:1 and ≈7.4:1 respectively). Lower values were tried during Phase 3 and failed contrast
+checks; don't reintroduce `/40`–`/60` for real (non-disabled) content. The one exception is
+genuinely inactive UI (e.g. the disabled "Offers" nav item) — WCAG 1.4.3 exempts inactive
+component text from contrast requirements, and looking de-emphasized is the intent there.
 
 ## Bangladesh localization
 
@@ -133,8 +165,10 @@ phase — just don't design yourself into a corner that makes it hard later.
 
 ## Current status / what NOT to build yet
 
-Phases 1 (Foundation) and 2 (Product data model) are done — see `docs/PRODUCT-ROADMAP.md` and
-`docs/PRODUCT-DATA.md`. Do not build the homepage sections, product/category pages, cart,
-checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist but aren't
-wired up) or create fake products/reviews/prices. Confirm scope with the user before starting a
-new phase.
+Phases 1 (Foundation), 2 (Product data model), and 3 (Global storefront design system) are done —
+see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md`. The reusable
+UI shell and components exist and are wired into every route, but do not build the actual homepage
+sections, product/category listing pages, product detail pages, cart, checkout, auth, or admin
+dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up real
+search/cart logic, or create fake products/reviews/prices. Confirm scope with the user before
+starting a new phase.
