@@ -1,17 +1,28 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Only Phase 1 is complete.** Do not start a later
-phase without explicit confirmation — each phase should be scoped and agreed before work begins.
+This roadmap defines the intended build order. **Phases 1 and 2 are complete.** Do not start a
+later phase without explicit confirmation — each phase should be scoped and agreed before work
+begins.
 
 ## Phase 1 — Foundation ✅
 Project initialization, Next.js/TypeScript/Tailwind/HeroUI setup, folder structure, brand
 configuration, documentation, resource/asset inspection, git init and first push.
 
-## Phase 2 — Product data / model
-Extract real product data from `resources/products/` supplier screenshots (title, price, SKU,
-category, description, specs, variants — marking anything not clearly visible as unknown).
-Design and implement Mongoose schemas (`Product`, `Category`, `Subcategory`, variants, stock).
-Connect MongoDB Atlas.
+## Phase 2 — Product data / model ✅
+Extracted verified product data from all 21 `resources/products/` supplier screenshots (title,
+price, SKU, category, description, specs — see `docs/PRODUCT-DATA.md` for coverage and gaps).
+Defined the `Product`/`Category` TypeScript domain model (`src/types/`) and matching Mongoose
+schemas (`src/models/`) with indexes, variants, and specifications support. Normalized supplier
+categories into Renvura's own `electronics-gadgets` / `health-beauty` taxonomy
+(`src/data/categories.ts`). Built the verified seed catalog (`src/data/products.ts`), a
+data-access service layer (`src/services/products.ts`), validation (`src/lib/validate-product.ts`),
+and BDT/slug/discount utilities (`src/utils/`). Copied production product photos into
+`public/products/`.
+
+**Not done in Phase 2** (deferred, per explicit scope): no MongoDB Atlas connection — the schemas
+exist but nothing calls `mongoose.connect()` yet; data access reads `src/data/products.ts`
+instead. `regularPrice`/`sellingPrice` are unset and every product's `status` is `"draft"` — the
+business hasn't reviewed pricing or approved products for sale.
 
 ## Phase 3 — Global layout
 Header/navigation, footer, mobile nav, theme handling, global providers, base layout shell that

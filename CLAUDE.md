@@ -4,8 +4,9 @@ Guidance for Claude Code (and any future session/agent) working in this reposito
 
 ## What Renvura is
 
-Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store, currently in
-foundation/architecture phase (no storefront features built yet).
+Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phase 1
+(foundation) and Phase 2 (product data model) are complete; no storefront UI (homepage, catalog
+pages, cart, checkout, admin) is built yet.
 
 **Business model:**
 - A supplier provides products and wholesale pricing (source data currently captured as
@@ -23,7 +24,8 @@ foundation/architecture phase (no storefront features built yet).
 - Tailwind CSS v4 (CSS-first config, no `tailwind.config.js`)
 - HeroUI v3 (`@heroui/react` + `@heroui/styles`) — React Aria based, no `HeroUIProvider` needed
 - `next-themes` for light/dark mode (class-based, see `src/components/layout/providers.tsx`)
-- MongoDB / MongoDB Atlas + Mongoose (not yet integrated — Phase 2+)
+- MongoDB / MongoDB Atlas + Mongoose (schemas defined in `src/models/`; **no DB connection wired
+  up yet** — current data access reads `src/data/products.ts`)
 - Next.js Route Handlers for server-side APIs (not yet built)
 - Vercel for deployment
 - ESLint (flat config; `next lint` is removed in Next 16 — use `npm run lint`, which runs
@@ -53,12 +55,13 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   src/components/layout/   header, footer, providers, shells
   src/components/ecommerce/ product cards, grids, cart UI, etc.
   src/config/               brand.ts and other static config
+  src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
-  src/lib/                   framework-agnostic utilities, DB/client setup
-  src/models/                 Mongoose schemas/models (Phase 2+)
-  src/services/               business logic / data-access layer
-  src/types/                  shared TypeScript types
-  src/utils/                  small pure helpers
+  src/lib/                   framework-agnostic utilities (validate-product.ts), DB/client setup
+  src/models/                 Mongoose schemas: Product.ts, Category.ts (not yet connected)
+  src/services/               data-access layer: products.ts (reads src/data/ until MongoDB is wired up)
+  src/types/                  shared TypeScript types: product.ts, category.ts
+  src/utils/                  small pure helpers: currency.ts, slug.ts, pricing.ts
   ```
 - Keep UI, business logic, and data-access layers separate — don't put Mongoose queries or
   business rules directly in components or route handlers.
@@ -76,10 +79,21 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - `resources/products/<category>/<product-N>/` contains product photos/videos and supplier
   screenshots. Screenshots are the source of truth for product data (title, price, SKU, category,
   description, specs, variants). **Never invent missing product information** — if a field isn't
-  clearly visible in the source images, mark it `unknown`/`missing` rather than guessing.
+  clearly visible in the source images, use `null`/`undefined` rather than guessing.
 - `resources/reference-theme.png` is a visual/layout reference only (a jewelry site). Adapt its
   design language (whitespace, hierarchy, editorial sections, premium feel) — do not copy it
   literally, and do not carry over jewelry-specific content or copy.
+- The verified product catalog lives in `src/data/products.ts` (21 products extracted from
+  `resources/products/` — see `docs/PRODUCT-DATA.md` for the full extraction summary, field
+  coverage, and known source-data issues). Every entry carries a `source` (`ProductSourceProvenance`
+  in `src/types/product.ts`) pointing back to the exact source folder/screenshot it came from —
+  keep that link intact when editing entries, and add a `dataQualityNotes` entry instead of
+  silently "fixing" anything that looks inconsistent in the source (e.g. a title/photo mismatch).
+  `pricing.wholesalePrice` is the supplier's cost; `regularPrice`/`sellingPrice` stay `null` and
+  `status` stays `"draft"` until the business actually sets customer-facing prices.
+- Only product **photos** (`image-*`) get copied into `public/products/` for storefront use.
+  Supplier **screenshots** (`screenshot-*.png`) stay in `resources/` only — they show a different
+  platform's branding/UI and must never be copied into `public/`.
 
 ## Branding rules
 
@@ -119,7 +133,8 @@ phase — just don't design yourself into a corner that makes it hard later.
 
 ## Current status / what NOT to build yet
 
-This repo is in **Phase 1 (Foundation)** — see `docs/PRODUCT-ROADMAP.md`. Do not build the
-homepage sections, product/category pages, cart, checkout, auth, or admin dashboard until asked.
-Do not integrate MongoDB or create fake products/reviews/prices. Confirm scope with the user
-before starting a new phase.
+Phases 1 (Foundation) and 2 (Product data model) are done — see `docs/PRODUCT-ROADMAP.md` and
+`docs/PRODUCT-DATA.md`. Do not build the homepage sections, product/category pages, cart,
+checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist but aren't
+wired up) or create fake products/reviews/prices. Confirm scope with the user before starting a
+new phase.

@@ -1,8 +1,9 @@
 # Architecture
 
-Status: **Phase 1 — Foundation**. This document describes the architecture put in place during
-project initialization, and the architecture the codebase is being kept ready for. See
-`docs/PRODUCT-ROADMAP.md` for phasing.
+Status: **Phase 2 — Product data model**. This document describes the architecture put in place
+during project initialization and product data modeling, and the architecture the codebase is
+being kept ready for. See `docs/PRODUCT-ROADMAP.md` for phasing and `docs/PRODUCT-DATA.md` for
+the extracted catalog itself.
 
 ## Stack
 
@@ -14,7 +15,7 @@ project initialization, and the architecture the codebase is being kept ready fo
 | Styling | Tailwind CSS v4 | CSS-first config in `src/app/globals.css`, no `tailwind.config.js` |
 | Component kit | HeroUI v3 (`@heroui/react`, `@heroui/styles`) | React Aria based; no context provider required |
 | Theme | `next-themes` | class-based light/dark, see `src/components/layout/providers.tsx` |
-| Data layer (planned) | MongoDB Atlas + Mongoose | not yet connected |
+| Data layer | MongoDB Atlas + Mongoose | Schemas defined (`src/models/`); **connection not wired up yet** — current data access reads `src/data/products.ts` |
 | API layer (planned) | Next.js Route Handlers | not yet built |
 | Hosting | Vercel | |
 | Source control | Git / GitHub | `masumgaibandha/renvura-dropshipping` |
@@ -32,7 +33,9 @@ renvura-dropshipping/
 ├── docs/                      This documentation set
 ├── public/
 │   ├── brand/                 Production copies of assets/ (same filenames)
-│   └── products/               Reserved for processed/optimized product images (Phase 2+)
+│   └── products/               Production copies of product photos (NOT supplier screenshots),
+│                                 under <category-slug>/<product-slug>/, e.g.
+│                                 electronics-gadgets/x699-turbo-fan/image-1.jpg
 ├── src/
 │   ├── app/                    App Router routes, layouts, metadata
 │   ├── components/
@@ -40,12 +43,13 @@ renvura-dropshipping/
 │   │   ├── layout/               Header, footer, providers, page shells
 │   │   └── ecommerce/            Product cards, grids, cart/wishlist UI, etc.
 │   ├── config/                    Static config (brand.ts, site-wide constants)
+│   ├── data/                       categories.ts, products.ts — verified seed data (Phase 2)
 │   ├── hooks/                      Client-side React hooks
-│   ├── lib/                         Framework-agnostic utilities, DB/client setup
-│   ├── models/                       Mongoose schemas/models (Phase 2+)
-│   ├── services/                      Business logic / data-access layer
-│   ├── types/                          Shared TypeScript types
-│   └── utils/                          Small pure helper functions
+│   ├── lib/                         Framework-agnostic utilities (validate-product.ts), DB/client setup
+│   ├── models/                       Mongoose schemas: Product.ts, Category.ts (not yet connected)
+│   ├── services/                      Data-access layer: products.ts (reads src/data/ for now)
+│   ├── types/                          product.ts, category.ts — shared TypeScript domain types
+│   └── utils/                          currency.ts, slug.ts, pricing.ts — small pure helpers
 ├── CLAUDE.md
 └── package.json
 ```
@@ -63,20 +67,41 @@ once the API layer exists.
 - Data fetching happens in Server Components / Route Handlers, not client-side `fetch` where
   avoidable.
 
-## Data model (planned — Phase 2)
+## Data model
 
-Not yet implemented. Expected top-level Mongoose models once MongoDB is wired up:
+### Product & Category (Phase 2 — done)
 
-- `Product` (with variants, category/subcategory refs, stock, supplier source reference)
-- `Category` / `Subcategory`
-- `Order` (with BD address shape: division/district/upazila, COD vs. online payment, lifecycle
-  status)
-- `Customer` (guest + registered)
-- `Review`
-- `Coupon`
+`src/types/product.ts` and `src/types/category.ts` define the domain model; `src/models/Product.ts`
+and `src/models/Category.ts` define the matching Mongoose schemas (not yet connected to a
+database — see below). Key shape decisions:
 
-Exact schemas will be derived from what's actually extractable from `resources/products/`
-screenshots plus store requirements — no fields will be invented ahead of need.
+- `Product.pricing` separates `wholesalePrice` (what the supplier charges — the verified,
+  extractable number) from `regularPrice`/`sellingPrice` (customer-facing prices the business
+  hasn't set yet, so they're `null` rather than guessed). `discountPercentage` is derived, not
+  stored as a source fact — see `calculateDiscountPercentage` in `src/utils/pricing.ts`.
+- `Product.bulkPricing` captures quantity-break tiers only where the source clearly shows them
+  (about half of the electronics catalog).
+- `Product.category`/`subcategory` are slugs into `src/data/categories.ts`, not free text.
+- Product provenance (which source folder/screenshot/images a record came from, and any data
+  quality caveats) is modeled separately as `ProductSourceProvenance`/`VerifiedProductRecord` in
+  `src/types/product.ts` — it lives in the seed data (`src/data/products.ts`), not in the
+  `Product` shape itself, so the public product model stays clean once this becomes an API
+  response shape.
+- The Mongoose `Product` schema indexes `slug` (unique), `sku` (sparse — many source products
+  don't have a confirmed SKU yet... actually all 21 currently do, but the schema doesn't assume
+  that will always be true), and `category`/`subcategory`/`status`/`tags`.
+
+**Not yet implemented**: `Order` (BD address shape: division/district/upazila, COD vs. online
+payment, lifecycle status), `Customer` (guest + registered), `Review`, `Coupon`. These will follow
+the same "only model what's needed, don't invent fields ahead of need" approach in later phases.
+
+### Data access — seed data now, MongoDB later
+
+MongoDB is **not connected yet** — `src/models/` defines the schemas but nothing calls
+`mongoose.connect()`. Until it does, `src/services/products.ts` reads directly from
+`src/data/products.ts` (the verified catalog extracted in Phase 2 — see `docs/PRODUCT-DATA.md`).
+The service functions (`getProductBySlug`, `getProductsByCategory`, etc.) are written so that
+swapping the implementation to query `ProductModel` later doesn't require changing any caller.
 
 ## Bangladesh-specific concerns baked into the architecture
 
