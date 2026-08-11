@@ -9,7 +9,7 @@ import { ProductDetails } from "@/components/product/ProductDetails";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
 import { brand, isConfigured } from "@/config/brand";
-import { getAllProducts, getCategoryBySlug, getProductBySlug, getRelatedProducts } from "@/services/products";
+import { getAllProducts, getCategoryBySlug, getProductBySlug, getRelatedProducts, toPublicProduct } from "@/services/products";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -101,7 +101,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         <ProductGallery images={product.media.images} title={product.title} />
 
         <div>
-          <BuyBox product={product} categoryLabel={category?.name} />
+          <BuyBox product={toPublicProduct(product)} categoryLabel={category?.name} />
           <DeliveryPaymentInfo className="mt-6" />
         </div>
       </div>

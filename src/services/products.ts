@@ -1,7 +1,7 @@
 import { categories } from "@/data/categories";
 import { products } from "@/data/products";
 import type { Category } from "@/types/category";
-import type { Product, VerifiedProductRecord } from "@/types/product";
+import type { Product, PublicProduct, VerifiedProductRecord } from "@/types/product";
 
 /**
  * Data-access layer for the catalog. Reads from the verified seed data in
@@ -12,6 +12,23 @@ import type { Product, VerifiedProductRecord } from "@/types/product";
 
 export function getAllProducts(): Product[] {
   return products.map((record) => record.product);
+}
+
+/**
+ * Strips `pricing.wholesalePrice` — call this before handing product data
+ * to a Client Component (see `PublicProduct`'s doc comment for why the full
+ * `Product` type must never cross that boundary).
+ */
+export function toPublicProduct(product: Product): PublicProduct {
+  return {
+    ...product,
+    pricing: {
+      currency: product.pricing.currency,
+      regularPrice: product.pricing.regularPrice,
+      sellingPrice: product.pricing.sellingPrice,
+      discountPercentage: product.pricing.discountPercentage,
+    },
+  };
 }
 
 export function getProductBySlug(slug: string): Product | undefined {

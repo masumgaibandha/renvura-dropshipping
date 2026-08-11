@@ -1,51 +1,26 @@
-"use client";
-
-import Link from "next/link";
-
-import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import { Container } from "@/components/layout/Container";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
-import { useWishlist } from "@/contexts/WishlistContext";
-import { getAllProducts } from "@/services/products";
+import { WishlistGrid } from "@/components/wishlist/WishlistGrid";
+import { getAllProducts, toPublicProduct } from "@/services/products";
 
 const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label: "Wishlist" }];
 
 /**
- * Client Component — the saved-product slugs only exist in localStorage,
- * so this page reads getAllProducts() (already synchronous/local) and
- * filters by the wishlist context's slugs. Unlike the cart (which stores
- * its own display fields), the wishlist deliberately stores slugs only,
- * so this is the one place a full product-data import into client code is
- * an accepted tradeoff — it's a dedicated, code-split route, not something
- * loaded on every page the way header chrome is.
+ * Server Component: fetches and sanitizes the catalog here, then hands it
+ * to `WishlistGrid` (Client Component) to filter by the client-only
+ * wishlist slugs. Splitting it this way — rather than calling
+ * `getAllProducts()` directly inside a "use client" file, as this route
+ * did in Phase 7 — keeps `wholesalePrice` out of the client JS bundle; see
+ * `PublicProduct`'s doc comment in `src/types/product.ts`.
  */
 export default function WishlistPage() {
-  const { slugs, isHydrated } = useWishlist();
-  const products = getAllProducts().filter((product) => slugs.includes(product.slug));
+  const products = getAllProducts().map(toPublicProduct);
 
   return (
     <Container>
       <Breadcrumbs items={breadcrumbItems} className="mb-4" />
       <h1 className="text-h1 text-foreground">Wishlist</h1>
-
-      {!isHydrated ? null : products.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-16 text-center">
-          <p className="text-body text-foreground/70">Your wishlist is empty.</p>
-          <Link
-            href="/shop"
-            className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-small font-medium text-white transition-colors hover:bg-accent-hover"
-          >
-            Browse Products
-          </Link>
-        </div>
-      ) : (
-        <div className="mt-6">
-          <p className="mb-6 text-small text-foreground/70">
-            {products.length} {products.length === 1 ? "product" : "products"}
-          </p>
-          <ProductGrid products={products} />
-        </div>
-      )}
+      <WishlistGrid products={products} />
     </Container>
   );
 }

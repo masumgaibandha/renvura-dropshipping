@@ -4,10 +4,11 @@ import { Tabs } from "@heroui/react";
 
 import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import type { Category } from "@/types/category";
-import type { Product } from "@/types/product";
+import type { PublicProduct } from "@/types/product";
 
 interface CategoryTabsProps {
-  products: Product[];
+  /** Must be `PublicProduct` (wholesalePrice stripped) — this is a Client Component, see `PublicProduct`'s doc comment. */
+  products: PublicProduct[];
   categories: Category[];
 }
 

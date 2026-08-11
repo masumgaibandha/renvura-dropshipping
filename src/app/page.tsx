@@ -8,7 +8,7 @@ import { FeaturedProductsRow } from "@/components/home/FeaturedProductsRow";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { WhyShopWithRenvura } from "@/components/home/WhyShopWithRenvura";
 import { Section } from "@/components/layout/Section";
-import { getAllCategories, getAllProducts, getCategoryBySlug } from "@/services/products";
+import { getAllCategories, getAllProducts, getCategoryBySlug, toPublicProduct } from "@/services/products";
 
 /**
  * Overrides the root layout's generic title/description for `/` specifically.
@@ -32,8 +32,9 @@ export default function Home() {
   const allProducts = getAllProducts();
   const topCategories = getAllCategories().filter((category) => !category.parentSlug);
 
-  const popularProducts = allProducts.slice(0, 10);
-  const featuredProducts = allProducts.slice(10, 18);
+  // CategoryTabs/FeaturedProductsRow are Client Components — sanitize before crossing that boundary.
+  const popularProducts = allProducts.slice(0, 10).map(toPublicProduct);
+  const featuredProducts = allProducts.slice(10, 18).map(toPublicProduct);
   const promoCategory = getCategoryBySlug("health-beauty") ?? topCategories[0];
 
   return (

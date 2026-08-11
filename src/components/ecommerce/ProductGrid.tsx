@@ -1,8 +1,8 @@
 import { ProductCard } from "./ProductCard";
-import type { Product } from "@/types/product";
+import type { PublicProduct } from "@/types/product";
 
 interface ProductGridProps {
-  products: Product[];
+  products: PublicProduct[];
   className?: string;
 }
 

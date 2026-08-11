@@ -6,10 +6,11 @@ import { useRef } from "react";
 import { ProductCard } from "@/components/ecommerce/ProductCard";
 import { IconArrowLeft, IconArrowRight } from "@/components/ui/icons";
 import type { Category } from "@/types/category";
-import type { Product } from "@/types/product";
+import type { PublicProduct } from "@/types/product";
 
 interface FeaturedProductsRowProps {
-  products: Product[];
+  /** Must be `PublicProduct` (wholesalePrice stripped) — this is a Client Component, see `PublicProduct`'s doc comment. */
+  products: PublicProduct[];
   promoCategory: Category;
 }
 

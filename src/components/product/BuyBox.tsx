@@ -7,11 +7,12 @@ import { useState } from "react";
 import { StockBadge } from "@/components/ecommerce/Badges";
 import { Price } from "@/components/ecommerce/Price";
 import { useCart } from "@/contexts/CartContext";
-import type { Product } from "@/types/product";
+import type { PublicProduct } from "@/types/product";
 import { QuantitySelector } from "./QuantitySelector";
 
 interface BuyBoxProps {
-  product: Product;
+  /** Must be `PublicProduct` (wholesalePrice stripped via `toPublicProduct`), not the full `Product` — this is a Client Component, see `PublicProduct`'s doc comment. */
+  product: PublicProduct;
   categoryLabel?: string;
   className?: string;
 }
@@ -21,9 +22,10 @@ interface BuyBoxProps {
  * SKU are each individually omitted when null, `shortDescription` only
  * shows if the source actually has one (the full `description` lives in
  * ProductDetails below, not duplicated here). `wholesalePrice` is never
- * read. Client Component (as of Phase 7) so the quantity selector and the
- * Add to Cart/Buy Now buttons can share one quantity value — disabled via
- * the same real-state formula ProductCard already uses.
+ * read, and can't be — see `PublicProduct`. Client Component (as of Phase
+ * 7) so the quantity selector and the Add to Cart/Buy Now buttons can share
+ * one quantity value — disabled via the same real-state formula
+ * ProductCard already uses.
  */
 export function BuyBox({ product, categoryLabel, className }: BuyBoxProps) {
   const { pricing, inventory } = product;

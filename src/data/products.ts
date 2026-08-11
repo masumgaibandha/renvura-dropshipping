@@ -9,10 +9,12 @@ import type { VerifiedProductRecord } from "@/types/product";
  * for the full extraction summary.
  *
  * `pricing.wholesalePrice` is the supplier's per-unit price shown on the
- * screenshot (Renvura's cost basis). `regularPrice` / `sellingPrice` are
- * left null — the business hasn't set customer-facing prices yet.
- * `status` is "draft" for every record for the same reason: nothing here
- * has been reviewed and approved for sale.
+ * screenshot (Renvura's cost basis) and is never customer-facing. 20 of the
+ * 21 records now carry approved `regularPrice` / `sellingPrice` values;
+ * `skin1004-centella-ampoule-100ml` is held back (both left `null`) pending
+ * resolution of the 30ml/100ml source mismatch flagged in its
+ * `source.dataQualityNotes`. `status` stays "draft" for every record for
+ * now — pricing approval and go-live/publish are separate decisions.
  */
 
 const SOURCE_MARKETPLACE = "SelfShop (B2B wholesale/dropshipping marketplace)";
@@ -38,9 +40,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 591.6,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1390,
+        sellingPrice: 1190,
+        discountPercentage: 14.39,
       },
       bulkPricing: [
         { minQuantity: 2, maxQuantity: 39, price: 551.0 },
@@ -96,9 +98,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 614.8,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1390,
+        sellingPrice: 1190,
+        discountPercentage: 14.39,
       },
       bulkPricing: [
         { minQuantity: 2, maxQuantity: 39, price: 570.72 },
@@ -152,9 +154,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 2969.6,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 5290,
+        sellingPrice: 4690,
+        discountPercentage: 11.34,
       },
       media: {
         thumbnail: "/products/electronics-gadgets/c16-ai-selfie-stick-gimbal/image-1.jpg",
@@ -210,9 +212,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 3491.6,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 6290,
+        sellingPrice: 5490,
+        discountPercentage: 12.72,
       },
       media: {
         thumbnail: "/products/electronics-gadgets/q18-dual-axis-gimbal/image-1.jpg",
@@ -259,9 +261,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 962.8,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1990,
+        sellingPrice: 1690,
+        discountPercentage: 15.08,
       },
       bulkPricing: [
         { minQuantity: 10, maxQuantity: 49, price: 928.0 },
@@ -317,9 +319,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 951.2,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1990,
+        sellingPrice: 1690,
+        discountPercentage: 15.08,
       },
       media: {
         thumbnail: "/products/electronics-gadgets/cob-led-flashlight-dual-light/image-1.jpg",
@@ -367,9 +369,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 812.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1690,
+        sellingPrice: 1490,
+        discountPercentage: 11.83,
       },
       media: {
         thumbnail: "/products/electronics-gadgets/jysuper-jy2600-flashlight/image-1.jpg",
@@ -420,9 +422,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 510.4,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1290,
+        sellingPrice: 1090,
+        discountPercentage: 15.5,
       },
       bulkPricing: [
         { minQuantity: 10, maxQuantity: 49, price: 481.4 },
@@ -477,9 +479,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 324.8,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 990,
+        sellingPrice: 890,
+        discountPercentage: 10.1,
       },
       bulkPricing: [
         { minQuantity: 10, maxQuantity: 49, price: 301.6 },
@@ -534,9 +536,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 812.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1690,
+        sellingPrice: 1490,
+        discountPercentage: 11.83,
       },
       media: {
         thumbnail: "/products/electronics-gadgets/f15-2-wireless-microphone/image-1.jpg",
@@ -589,9 +591,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 220.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 890,
+        sellingPrice: 790,
+        discountPercentage: 11.24,
       },
       media: {
         thumbnail: "/products/health-beauty/dark-spot-correcting-glow-serum/image-1.jpg",
@@ -627,9 +629,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 352.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1190,
+        sellingPrice: 990,
+        discountPercentage: 16.81,
       },
       media: {
         thumbnail: "/products/health-beauty/beauty-of-joseon-sunscreen-10ml/image-1.jpg",
@@ -664,9 +666,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 726.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1590,
+        sellingPrice: 1390,
+        discountPercentage: 12.58,
       },
       media: {
         thumbnail: "/products/health-beauty/skin1004-centella-ampoule-30ml/image-1.jpg",
@@ -751,6 +753,7 @@ export const products: VerifiedProductRecord[] = [
       verifiedAt: VERIFIED_AT,
       dataQualityNotes: [
         "NEEDS MANUAL REVIEW: listing title says \"100ml\" and is priced well above the 30ml variant, but the product photo is identical to product-03 (the 30ml listing) and the description text still says \"30ml Generous Quantity\". The source screenshot does not clearly confirm this is genuinely a distinct 100ml product rather than a duplicated/mislabeled listing. Captured as-shown; do not treat the 100ml claim as fully verified until a supplier follow-up.",
+        "needsVerification: retail pricing intentionally withheld (regularPrice/sellingPrice left null, status stays \"draft\") until the 30ml/100ml mismatch above is resolved with the supplier — do not price or publish this record from the mismatch note alone.",
       ],
     },
   },
@@ -770,9 +773,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 220.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 890,
+        sellingPrice: 790,
+        discountPercentage: 11.24,
       },
       media: {
         thumbnail: "/products/health-beauty/bioaqua-lip-sleeping-mask/image-1.jpg",
@@ -810,9 +813,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 165.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 790,
+        sellingPrice: 690,
+        discountPercentage: 12.66,
       },
       media: {
         thumbnail: "/products/health-beauty/lanbena-blackhead-remover-mask/image-1.jpg",
@@ -858,9 +861,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 165.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 790,
+        sellingPrice: 690,
+        discountPercentage: 12.66,
       },
       media: {
         thumbnail: "/products/health-beauty/silicone-body-scrubber-belt/image-1.jpg",
@@ -907,9 +910,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 825.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1690,
+        sellingPrice: 1490,
+        discountPercentage: 11.83,
       },
       media: {
         thumbnail: "/products/health-beauty/chamomile-whitening-sunscreen-spray/image-1.jpg",
@@ -948,9 +951,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 1870.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 3490,
+        sellingPrice: 2990,
+        discountPercentage: 14.33,
       },
       media: {
         thumbnail: "/products/health-beauty/dr-althea-345-relief-cream-50ml/image-1.jpg",
@@ -987,9 +990,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 605.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1390,
+        sellingPrice: 1190,
+        discountPercentage: 14.39,
       },
       media: {
         thumbnail: "/products/health-beauty/face-shop-rice-water-bright-cleanser-50ml/image-1.jpg",
@@ -1027,9 +1030,9 @@ export const products: VerifiedProductRecord[] = [
       pricing: {
         currency: "BDT",
         wholesalePrice: 935.0,
-        regularPrice: null,
-        sellingPrice: null,
-        discountPercentage: null,
+        regularPrice: 1990,
+        sellingPrice: 1690,
+        discountPercentage: 15.08,
       },
       media: {
         thumbnail: "/products/health-beauty/face-shop-rice-water-bright-cleanser-100ml/image-1.jpg",

@@ -125,3 +125,14 @@ export interface VerifiedProductRecord {
   product: Product;
   source: ProductSourceProvenance;
 }
+
+/**
+ * `Product` with `pricing.wholesalePrice` removed. Any Client Component
+ * boundary that needs product data must receive this shape instead of the
+ * full `Product` — a Client Component's props (and the source of any data
+ * module it imports directly) are bundled into the JS sent to the browser,
+ * so passing the real `Product` type across that boundary ships Renvura's
+ * supplier cost to every visitor. See `toPublicProduct` in
+ * `src/services/products.ts`.
+ */
+export type PublicProduct = Omit<Product, "pricing"> & { pricing: Omit<ProductPricing, "wholesalePrice"> };

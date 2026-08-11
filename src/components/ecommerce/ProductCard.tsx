@@ -4,12 +4,13 @@ import Link from "next/link";
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { WishlistToggleButton } from "@/components/wishlist/WishlistToggleButton";
 import { getCategoryBySlug } from "@/services/products";
-import type { Product } from "@/types/product";
+import type { PublicProduct } from "@/types/product";
 import { SaleBadge, StockBadge } from "./Badges";
 import { Price } from "./Price";
 
 interface ProductCardProps {
-  product: Product;
+  /** `PublicProduct` (never the full `Product`) — see its doc comment; a real `Product` is still accepted since it's structurally a superset. */
+  product: PublicProduct;
   className?: string;
 }
 
