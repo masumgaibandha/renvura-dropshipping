@@ -22,7 +22,7 @@ export function MobileFilterDrawer({ children }: MobileFilterDrawerProps) {
 
   return (
     <Drawer.Root state={state}>
-      <Drawer.Trigger className="inline-flex h-10 items-center gap-2 rounded-full border border-border bg-surface px-4 text-small font-medium text-foreground transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
+      <Drawer.Trigger className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-xs font-medium text-foreground transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">
         <IconGrid className="size-4" />
         Filters
       </Drawer.Trigger>

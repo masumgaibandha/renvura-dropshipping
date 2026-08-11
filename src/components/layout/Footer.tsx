@@ -16,10 +16,10 @@ function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) 
   return (
     <div>
       <h3 className="text-label text-white/90 uppercase">{title}</h3>
-      <ul className="mt-4 space-y-2.5">
+      <ul className="mt-2.5 space-y-1.5 md:mt-4 md:space-y-2.5">
         {links.map((link) => (
           <li key={link.label}>
-            <Link href={link.href} className="text-small text-white/70 transition-colors hover:text-white">
+            <Link href={link.href} className="text-xs text-white/70 transition-colors hover:text-white md:text-small">
               {link.label}
             </Link>
           </li>
@@ -79,12 +79,12 @@ export function Footer() {
   return (
     <footer className="bg-ink text-white">
       <Container>
-        <div className="grid grid-cols-2 gap-x-8 gap-y-10 py-12 sm:py-16 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-6 py-6 md:grid-cols-4 md:gap-x-8 md:gap-y-10 md:py-16">
           <div className="col-span-2 md:col-span-4 lg:col-span-1">
             <Image src={brand.assets.logo.dark} alt={brand.name} width={150} height={45} className="h-10 w-auto" />
-            <p className="mt-4 max-w-xs text-small text-white/70">{brand.description}</p>
+            <p className="mt-3 max-w-xs text-xs text-white/70 md:mt-4 md:text-small">{brand.description}</p>
             {socialLinks.length > 0 && (
-              <div className="mt-4 flex items-center gap-3">
+              <div className="mt-3 flex items-center gap-3 md:mt-4">
                 {socialLinks.map(({ key, href, Icon, label }) => (
                   <a
                     key={key}
@@ -104,7 +104,7 @@ export function Footer() {
 
           <div>
             <h3 className="text-label text-white/90 uppercase">Get in touch</h3>
-            <ul className="mt-4 space-y-2.5 text-small text-white/70">
+            <ul className="mt-2.5 space-y-1.5 text-xs text-white/70 md:mt-4 md:space-y-2.5 md:text-small">
               {contactItems.length > 0 ? (
                 contactItems.map((item) => (
                   <li key={item.href}>
@@ -124,26 +124,26 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/15 py-8">
+        <div className="border-t border-white/15 py-5 md:py-8">
           <h3 className="text-h3">Stay in the loop</h3>
-          <p className="mt-1 mb-4 text-small text-white/70">New drops, offers, and stories — once a month.</p>
+          <p className="mt-1 mb-3 text-xs text-white/70 md:mb-4 md:text-small">New drops, offers, and stories — once a month.</p>
           <NewsletterSignup />
         </div>
 
-        <div className="border-t border-white/15 py-6">
+        <div className="border-t border-white/15 py-4 md:py-6">
           <h3 className="text-label text-white/90 uppercase">We accept</h3>
-          <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-small text-white/70">
+          <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-white/70 md:mt-3 md:gap-x-6 md:gap-y-2 md:text-small">
             {paymentMethods.map((method) => (
               <li key={method}>{method}</li>
             ))}
           </ul>
-          <p className="mt-3 text-xs text-white/75">
+          <p className="mt-2 text-xs text-white/75 md:mt-3">
             bKash, Nagad, and Rocket payments are currently received and verified manually — there is no automated
             payment gateway yet.
           </p>
         </div>
 
-        <div className="flex flex-col items-center gap-2 border-t border-white/15 py-6 text-xs text-white/75 sm:flex-row sm:justify-center">
+        <div className="flex flex-col items-center gap-2 border-t border-white/15 py-4 text-xs text-white/75 sm:flex-row sm:justify-center md:py-6">
           <span>
             © {year} {brand.name}. All rights reserved.
           </span>

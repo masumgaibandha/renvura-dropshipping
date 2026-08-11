@@ -34,7 +34,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       : null;
 
   return (
-    <article className={`group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card ${className ?? ""}`}>
+    <article className={`group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card md:rounded-2xl ${className ?? ""}`}>
       <div className="relative aspect-square bg-surface-soft">
         {image ? (
           <Link href={productHref} tabIndex={-1} aria-hidden="true" className="block size-full">
@@ -56,19 +56,19 @@ export function ProductCard({ product, className }: ProductCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5 p-3">
-        {categoryLabel && <p className="text-label text-foreground/70 uppercase">{categoryLabel}</p>}
+      <div className="flex flex-1 flex-col gap-1 p-2 md:gap-1.5 md:p-3">
+        {categoryLabel && <p className="hidden text-label text-foreground/70 uppercase md:block">{categoryLabel}</p>}
 
-        <h3 className="text-small line-clamp-2 min-h-10 font-medium">
+        <h3 className="line-clamp-2 text-xs leading-snug font-medium md:min-h-10 md:text-small md:leading-normal">
           <Link href={productHref} className="hover:text-accent">
             {product.title}
           </Link>
         </h3>
 
-        <div className="mt-auto flex flex-col gap-2 pt-1">
-          <Price sellingPrice={pricing.sellingPrice} regularPrice={pricing.regularPrice} showDiscountBadge={false} />
+        <div className="mt-auto flex flex-col gap-1 pt-0.5 md:gap-2 md:pt-1">
+          <Price sellingPrice={pricing.sellingPrice} regularPrice={pricing.regularPrice} size="sm" showDiscountBadge={false} />
 
-          <Button variant="primary" size="sm" fullWidth isDisabled={!canPurchase} aria-label={`Add ${product.title} to cart`}>
+          <Button variant="primary" size="sm" fullWidth isDisabled={!canPurchase} className="text-xs md:text-small" aria-label={`Add ${product.title} to cart`}>
             Add to Cart
           </Button>
         </div>

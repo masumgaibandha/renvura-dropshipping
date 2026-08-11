@@ -93,22 +93,22 @@ export async function ProductListingPage({ categorySlug, title, description, sea
 
   return (
     <Container>
-      <Breadcrumbs items={breadcrumbItems} className="mb-4" />
+      <Breadcrumbs items={breadcrumbItems} className="mb-2 md:mb-4" />
 
       <h1 className="text-h1 text-foreground">{title}</h1>
-      <p className="mt-2 max-w-2xl text-body text-foreground/70">{description}</p>
-      <p className="mt-3 text-small text-foreground/70">
+      <p className="mt-1 max-w-2xl text-body text-foreground/70 md:mt-2">{description}</p>
+      <p className="mt-1.5 text-small text-foreground/70 md:mt-3">
         {listing.total} {listing.total === 1 ? "product" : "products"}
       </p>
 
-      <div className="mt-6 flex items-center justify-between gap-4 border-y border-border py-3">
+      <div className="mt-4 flex items-center justify-between gap-4 border-y border-border py-2 md:mt-6 md:py-3">
         <div className="hidden md:flex">{filterControls}</div>
         <div className="md:hidden">
           <MobileFilterDrawer>{filterControls}</MobileFilterDrawer>
         </div>
       </div>
 
-      <div className="mt-8">
+      <div className="mt-4 md:mt-8">
         {listing.products.length > 0 ? (
           <ProductGrid products={listing.products} />
         ) : (
@@ -135,13 +135,13 @@ export async function ProductListingPage({ categorySlug, title, description, sea
       </div>
 
       {listing.totalPages > 1 && (
-        <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-2">
+        <nav aria-label="Pagination" className="mt-4 flex items-center justify-center gap-2 md:mt-10">
           {Array.from({ length: listing.totalPages }, (_, index) => index + 1).map((pageNumber) => (
             <Link
               key={pageNumber}
               href={pageHref(pageNumber)}
               aria-current={pageNumber === listing.page ? "page" : undefined}
-              className={`inline-flex size-10 items-center justify-center rounded-full text-small font-medium transition-colors ${
+              className={`inline-flex size-9 items-center justify-center rounded-full text-small font-medium transition-colors md:size-10 ${
                 pageNumber === listing.page ? "bg-accent text-white" : "border border-border bg-surface text-foreground hover:border-accent"
               }`}
             >

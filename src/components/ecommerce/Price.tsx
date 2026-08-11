@@ -27,7 +27,7 @@ const sellingPriceSize = {
  */
 export function Price({ sellingPrice, regularPrice, size = "md", showDiscountBadge = true, className }: PriceProps) {
   if (sellingPrice === null) {
-    return <p className={clsx("text-small text-foreground/70", className)}>Price unavailable</p>;
+    return <p className={clsx("text-xs text-foreground/70 md:text-small", className)}>Price unavailable</p>;
   }
 
   const hasHigherRegularPrice = typeof regularPrice === "number" && regularPrice > sellingPrice;
