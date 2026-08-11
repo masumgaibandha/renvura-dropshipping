@@ -5,9 +5,10 @@ Guidance for Claude Code (and any future session/agent) working in this reposito
 ## What Renvura is
 
 Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phase 1
-(foundation), Phase 2 (product data model), and Phase 3 (global storefront design system) are
-complete. The reusable UI (header, footer, product cards, price/badges) exists, but no actual
-pages (homepage, catalog, product detail, cart, checkout, admin) are built yet.
+(foundation), Phase 2 (product data model), and Phase 3 (global storefront design system,
+including a redesign pass that also built the real homepage — see below) are complete. The
+reusable UI (header, footer, product cards, price/badges) and the homepage exist; catalog/category
+listing, product detail, cart, checkout, and admin pages are not built yet.
 
 **Business model:**
 - A supplier provides products and wholesale pricing (source data currently captured as
@@ -51,11 +52,14 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - Import alias `@/*` maps to `src/*`.
 - Folder layout (see `docs/ARCHITECTURE.md` for the full rationale):
   ```
-  src/app/                 routes (App Router); ui-preview/ is TEMPORARY — see below
+  src/app/                 routes (App Router); page.tsx is the real homepage; ui-preview/ is
+                             TEMPORARY — see below
   src/components/ui/       icons.tsx, IconLinkButton.tsx — small generic primitives
-  src/components/layout/   Container, Section, AnnouncementBar, Header, Footer, StoreShell,
-                             NavLinks, MobileNav, providers
+  src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
+                             NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
   src/components/ecommerce/ ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
+  src/components/home/      Homepage-only composition: HeroBanner, CategoryTabs, ProductGrid,
+                             FeaturedProductsRow, BrandStory — not meant for reuse elsewhere
   src/config/               brand.ts, navigation.ts
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
@@ -82,9 +86,12 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   screenshots. Screenshots are the source of truth for product data (title, price, SKU, category,
   description, specs, variants). **Never invent missing product information** — if a field isn't
   clearly visible in the source images, use `null`/`undefined` rather than guessing.
-- `resources/reference-theme.png` is a visual/layout reference only (a jewelry site). Adapt its
-  design language (whitespace, hierarchy, editorial sections, premium feel) — do not copy it
-  literally, and do not carry over jewelry-specific content or copy.
+- `resources/reference-theme.png` and `resources/reference-theme.pdf` are the **authoritative
+  layout blueprint** — a "TimTom"-style e-commerce homepage. Reproduce its structure closely
+  (proportions, header/nav structure, hero sizing, grid density, card anatomy, footer structure —
+  see `docs/DESIGN-SYSTEM.md` §2/§9), not just "inspired by." Its own content, copy, and
+  kids-brand illustration style do not carry over — only structure, and the approved storefront
+  palette (`docs/DESIGN-SYSTEM.md` §3) replaces its color treatment.
 - The verified product catalog lives in `src/data/products.ts` (21 products extracted from
   `resources/products/` — see `docs/PRODUCT-DATA.md` for the full extraction summary, field
   coverage, and known source-data issues). Every entry carries a `source` (`ProductSourceProvenance`
@@ -106,15 +113,18 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   `src/config/brand.ts` (`brand.assets.*`), not hardcoded paths, so there's one place to update.
 - Pick the light/dark variant based on the background it sits on; never stretch or distort;
   preserve proportions. The logo PNGs are opaque lockups (a solid navy/cream rectangle is baked
-  into the file), so this isn't just aesthetic — `logo-dark.png` only blends seamlessly on a navy
-  surface. Concretely: `Header` (light) uses `logo-light.png`; `Footer` (navy by design) uses
-  `logo-dark.png`.
+  into the file). Concretely: `Header` (light) uses `logo-light.png`; `Footer` (dark by design)
+  uses `logo-dark.png` — the footer's dark surface is no longer exactly `brand-navy` (see below),
+  so the blend is close but not bit-for-bit exact; see `docs/DESIGN-SYSTEM.md` §4 for the tradeoff.
 - Derived brand colors (sampled directly from the asset pixels, not guessed):
-  navy `#11253C`, cream `#F7F1E5`, gold `#CDAF80`. Don't overuse gold or navy — the interface
-  should read as clean and commerce-focused, not jewelry/luxury pastiche. Concretely: navy is the
-  primary accent (buttons, links, focus rings) in light mode; gold takes over as the accent only
-  in dark mode (navy-on-navy would be invisible) and otherwise stays restrained to footer headings,
-  small icons, and dividers — never a fill/background color. See `docs/DESIGN-SYSTEM.md` §3.
+  navy `#11253C`, cream `#F7F1E5`, gold `#CDAF80`. **These are secondary brand accents only** —
+  the logo lockups, plus exactly one restrained touch each (footer divider dot, announcement bar
+  truck icon). The primary interactive/surface palette is the approved storefront palette (indigo
+  `#5046E5`/`#4338CA` for buttons, links, and focus rings; slate neutrals for
+  background/foreground/border; amber `#F59E0B` for sale/discount badges; near-black
+  `#101727`/`#1C2333` for dark surfaces like the footer and announcement bar). Don't overuse gold
+  or navy — the interface should read as clean and commerce-focused, not jewelry/luxury pastiche.
+  See `docs/DESIGN-SYSTEM.md` §3 for the full token table.
 
 ## UI / storefront component rules
 
@@ -137,8 +147,9 @@ Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/
 light backgrounds, `text-brand-cream/70`+ on the navy footer) — verified against WCAG AA
 (≈5.8:1 and ≈7.4:1 respectively). Lower values were tried during Phase 3 and failed contrast
 checks; don't reintroduce `/40`–`/60` for real (non-disabled) content. The one exception is
-genuinely inactive UI (e.g. the disabled "Offers" nav item) — WCAG 1.4.3 exempts inactive
-component text from contrast requirements, and looking de-emphasized is the intent there.
+genuinely inactive UI (`NavLinks.tsx` can render a `href: null` nav item as an inert "Soon" pill,
+though no current nav item uses that path) — WCAG 1.4.3 exempts inactive component text from
+contrast requirements, and looking de-emphasized is the intent there.
 
 ## Bangladesh localization
 
@@ -165,10 +176,13 @@ phase — just don't design yourself into a corner that makes it hard later.
 
 ## Current status / what NOT to build yet
 
-Phases 1 (Foundation), 2 (Product data model), and 3 (Global storefront design system) are done —
-see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md`. The reusable
-UI shell and components exist and are wired into every route, but do not build the actual homepage
-sections, product/category listing pages, product detail pages, cart, checkout, auth, or admin
-dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up real
-search/cart logic, or create fake products/reviews/prices. Confirm scope with the user before
-starting a new phase.
+Phases 1 (Foundation), 2 (Product data model), and 3 (Global storefront design system, including a
+redesign pass that pulled Phase 4's homepage forward into the same pass — see
+`docs/PRODUCT-ROADMAP.md`) are done — see also `docs/PRODUCT-DATA.md` and `docs/DESIGN-SYSTEM.md`.
+The reusable UI shell, components, and the real homepage (`src/app/page.tsx`) exist and are wired
+in, but do not build product/category listing pages, product detail pages, cart, checkout, auth,
+or admin dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up
+real search/cart/newsletter logic, or create fake products/reviews/prices — every product still has
+`sellingPrice: null`, so "Price unavailable" and a disabled Add to Cart button are the correct,
+expected state everywhere, including on the homepage, until Phase 2's pricing gap is resolved.
+Confirm scope with the user before starting a new phase.

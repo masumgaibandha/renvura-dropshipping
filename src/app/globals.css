@@ -13,38 +13,50 @@
  */
 :root {
   --background: #ffffff;
-  --foreground: #11253c;
+  --foreground: #111827;
 
-  /* Renvura brand primitives, sampled from assets/ (see docs/DESIGN-SYSTEM.md) */
+  /* Renvura brand primitives, sampled from assets/ (see docs/DESIGN-SYSTEM.md). Secondary
+   * accents only as of the Phase 3 correction — logo lockups and small restrained touches, not
+   * the primary interactive/surface palette below. */
   --brand-navy: #11253c;
   --brand-cream: #f7f1e5;
   --brand-gold: #cdaf80;
+  /* Brand-tinted muted text — used narrowly in the Brand Story section only; everywhere else the
+   * opacity-based text-foreground/70 convention is the muted-text mechanism (see CLAUDE.md). */
+  --secondary-text: #4a5a6e;
 
-  /* Primary interactive color: navy, per brand direction. */
-  --accent: var(--brand-navy);
-  --accent-foreground: var(--brand-cream);
+  /* Approved storefront palette (Phase 3 correction) — the primary interactive/surface system. */
+  --storefront-ink: #101727;
+  --storefront-ink-secondary: #1c2333;
 
-  /* Subtle navy-tinted hairline border instead of HeroUI's neutral gray default. */
-  --border: color-mix(in oklab, var(--brand-navy) 12%, white);
+  /* Primary interactive color: indigo, per the approved storefront palette. */
+  --accent: #5046e5;
+  --accent-foreground: #ffffff;
+  --accent-hover: #4338ca;
+
+  --background-secondary: #f8fafc;
+  --border: #e5e7eb;
+
+  /* Sale/discount accent — overrides HeroUI's default warning amber with the approved hex. */
+  --warning: #f59e0b;
 
   /* Soft, premium card shadow, exposed as the `shadow-card` utility below. */
-  --card-shadow: 0 1px 2px rgba(17, 37, 60, 0.04), 0 12px 24px -16px rgba(17, 37, 60, 0.18);
+  --card-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 24px -16px rgba(17, 24, 39, 0.18);
 }
 
 .dark {
-  --background: var(--brand-navy);
-  --foreground: var(--brand-cream);
+  --background: var(--storefront-ink);
+  --foreground: #f8fafc;
 
-  /*
-   * Navy accent buttons would be invisible on a navy background, so dark
-   * mode swaps the interactive color to gold — still restrained (it's only
-   * the accent, not a fill color) and matches the gold-on-navy treatment
-   * already used in assets/appicon-dark.png and assets/logo-dark.png.
-   */
-  --accent: var(--brand-gold);
-  --accent-foreground: var(--brand-navy);
+  --background-secondary: var(--storefront-ink-secondary);
 
-  --border: color-mix(in oklab, var(--brand-cream) 16%, transparent);
+  /* Indigo has enough contrast on the new dark ink background, so unlike the old navy/gold
+   * scheme, the accent doesn't need to swap between themes. */
+  --accent: #5046e5;
+  --accent-foreground: #ffffff;
+  --accent-hover: #4338ca;
+
+  --border: color-mix(in oklab, #f8fafc 16%, transparent);
 }
 
 @theme inline {
@@ -53,6 +65,9 @@
   --color-brand-navy: var(--brand-navy);
   --color-brand-cream: var(--brand-cream);
   --color-brand-gold: var(--brand-gold);
+  --color-ink: var(--storefront-ink);
+  --color-ink-secondary: var(--storefront-ink-secondary);
+  --color-secondary-text: var(--secondary-text);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

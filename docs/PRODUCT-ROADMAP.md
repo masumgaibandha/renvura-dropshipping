@@ -1,7 +1,9 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Phases 1–3 are complete.** Do not start a later
-phase without explicit confirmation — each phase should be scoped and agreed before work begins.
+This roadmap defines the intended build order. **Phases 1–3 are complete, and Phase 4 (Homepage)
+was pulled forward and completed inside Phase 3's redesign pass** (see the Phase 3 entry below for
+why). Do not start a later phase without explicit confirmation — each phase should be scoped and
+agreed before work begins.
 
 ## Phase 1 — Foundation ✅
 Project initialization, Next.js/TypeScript/Tailwind/HeroUI setup, folder structure, brand
@@ -23,27 +25,53 @@ exist but nothing calls `mongoose.connect()` yet; data access reads `src/data/pr
 instead. `regularPrice`/`sellingPrice` are unset and every product's `status` is `"draft"` — the
 business hasn't reviewed pricing or approved products for sale.
 
-## Phase 3 — Global storefront design system ✅
-Design tokens (colors, typography, shadows, container/section rhythm) in `src/app/globals.css`,
-rethemeing HeroUI v3 via its CSS custom-property system. Built and wired into every route via
-`StoreShell`: `AnnouncementBar`, sticky `Header` with desktop nav + inline search, `MobileNav`
-drawer (hamburger + search trigger sharing one overlay state), `Footer`. Built the reusable
-storefront primitives Phase 4+ will consume: `ProductCard`, `Price`, `Badges`
-(In Stock/Out of Stock/Sale — no fabricated "Best Seller"/"Trending" states), `SearchBar` (UI only,
-no search logic yet). Added a temporary `/ui-preview` route (noindex, on-page notice) to verify
-all of this against real Phase 2 product data — see `docs/DESIGN-SYSTEM.md` for full rules and
-`docs/PRODUCT-ROADMAP.md` note below.
+## Phase 3 — Global storefront design system ✅ (three passes)
 
-**Not done in Phase 3** (deferred, per explicit scope): no real search, cart, checkout, auth,
-admin, or MongoDB connection. Add to Cart / Buy Now are wired to real state (disabled when
-unpriced/out of stock) but don't add anything anywhere yet. `/ui-preview` must be removed or
-gated before production launch.
+**Pass 1 (initial build):** design tokens (colors, typography, shadows, container/section rhythm)
+in `src/app/globals.css`, rethemeing HeroUI v3 via its CSS custom-property system. Built and wired
+into every route via `StoreShell`: `AnnouncementBar`, sticky `Header` with desktop nav + inline
+search, `MobileNav` drawer, `Footer`. Built the reusable storefront primitives: `ProductCard`,
+`Price`, `Badges` (In Stock/Out of Stock/Sale — no fabricated "Best Seller"/"Trending" states),
+`SearchBar` (UI only). Added a temporary `/ui-preview` route (noindex, on-page notice) to verify
+all of this against real Phase 2 product data. Visual direction at this point: a navy/cream/gold
+palette against an original (later-replaced) jewelry-site layout reference.
 
-## Phase 4 — Homepage
+**Pass 2 (correction):** the user replaced `resources/reference-theme.png`/`.pdf` with a new
+authoritative reference (a "TimTom"-style e-commerce homepage) and approved a new primary
+storefront palette (indigo/slate/amber). This pass retinted the existing components' tokens —
+palette only, no layout changes yet.
+
+**Pass 3 (redesign):** the user rejected the palette-only correction as insufficient and required
+the reference files to be treated as a literal **layout blueprint** — proportions, header/nav
+structure, hero, grid density, card anatomy, footer structure reproduced closely, not just colors.
+This pass rebuilt `Header`/`AnnouncementBar`/`Footer`/`ProductCard`, added `SecondaryNav` and
+`NewsletterSignup`, and **explicitly pulled Phase 4 (Homepage) forward** into this same pass — see
+below. See `docs/DESIGN-SYSTEM.md` §§2–9 for the full current state (this file doesn't restate
+component-level detail that lives there).
+
+**Not done in Phase 3** (deferred, per explicit scope, still true after all three passes): no real
+search, cart, checkout, auth, admin, or MongoDB connection. Add to Cart is wired to real state
+(disabled when unpriced/out of stock) but doesn't add anything anywhere yet. `/ui-preview` must be
+removed or gated before production launch.
+
+## Phase 4 — Homepage ✅ (completed inside Phase 3's redesign pass, out of the normal order)
+
+Built using real Phase 2 product data and the Phase 3 primitives, following the reference's actual
+section set rather than the originally-planned list below — see `docs/DESIGN-SYSTEM.md` §9 for
+what was actually built (`HeroBanner`, Popular Products with category tabs, Featured Picks, Our
+Story) and why some of the originally-planned sections (Best Sellers, Trending Products, Customer
+Reviews) were renamed or dropped: no sales/ranking/review data exists in the Phase 2 catalog to
+honestly support those claims.
+
+<details>
+<summary>Original Phase 4 scope as planned before the redesign (kept for history)</summary>
+
 Hero, Featured Products, Best Sellers, Shop by Category, Trending Products, Problem-Solving
 Gadgets, Promotional Banner, Health & Beauty Feature, New Arrivals, Why Shop With Renvura,
 Customer Reviews, Newsletter — built against real product data from Phase 2 using the Phase 3
 `ProductCard`/`Price`/`Section`/`Container` primitives, not placeholders or new one-off styling.
+
+</details>
 
 ## Phase 5 — Categories / product listing
 Category and subcategory pages, product grids, filters, sorting, search.

@@ -1,9 +1,17 @@
 # Design System
 
-Status: **Phase 3 — Global storefront design system implemented.** Sections 1–2 below are the
-original Phase 1 visual-research conclusions (kept as historical record — still accurate).
-Sections 3 onward now describe what's actually built, not just planned. See
-`docs/ARCHITECTURE.md` for where these components live in the folder structure.
+Status: **Phase 3 — Global storefront design system implemented; Phase 3 correction applied;
+Phase 3 redesign applied (homepage built).** The original Phase 1 visual reference (a jewelry
+site) was replaced by the user with a new authoritative reference
+(`resources/reference-theme.png`/`.pdf`, a "TimTom"-style e-commerce homepage). Two passes
+followed: a **correction** pass (palette only — see §3) and a **redesign** pass, where the user
+explicitly rejected "inspired by" as insufficient and required
+`resources/reference-theme.png`/`.pdf` to be treated as the literal **layout blueprint** —
+proportions, header/nav structure, hero, grid density, card anatomy, and footer structure
+reproduced closely, not just the color palette. That redesign pass also built the real homepage
+(`src/app/page.tsx`), previously deferred to Phase 4 — see `docs/PRODUCT-ROADMAP.md` for how that
+interacts with the phase order. See `docs/ARCHITECTURE.md` for where these components live in the
+folder structure.
 
 ## 1. Brand assets (`assets/`)
 
@@ -35,41 +43,64 @@ proposed direction, not something read off the files.
   interface should stay commerce-focused and clean rather than leaning into gold/navy "luxury"
   styling just because the logo has it.
 
-## 2. Layout reference (`resources/reference-theme.png`)
+**Phase 3 correction:** as of the approved storefront palette (§3), navy/cream/gold are demoted
+further — they're **secondary brand accents only**, not the primary interactive/surface palette.
+The logo lockups (baked-in PNGs, unchanged) are the main place they still appear; elsewhere each
+gets exactly one restrained touch (e.g. the footer divider dot, the announcement bar's truck icon)
+rather than driving buttons, links, or section backgrounds the way they did before this
+correction.
 
-A jewelry e-commerce homepage (brand "LUSION", Valentine's-themed at time of capture). This is a
-**layout and pacing reference only** — none of its content, copy, or jewelry-specific imagery
-carries over.
+## 2. Layout reference (`resources/reference-theme.png` / `.pdf`)
+
+**Phase 3 correction:** this reference was intentionally replaced by the user; it no longer shows
+the original jewelry/"LUSION" site described in earlier drafts of this document. The current,
+authoritative reference is a "TimTom"-style e-commerce homepage (a Bangladeshi baby/kids
+clothing-and-toys shop at time of capture). None of its kids-brand content, copy, illustration
+style, or purple/indigo-as-childish framing carries over; what carries over is the *structural
+pattern* and the *approved storefront palette* (§3), which is a deliberate departure from that
+site's look toward a cleaner, commerce-focused indigo/slate system.
+
+**Phase 3 redesign:** these two files are the literal **layout blueprint**, not just a mood
+reference — proportions, section order, header/nav structure, hero sizing, grid density, card
+anatomy, and footer structure are reproduced closely enough that the built storefront and the
+reference read as the same design-system family side by side. Section 4 documents exactly how each
+piece maps to a component below.
 
 Observed structural pattern, top to bottom:
-1. Slim utility bar + primary nav, generous horizontal padding, minimal chrome.
-2. Full-bleed hero with large lifestyle photography, a short eyebrow label, a large serif/display
-   headline, one primary CTA — lots of surrounding whitespace, text left-aligned over a soft
-   pastel background rather than directly on the photo.
-3. A short, centered editorial/brand-statement block (quote-like, small type, lots of vertical
-   breathing room) used as a pacing break between commercial sections.
-4. Product sections follow a consistent rhythm: a small section label (often with an icon), then
-   a 3–4 column product grid with generous gutters, consistent card proportions, price shown
-   simply below the product image.
-5. Full-bleed promotional banners (image + solid-color text panel, or duotone photo with overlaid
-   headline) are interleaved between product grids roughly every 2–3 sections, not stacked
-   back-to-back — this is what keeps a long homepage from feeling monotonous.
-6. Large duo-image editorial blocks (two large photos side by side, minimal text) are used for
-   category storytelling ("Men's Jewelry" / "Women's Jewelry" in the reference) — this maps well
-   to Renvura's two initial categories.
-7. Footer is dense but organized into clear columns, with payment-method icons — directly
-   relevant to Bangladesh (bKash/Nagad-style trust marks will belong here later).
+1. Slim utility bar (contact/WhatsApp number, order tracking, locale switcher) in the primary
+   accent color, directly above a white sticky header with logo, a "Browse All Categories"
+   dropdown trigger, primary nav, search field, and cart/wishlist/account icons.
+2. Full-bleed hero banner: large illustrated/lifestyle graphic, a short headline + subhead, no
+   competing CTA clutter — kept simple and image-led.
+3. "Popular Products" section: a category filter tab row, then a dense grid (4–5 columns desktop)
+   of product cards. Each card shows image, category label, title, price with struck-through
+   original price and a discount-percentage tag shown directly on the price line (not just as an
+   image overlay), and an **inline "Add to Cart" button on the card itself** — the CTA is part of
+   the grid, not a separate step.
+4. "Daily Best Sells": a horizontally-scrollable carousel mixing one promotional banner tile with
+   several product tiles, "Only X left" urgency tags where genuinely applicable, and an
+   out-of-stock state shown as a disabled button rather than removing the card.
+5. A brand-story block: small "Our Story" eyebrow, a short headline, 2–3 short paragraphs, and a
+   supporting graphic/device mockup — a single pacing break between the product grid and the
+   footer, not repeated multiple times.
+6. Footer is dense, dark-background, organized into clear columns (Shop / Information / Get in
+   touch), a newsletter signup row, and payment-method icons — directly relevant to Bangladesh
+   (bKash/Nagad-style trust marks belong here, as already implemented).
 
 **What to adapt for Renvura (electronics + health & beauty, Bangladesh, conversion-focused):**
-- Keep: generous whitespace, large hero imagery, editorial pacing breaks between grids, simple
-  price-under-image product cards, duo-image category storytelling for the two initial
-  categories.
-- Change: swap the soft pastel/blush palette for the neutral cream/navy/gold direction above;
-  swap romantic/gift-occasion framing for problem-solving/utility framing (the brief calls out a
-  "Problem-Solving Gadgets" section); swap jewelry macro photography for clean product-on-white or
-  lifestyle-in-use photography; trust and delivery information (COD, Dhaka vs. outside-Dhaka,
-  warranty) need more visual weight than a jewelry site typically gives them, since that's a
-  bigger purchase-decision factor for BD gadget/beauty shoppers than for jewelry.
+- Keep: the utility-bar contact/trust signal above the header (maps directly to a BD
+  phone/WhatsApp-ordering expectation), the dense product grid with inline price + discount tag +
+  Add to Cart (reduces clicks to purchase, which matters more for gadget/beauty impulse buys than
+  for jewelry), the best-sellers carousel pattern, and the dark, column-organized footer.
+- Change: swap the kids-brand illustrated hero and cutesy copy ("Your Kid Loves Us!") for
+  problem-solving/utility framing appropriate to electronics/health & beauty (the brief calls out
+  a "Problem-Solving Gadgets" section); swap the reference's purple/indigo-as-childish-brand-color
+  usage for the approved storefront palette's more restrained, commerce-focused application (§3);
+  keep Renvura navy/cream/gold as secondary accents (logo, small touches) rather than adopting the
+  reference's own branding. Trust and delivery information (COD, Dhaka vs. outside-Dhaka,
+  warranty) should carry more visual weight in the utility bar/header than the reference gives
+  its own contact info, since that's a bigger purchase-decision factor for BD gadget/beauty
+  shoppers.
 
 ## 3. Design tokens (implemented — `src/app/globals.css`)
 
@@ -78,20 +109,28 @@ HeroUI v3 themes entirely through CSS custom properties (see
 wrapping every HeroUI component, `globals.css` overrides the semantic tokens HeroUI itself reads —
 every HeroUI component (Button, Chip, SearchField, Drawer, focus rings, …) is rethemed for free.
 
-**Color tokens:**
+**Color tokens (Phase 3 correction — approved storefront palette, supersedes the original
+navy-led scheme):**
 
 | Token | Light value | Dark value | Used for |
 |---|---|---|---|
-| `--background` / `--foreground` | white / `brand-navy` | `brand-navy` / `brand-cream` | Page background/text |
-| `--accent` / `--accent-foreground` | `brand-navy` / `brand-cream` | `brand-gold` / `brand-navy` | Primary buttons, links, focus rings — see note below |
-| `--border` | navy-tinted 12% hairline | cream-tinted 16% hairline | Card/input borders |
-| `--brand-navy` / `--brand-cream` / `--brand-gold` | `#11253C` / `#F7F1E5` / `#CDAF80` | (same, primitives don't change) | Brand-locked surfaces (announcement bar, footer) |
+| `--background` | `#FFFFFF` | `--storefront-ink` (`#101727`) | Page background |
+| `--foreground` | `#111827` | `#F8FAFC` | Page text |
+| `--accent` / `--accent-foreground` | `#5046E5` / `#FFFFFF` | same | Primary buttons, links, focus rings |
+| `--accent-hover` | `#4338CA` | same | Button/link hover-active state |
+| `--background-secondary` | `#F8FAFC` | `--storefront-ink-secondary` (`#1C2333`) | Card image wells, hover surfaces, dev-preview panels |
+| `--border` | `#E5E7EB` | cream-tinted 16% hairline | Card/input borders |
+| `--warning` | `#F59E0B` | same | Overridden from HeroUI's default amber to the exact approved hex — used for `SaleBadge` (discount chips), not just literal warning states |
+| `--storefront-ink` / `--storefront-ink-secondary` | `#101727` / `#1C2333` | (same, primitives don't change) | Dark surfaces: Footer, AnnouncementBar (`bg-ink`/`bg-ink-secondary` utilities), dark-mode page background |
+| `--brand-navy` / `--brand-cream` / `--brand-gold` | `#11253C` / `#F7F1E5` / `#CDAF80` | (same, primitives don't change) | **Secondary accents only** — logo lockups, plus exactly one restrained touch each (footer divider dot, announcement bar truck icon) |
+| `--secondary-text` | `#4A5A6E` | (same) | Brand-tinted muted text, used narrowly in `BrandStory`'s body copy only — everywhere else the opacity-based `text-foreground/70` convention is the muted-text mechanism (see CLAUDE.md's contrast rule) |
 
-Dark mode swaps the accent from navy to gold: a navy button would be invisible on a navy
-background, and gold-on-navy is already the exact treatment used in `assets/appicon-dark.png` and
-`assets/logo-dark.png`, so it's a brand-faithful fix rather than an arbitrary one. Gold is still
-only ever the *accent* in dark mode — never a fill color — so "don't overuse gold" holds in both
-themes.
+Unlike the original scheme, the accent does **not** swap between light and dark mode: indigo
+(`#5046E5`) has enough contrast against both the white light-mode background and the new
+`--storefront-ink` dark-mode background, so there's no navy-on-navy-style invisibility problem to
+work around. `SaleBadge` uses `color="warning"` (amber) rather than `color="danger"` (red) so
+discount tags read as promotional rather than as an error/danger state — matching the reference's
+orange discount tags.
 
 **Typography scale** (`--text-display/h1/h2/h3/body/small/price/label`): fluid `clamp()` sizes so
 components don't need per-breakpoint text overrides. One font family throughout (Geist Sans, via
@@ -111,9 +150,9 @@ if a specific hero moment genuinely needs it.
 | `text-price` | 18px → 22px, semibold, tabular-nums | Selling price emphasis |
 | `text-label` | 12px, uppercase, wide tracking | Eyebrows, category labels, badges |
 
-**Shadow**: one `shadow-card` token (soft, navy-tinted, low-opacity) for product cards and similar
-raised surfaces — not a generic Tailwind `shadow-lg`, which reads flatter/greyer against the warm
-cream/navy palette.
+**Shadow**: one `shadow-card` token (soft, foreground-tinted, low-opacity) for product cards and
+similar raised surfaces — not a generic Tailwind `shadow-lg`, which reads flatter/greyer against
+the palette. Retinted from navy to the `#111827` foreground gray in the Phase 3 correction.
 
 **Container & section rhythm**: no CSS tokens for these — `src/components/layout/Container.tsx`
 (`max-w-7xl`, responsive `px-4/6/8` gutters) and `Section.tsx` (`py-10 sm:py-14 lg:py-20`) are the
@@ -128,39 +167,69 @@ Phase 1). That makes the "pick the variant by the background it sits on" rule li
 aesthetic:
 - Header (white/light background) → `logo-light.png` (cream lockup, blends acceptably against a
   near-white header).
-- Footer (navy background, by design — see below) → `logo-dark.png` (navy lockup, blends exactly).
+- Footer (dark background, by design — see below) → `logo-dark.png` (navy lockup). **Known minor
+  nuance from the Phase 3 correction**: the footer background is now `--storefront-ink`
+  (`#101727`), not the exact `brand-navy` (`#11253C`) the logo PNG's background rectangle is baked
+  to — both are dark near-black tones so the mismatch reads as very subtle at normal viewing
+  distance, but it's no longer a bit-for-bit-exact blend the way it was pre-correction. Not worth
+  a workaround unless it's visibly distracting in practice; flagged here rather than silently
+  accepted.
 
 **Header** (`src/components/layout/Header.tsx`): sticky, translucent+blurred white background,
-navy-tinted hairline bottom border. Desktop (`lg:` / 1024px+): full nav row + inline search.
-Below that: hamburger + search-trigger icon that both open one shared mobile drawer (see Mobile
-behavior below). Wishlist/account icons hide below `md:` (768px) to keep the mobile bar from
-crowding; cart stays visible at every size since users expect to reach it from anywhere.
+hairline bottom border. **Phase 3 redesign**: the desktop `<nav>` moved out of `Header` entirely
+(into `SecondaryNav`, below); the search field is now the dominant center element
+(`flex-1 max-w-2xl`, was `md:max-w-xs`), matching the reference's visually-dominant search. Cart
+and Account gained visible text labels next to the icon on desktop (`IconLinkButton` now supports
+icon+label, not just icon-only) — Wishlist stays icon-only, matching the reference's own header.
+Mobile: hamburger + search-trigger icon that both open one shared mobile drawer (see Mobile
+behavior below); cart stays visible at every size.
+
+**SecondaryNav** (`src/components/layout/SecondaryNav.tsx`, new in the Phase 3 redesign): the
+compact bordered row beneath the header — reference layout: a purple "Browse All Categories"
+dropdown (HeroUI `Dropdown`, listing `getAllCategories()` — a real, working menu, not decorative)
+on the left, primary nav (`NavLinks`, reused) on the right. Desktop-only (`hidden lg:block`) —
+mobile nav still lives entirely in the existing `MobileNav` drawer, unchanged.
 
 **Footer** (`Footer.tsx`): the one section besides the announcement bar that's deliberately
-navy/dark — footers conventionally read as "grounding" the page, it's the correct home for the
-dark logo lockup, and it gives gold a legitimate, restrained place to appear (column headings,
-divider dot) without touching the main light storefront. Structure: Brand / Shop / Customer
-Service / Information / Payment, per the brief. Payment methods are listed as plain text (no
-bKash/Nagad/Rocket logo assets exist, and none should be implied to be official brand marks) with
-an explicit note that mobile-wallet payments are processed manually — never implies API/gateway
-integration that doesn't exist. Nothing reads from `brand.contact`/`brand.social` (still
-placeholder "TODO: ..." values) — the footer links to `/contact` etc. instead of inlining an email
-or phone number, so there's nothing to leak once those routes exist.
+dark — footers conventionally read as "grounding" the page, and it's the correct home for the dark
+logo lockup. Background is `bg-ink` (`--storefront-ink`, `#101727`); column headings/body text are
+plain white. Gold is kept to exactly one restrained touch — the divider dot in the copyright row.
+**Phase 3 redesign structure** (matches the reference's column set): Brand (logo, description,
+social icons — each icon gated by `isConfigured(brand.social.x)`, so nothing renders until real
+URLs exist) / Shop (All Products, Categories, New Arrivals — the latter two currently point at the
+same `/shop` scaffold; Phase 5 hasn't built a dedicated categories index or new-arrivals view yet)
+/ Information (Contact Us, About Us, FAQ, Privacy Policy) / Get in touch (real configured
+phone/email only — falls back to a plain "Contact Us" link when none are configured, which is the
+current state). Below the column grid: a newsletter row (`NewsletterSignup.tsx` — same
+"foundation only, form present, `preventDefault`, no fake success state" pattern as `SearchBar`),
+then the payment-methods row (unchanged: plain text, explicit manual-processing note, never implies
+a gateway integration that doesn't exist), then copyright.
 
-**AnnouncementBar** (`AnnouncementBar.tsx`): navy background, cream text, a small gold truck icon
-— the same gold-on-navy pairing as the footer, in miniature. Content is a `message` prop
-(default: "Cash on Delivery Available Nationwide") — never a hardcoded promotion/discount claim.
+**AnnouncementBar** (`AnnouncementBar.tsx`): **Phase 3 redesign**: rebuilt as the reference's
+3-zone utility strip — `bg-accent` (purple, not the dark ink surface), white text. Left: About
+Us/Contact Us. Right: a "Call/WhatsApp to Order Now" link that only renders once
+`brand.contact.phone`/`whatsapp` is configured (currently TODO, so it's correctly absent — not a
+dead link to nowhere), Order Tracking, and a static "৳ BDT" currency label. Mobile collapses to a
+single centered COD trust line. No more `message` prop — the bar is now a fixed structural row, not
+a single editable string.
 
 **ProductCard** (`src/components/ecommerce/ProductCard.tsx`): only renders fields the `Product`
 actually has. Deliberate omissions: no ratings/review counts (no such data exists), no
 "Best Seller"/"Trending" badges (nothing in the data model supports them yet — see
 `src/components/ecommerce/Badges.tsx`, which only implements "In Stock" / "Out of Stock" / a
-computed "Sale −X%"). The card shows the **Out of Stock** badge as an exception overlay; "in
-stock" is the unflagged default rather than a badge on every card, to keep cards from feeling
-noisy. Add to Cart / Buy Now are disabled (not hidden) whenever `pricing.sellingPrice` is `null`
-or the item is out of stock — real business logic (you can't buy something with no price), not a
-throwaway placeholder, and it'll naturally start working once Phase 7/8 wire up real cart/checkout
-and products get real prices.
+computed "Sale −X%" in amber, `color="warning"`, matching the reference's orange discount tags
+rather than reading as an error state). **Phase 3 redesign**: the card anatomy now matches the
+reference's exactly — image, category label, 2-line title, price row, and a **single full-width
+"Add to Cart" button** (the "Buy Now" second button and the wishlist heart overlay from the
+original Phase 3 build were both removed — neither appears in the reference's card, and the
+redesign brief was explicit about card anatomy). Padding tightened for a denser card
+(`p-3`/`gap-1.5`, was `p-4`/`gap-2`) matching the reference's compact grid. Add to Cart is disabled
+(not hidden) whenever `pricing.sellingPrice` is `null` or the item is out of stock — real business
+logic, and it'll naturally start working once Phase 7/8 wire up real cart/checkout and products get
+real prices. **Important known gap**: every current product has `sellingPrice: null`, so every
+real card today shows "Price unavailable" and a disabled button — the reference shows populated
+prices/discount tags on every card; Renvura's cards won't visually match that part until Phase 2's
+pricing gap is resolved. This is expected, not a bug — see docs/PRODUCT-ROADMAP.md.
 
 **Price** (`Price.tsx`): uses the Phase 2 `formatBDT`/`calculateDiscountPercentage` utilities
 directly. Renders "Price unavailable" — never `wholesalePrice` — when `sellingPrice` is `null`;
@@ -180,17 +249,21 @@ and focus return for free — not reimplemented by hand. It contains, in order: 
 the same `SearchBar` used on desktop, vertical `NavLinks`, and wishlist/account/cart icons in the
 footer — so mobile users reach every primary action from one place.
 
-**"Offers" nav item**: has no real destination yet (no promo-page content to show, and none should
-be invented), so `src/config/navigation.ts` marks it `href: null` and `NavLinks.tsx` renders it as
-an inert, non-interactive `<span>` with a small "Soon" pill instead of a dead/fake link. This is
-the one place in the UI that intentionally uses low-contrast text below the normal minimum — WCAG
-1.4.3 explicitly exempts text that's part of an inactive UI component, and looking clearly
-de-emphasized is the point.
+**Inert nav items**: `NavLinks.tsx` can render a `href: null` item as an inert, non-interactive
+`<span>` with a small "Soon" pill instead of a dead/fake link (WCAG 1.4.3 exempts inactive-component
+text from the normal contrast minimum, so the de-emphasized look there is intentional) — the
+mechanism is generic and stays in the component even though no current nav item uses it.
+**Phase 3 redesign**: `mainNavItems` (`src/config/navigation.ts`) was reordered/relabeled to match
+the reference's nav row exactly — `Home, Products (was "Shop"), Electronics & Gadgets, Health &
+Beauty` — which dropped the "Offers" placeholder item from the config; it can come back the same
+way once there's a real destination for it.
 
-**Category nav links** (Electronics & Gadgets, Health & Beauty, Shop) *do* point to real intended
-paths (`/electronics-gadgets`, `/health-beauty`, `/shop`) even though those pages don't exist until
-Phase 5 — that's normal, expected nav scaffolding, not a bug; Next.js doesn't require `<Link>`
-targets to resolve at build time.
+**Category nav links** (Electronics & Gadgets, Health & Beauty, Products) *do* point to real
+intended paths (`/electronics-gadgets`, `/health-beauty`, `/shop`) even though those pages don't
+exist until Phase 5 — that's normal, expected nav scaffolding, not a bug; Next.js doesn't require
+`<Link>` targets to resolve at build time. `NavLinks` now renders in two places: `SecondaryNav`
+(desktop, horizontal) and the mobile drawer (vertical) — same component, same config, per the
+original one-source-of-truth rationale.
 
 ## 6. Accessibility notes specific to this phase
 
@@ -208,20 +281,59 @@ targets to resolve at build time.
 
 ## 7. Temporary route: `/ui-preview`
 
-`src/app/ui-preview/page.tsx` exists **only** to visually verify this design system (typography,
-buttons, badges, Price states, real `ProductCard`s from Phase 2 data, container/section rhythm)
-since the real homepage isn't built until Phase 4. It's marked `robots: { index: false, follow:
+`src/app/ui-preview/page.tsx` exists **only** to visually verify this design system in isolation
+(typography, buttons, badges, Price states, real `ProductCard`s from Phase 2 data, container/
+section rhythm) — useful independently of the now-built homepage (§9) for checking individual
+tokens/components without the full page composition. It's marked `robots: { index: false, follow:
 false }` and carries an on-page notice. **Remove or gate this route before production
 deployment** — it is not, and must never become, part of the public site.
 
 ## 8. UI principles carried forward
 
-- Server Components by default — only 4 files in `src/components/` are Client Components
-  (`SearchBar`, `MobileNav`, `NavLinks`, `providers`), each for a concrete reason (react-aria
-  interactivity, shared overlay state, `usePathname`, theme context).
-- HeroUI v3 primitives (Button, Chip, SearchField, Drawer) retheme via CSS tokens, not forks —
-  customize via `className`/props, never copy-paste HeroUI internals.
+- Server Components by default — Client Components are each for a concrete, stated reason:
+  `SearchBar`/`NewsletterSignup` (real form + `preventDefault`, no backend yet), `MobileNav`
+  (shared overlay state), `NavLinks` (`usePathname`), `providers` (theme context),
+  `CategoryTabs`/`FeaturedProductsRow` (HeroUI `Tabs` state / scroll-ref interactivity — see §9).
+- HeroUI v3 primitives (Button, Chip, SearchField, Drawer, Dropdown, Tabs, TextField/Input) retheme
+  via CSS tokens, not forks — customize via `className`/props, never copy-paste HeroUI internals.
 - Conversion-focused means clear price, clear CTA, clear delivery/COD trust signals near the
   point of decision — not just "looks premium."
 - Accessible by default: rely on HeroUI/React Aria's primitives, don't strip them out for a
   custom look.
+
+## 9. Homepage (`src/app/page.tsx`, Phase 3 redesign)
+
+Built ahead of the normal phase order at the user's explicit direction (previously deferred to
+Phase 4 — see `docs/PRODUCT-ROADMAP.md`). Server Component; fetches `getAllProducts()`/
+`getAllCategories()` once and passes the results down — no client-side fetching. Section order
+matches the reference: `HeroBanner` → Popular Products (`CategoryTabs`, which renders its own
+title + category-tab row + filtered `ProductGrid`, since HeroUI's `Tabs.Root` has to wrap both) →
+centered "View All Products" link (→ `/shop`) → `FeaturedProductsRow` ("Featured Picks" — see
+below for why not "Best Sellers") → `BrandStory` ("Our Story").
+
+New composite components live in `src/components/home/` (distinct from the generic reusable
+`ecommerce/` primitives and `layout/` chrome, since these are homepage-composition-specific, not
+meant for reuse across arbitrary pages):
+
+- **`HeroBanner.tsx`**: rounded, wide-landscape banner (reference proportions) with a real product
+  photo (not a fabricated lifestyle scene) faded into a soft gradient background, left-aligned
+  headline/subtext, CTA to `/shop`. The photo is a **temporary placeholder** pending real hero
+  photography — flagged in a code comment, not a visible on-page watermark, since this is the live
+  homepage.
+- **`CategoryTabs.tsx`**: All / Electronics & Gadgets / Health & Beauty tabs (HeroUI `Tabs`),
+  filtering an in-memory product array — no new data fetching or route change per tab.
+- **`ProductGrid.tsx`**: the shared dense responsive grid
+  (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`, ~5 columns at reference/1440px
+  width) wrapping `ProductCard`s.
+- **`FeaturedProductsRow.tsx`**: horizontally-scrollable strip with prev/next controls (a plain
+  `ref.scrollBy`, not a new dependency), starting with a promotional category tile (real category,
+  e.g. "Health & Beauty Picks" → `/health-beauty`) followed by product cards. Titled **"Featured
+  Picks"**, not "Best Sellers"/"Daily Best Sells" — no sales-ranking data exists in the Phase 2
+  catalog to support a best-seller claim, so the section is named for what it honestly is.
+- **`BrandStory.tsx`**: a 2×2 collage of real product photos (not a fabricated lifestyle scene)
+  beside an "Our Story" eyebrow, heading, gold underline accent, and three short paragraphs using
+  `--secondary-text` for body copy (§3) — deliberately modest, no invented history, customer
+  counts, or market-leadership claims.
+
+`/ui-preview` is unchanged and still useful for isolated component/token verification; the
+homepage does not link to it.

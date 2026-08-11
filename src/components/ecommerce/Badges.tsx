@@ -45,7 +45,7 @@ export function SaleBadge({ discountPercentage, className }: SaleBadgeProps) {
   }
 
   return (
-    <Chip color="danger" variant="primary" size="sm" className={className}>
+    <Chip color="warning" variant="primary" size="sm" className={className}>
       -{Math.round(discountPercentage)}%
     </Chip>
   );

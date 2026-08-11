@@ -4,7 +4,6 @@ import Link from "next/link";
 
 import { getCategoryBySlug } from "@/services/products";
 import type { Product } from "@/types/product";
-import { IconHeart } from "@/components/ui/icons";
 import { SaleBadge, StockBadge } from "./Badges";
 import { Price } from "./Price";
 
@@ -14,11 +13,13 @@ interface ProductCardProps {
 }
 
 /**
- * Storefront product tile. Only renders fields the product actually has —
- * see docs/DESIGN-SYSTEM.md for what's intentionally omitted (ratings,
- * review counts, "Best Seller"/"Trending" badges) until real data backs
- * them. Add to Cart / Buy Now are disabled until the product has a real
- * `sellingPrice` — there's nothing fake to add to a cart otherwise.
+ * Compact storefront product tile — reference card anatomy: image, category
+ * label, title, price row, single full-width Add to Cart button. Only
+ * renders fields the product actually has — see docs/DESIGN-SYSTEM.md for
+ * what's intentionally omitted (ratings, review counts, "Best Seller"/
+ * "Trending" badges) until real data backs them. Add to Cart is disabled
+ * until the product has a real `sellingPrice` — there's nothing fake to add
+ * to a cart otherwise.
  */
 export function ProductCard({ product, className }: ProductCardProps) {
   const { pricing, media, inventory } = product;
@@ -33,7 +34,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
       : null;
 
   return (
-    <article className={`group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card ${className ?? ""}`}>
+    <article className={`group flex flex-col overflow-hidden rounded-xl border border-border bg-surface ${className ?? ""}`}>
       <div className="relative aspect-square bg-background-secondary">
         {image ? (
           <Link href={productHref} tabIndex={-1} aria-hidden="true" className="block size-full">
@@ -41,7 +42,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
               src={image}
               alt={product.title}
               fill
-              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
+              sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           </Link>
@@ -53,19 +54,9 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <SaleBadge discountPercentage={discountPercentage} />
           {inventory.status === "out_of_stock" && <StockBadge status="out_of_stock" />}
         </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          isIconOnly
-          aria-label={`Add ${product.title} to wishlist`}
-          className="absolute top-2 right-2 bg-surface/85 backdrop-blur"
-        >
-          <IconHeart className="size-4" />
-        </Button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-2 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 p-3">
         {categoryLabel && <p className="text-label text-foreground/70 uppercase">{categoryLabel}</p>}
 
         <h3 className="text-small line-clamp-2 min-h-10 font-medium">
@@ -74,17 +65,12 @@ export function ProductCard({ product, className }: ProductCardProps) {
           </Link>
         </h3>
 
-        <div className="mt-auto flex flex-col gap-3 pt-1">
+        <div className="mt-auto flex flex-col gap-2 pt-1">
           <Price sellingPrice={pricing.sellingPrice} regularPrice={pricing.regularPrice} showDiscountBadge={false} />
 
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" fullWidth isDisabled={!canPurchase} aria-label={`Add ${product.title} to cart`}>
-              Add to Cart
-            </Button>
-            <Button variant="primary" size="sm" fullWidth isDisabled={!canPurchase} aria-label={`Buy ${product.title} now`}>
-              Buy Now
-            </Button>
-          </div>
+          <Button variant="primary" size="sm" fullWidth isDisabled={!canPurchase} aria-label={`Add ${product.title} to cart`}>
+            Add to Cart
+          </Button>
         </div>
       </div>
     </article>

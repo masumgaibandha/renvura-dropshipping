@@ -29,7 +29,7 @@ export default function UiPreviewPage() {
     <>
       <Section className="pb-0!">
         <h1 className="text-h1 mb-4">Design System Preview</h1>
-        <div className="rounded-2xl border border-brand-gold/40 bg-brand-cream px-4 py-3 text-small text-brand-navy">
+        <div className="rounded-2xl border border-border bg-background-secondary px-4 py-3 text-small text-foreground">
           <strong>Internal preview, not part of the public site.</strong> Verifies Phase 3 design-system components
           against real Phase 2 product data. Remove or gate this route before production launch.
         </div>
@@ -52,7 +52,7 @@ export default function UiPreviewPage() {
         </div>
       </Section>
 
-      <Section className="bg-brand-cream/50">
+      <Section className="bg-background-secondary">
         <h2 className="text-h2 mb-6">Buttons</h2>
         <div className="flex flex-wrap items-center gap-3">
           <Button variant="primary">Primary</Button>
@@ -83,7 +83,7 @@ export default function UiPreviewPage() {
         </div>
       </Section>
 
-      <Section className="bg-brand-cream/50">
+      <Section className="bg-background-secondary">
         <h2 className="text-h2 mb-6">Price component</h2>
         <div className="flex flex-wrap gap-10">
           <div>
