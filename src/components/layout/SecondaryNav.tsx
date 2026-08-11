@@ -16,7 +16,7 @@ export function SecondaryNav() {
   const categories = getAllCategories().filter((category) => !category.parentSlug);
 
   return (
-    <div className="hidden border-b border-border bg-background lg:block">
+    <div className="hidden border-b border-border bg-white lg:block">
       <Container className="flex h-12 items-center justify-between gap-6">
         <Dropdown.Root>
           <Dropdown.Trigger className="inline-flex h-9 items-center gap-2 rounded-full bg-accent px-4 text-small font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus">

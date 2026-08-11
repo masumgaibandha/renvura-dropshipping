@@ -36,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={clsx(geistSans.variable, geistMono.variable, "h-full antialiased")}
     >
       <body className="min-h-full">
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+        <Providers themeProps={{ attribute: "class", defaultTheme: "light", forcedTheme: "light", enableSystem: false }}>
           <StoreShell>{children}</StoreShell>
         </Providers>
       </body>

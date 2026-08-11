@@ -2,43 +2,44 @@ import Image from "next/image";
 import Link from "next/link";
 
 /**
- * Homepage hero — reference proportions: a large, rounded, wide-landscape
- * banner with left-aligned text over an image/graphic. The background here
- * is a temporary placeholder (a real product photo over a soft gradient,
- * not a fabricated lifestyle scene) pending real hero photography — flagged
- * here rather than silently treated as final. Copy is category-based and
- * truthful (no invented promotions).
+ * Homepage hero — a single image-led banner using the approved campaign
+ * artwork (resources/hero.png, copied to public/images/home/hero.png; the
+ * original in resources/ is untouched). The artwork already contains the
+ * complete composition — Renvura branding, headline, supporting copy, the
+ * "Shop Now" CTA, and the product composition — so nothing is re-rendered
+ * on top of it; that would duplicate the same content in the DOM. The
+ * image is exactly 3:1 (2172×724), matching the container's aspect ratio
+ * exactly, so `object-contain` shows it at any width with no cropping and
+ * no letterboxing. The whole banner is a single link to /shop since the
+ * "Shop Now" CTA baked into the image isn't itself interactive.
+ *
+ * The aspect ratio is set as an inline style, not just the `aspect-[3/1]`
+ * Tailwind class, on purpose: `next/image`'s `fill` mode makes the image
+ * `position: absolute`, which takes it out of normal flow — if the
+ * aspect-ratio rule for any reason isn't present in the compiled CSS (this
+ * broke once already, from a Turbopack dev-cache staleness bug where the
+ * class silently never made it into the dev bundle even though `npm run
+ * build` compiled it correctly), the container has no defined height and
+ * collapses to zero, and the entire hero disappears. The inline style
+ * can't be dropped by a CSS pipeline issue since React applies it directly
+ * to the element.
  */
 export function HeroBanner() {
   return (
-    <div className="relative isolate flex aspect-[16/9] w-full items-center overflow-hidden rounded-2xl bg-gradient-to-br from-accent-soft via-background-secondary to-background sm:aspect-[21/9] lg:aspect-[21/7]">
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 right-0 w-3/5 sm:w-1/2"
-      >
-        <Image
-          src="/products/electronics-gadgets/x699-turbo-fan/image-1.jpg"
-          alt=""
-          fill
-          priority
-          sizes="(min-width: 640px) 50vw, 60vw"
-          className="object-cover object-center opacity-90 [mask-image:linear-gradient(to_right,transparent,black_25%)]"
-        />
-      </div>
-
-      <div className="relative z-10 max-w-lg px-6 py-8 sm:px-10 lg:px-14">
-        <p className="text-label text-accent uppercase">Electronics &amp; Gadgets · Health &amp; Beauty</p>
-        <h1 className="text-display mt-3 text-foreground">Everyday Essentials, Delivered Across Bangladesh</h1>
-        <p className="text-body mt-4 max-w-sm text-foreground/70">
-          Handpicked gadgets and health &amp; beauty products, with Cash on Delivery nationwide.
-        </p>
-        <Link
-          href="/shop"
-          className="mt-6 inline-flex h-11 items-center rounded-full bg-accent px-6 text-small font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
-        >
-          Explore Products
-        </Link>
-      </div>
-    </div>
+    <Link
+      href="/shop"
+      aria-label="Shop Renvura products"
+      style={{ aspectRatio: "3 / 1" }}
+      className="relative block w-full overflow-hidden rounded-2xl bg-background"
+    >
+      <Image
+        src="/images/home/hero.png"
+        alt="Renvura — Everyday Essentials delivered across Bangladesh, featuring gadgets and health and beauty products"
+        fill
+        priority
+        sizes="100vw"
+        className="object-contain"
+      />
+    </Link>
   );
 }

@@ -18,7 +18,7 @@ import { MobileDrawer, MobileMenuTrigger, MobileNavProvider, MobileSearchTrigger
 export function Header() {
   return (
     <MobileNavProvider>
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
         <Container>
           <div className="flex h-16 items-center gap-3 md:h-18 md:gap-6">
             <MobileMenuTrigger className="lg:hidden" />

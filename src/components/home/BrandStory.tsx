@@ -10,15 +10,18 @@ const storyImages = [
 /**
  * "Our Story" section — reference composition: large visual left, short
  * eyebrow/heading/copy right. The visual is a collage of real product
- * photos (not a fabricated lifestyle scene). Copy is deliberately modest —
- * no invented history, customer counts, or market-leadership claims.
+ * photos (not a fabricated lifestyle scene), set on a subtle warm panel
+ * (`--surface-warm`) as the one restrained premium accent in this section —
+ * everywhere else stays on the plain body background. Copy is deliberately
+ * modest — no invented history, customer counts, or market-leadership
+ * claims.
  */
 export function BrandStory() {
   return (
     <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 rounded-2xl bg-surface-warm p-3">
         {storyImages.map((image) => (
-          <div key={image.src} className="relative aspect-square overflow-hidden rounded-xl bg-background-secondary">
+          <div key={image.src} className="relative aspect-square overflow-hidden rounded-xl bg-surface-soft">
             <Image src={image.src} alt={image.alt} fill sizes="(min-width: 1024px) 25vw, 45vw" className="object-cover" />
           </div>
         ))}

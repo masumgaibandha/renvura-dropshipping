@@ -34,8 +34,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
       : null;
 
   return (
-    <article className={`group flex flex-col overflow-hidden rounded-xl border border-border bg-surface ${className ?? ""}`}>
-      <div className="relative aspect-square bg-background-secondary">
+    <article className={`group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card ${className ?? ""}`}>
+      <div className="relative aspect-square bg-surface-soft">
         {image ? (
           <Link href={productHref} tabIndex={-1} aria-hidden="true" className="block size-full">
             <Image
