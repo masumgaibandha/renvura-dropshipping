@@ -90,6 +90,13 @@ export interface Order {
   orderNumber: string;
   /** Client-generated, server-enforced-unique — prevents duplicate orders from a double submit. */
   idempotencyKey: string;
+  /**
+   * Better Auth user id, set server-side from the session at order-creation
+   * time (`createOrder` in `src/actions/orders.ts`) — `null` for a guest
+   * order. Never accepted from the client; there is no field for it in
+   * `order-schema.ts`'s input shape.
+   */
+  customerUserId: string | null;
   customer: OrderCustomer;
   shippingAddress: OrderShippingAddress;
   items: OrderItem[];
@@ -100,8 +107,18 @@ export interface Order {
   updatedAt: string;
 }
 
-/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`. */
-export type OrderSummary = Omit<Order, "idempotencyKey">;
+/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner). */
+export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId">;
+
+/** Lightweight projection for `/account/orders` — one row per order, newest first. */
+export interface OrderListItem {
+  orderNumber: string;
+  createdAt: string;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  total: number;
+  itemCount: number;
+}
 
 /** Even more restricted projection for `/track-order` — no transactionId, no full address (division/district/upazila only). */
 export interface OrderTrackingSummary {

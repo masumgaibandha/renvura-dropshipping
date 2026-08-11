@@ -11,6 +11,7 @@ import { IconBag, IconHeart, IconMenu, IconUser } from "@/components/ui/icons";
 import { SearchBar } from "@/components/ecommerce/SearchBar";
 import { WishlistCountBadge } from "@/components/wishlist/WishlistCountBadge";
 import { brand } from "@/config/brand";
+import { useSession } from "@/lib/auth-client";
 import { NavLinks } from "./NavLinks";
 
 /**
@@ -55,6 +56,7 @@ export function MobileSearchTrigger({ className }: { className?: string }) {
 
 export function MobileDrawer() {
   const state = useMobileNav();
+  const { data: session } = useSession();
 
   return (
     <Drawer.Root state={state}>
@@ -89,7 +91,7 @@ export function MobileDrawer() {
                   <IconHeart className="size-5" />
                   <WishlistCountBadge />
                 </IconLinkButton>
-                <IconLinkButton href="/account" aria-label="Account">
+                <IconLinkButton href={session ? "/account" : "/login"} aria-label="Account">
                   <IconUser className="size-5" />
                 </IconLinkButton>
                 <IconLinkButton href="/cart" aria-label="Cart" className="relative">

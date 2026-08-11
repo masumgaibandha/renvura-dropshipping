@@ -1,11 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { HeaderAccountLink } from "@/components/account/HeaderAccountLink";
 import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CartIcon } from "@/components/cart/CartIcon";
 import { SearchBar } from "@/components/ecommerce/SearchBar";
 import { IconLinkButton } from "@/components/ui/IconLinkButton";
-import { IconHeart, IconUser } from "@/components/ui/icons";
+import { IconHeart } from "@/components/ui/icons";
 import { WishlistCountBadge } from "@/components/wishlist/WishlistCountBadge";
 import { brand } from "@/config/brand";
 import { Container } from "./Container";
@@ -40,10 +41,9 @@ export function Header() {
                 <IconHeart className="size-5" />
                 <WishlistCountBadge />
               </IconLinkButton>
-              <IconLinkButton href="/account" aria-label="Account" className="hidden md:inline-flex">
-                <IconUser className="size-5" />
-                <span className="text-small font-medium">Login</span>
-              </IconLinkButton>
+              <div className="hidden md:inline-flex">
+                <HeaderAccountLink />
+              </div>
               <CartIcon />
             </div>
           </div>

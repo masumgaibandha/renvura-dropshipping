@@ -6,29 +6,55 @@ import { useState, useTransition, type FormEvent } from "react";
 
 import { createOrder } from "@/actions/orders";
 import { useCart } from "@/contexts/CartContext";
+import type { Address } from "@/types/address";
 import type { PaymentMethod } from "@/types/order";
 import { CustomerInfoSection, type CustomerInfoValue } from "./CustomerInfoSection";
 import { DeliveryAddressSection, type DeliveryAddressValue } from "./DeliveryAddressSection";
 import { OrderSummary } from "./OrderSummary";
 import { PaymentMethodSection } from "./PaymentMethodSection";
+import { SavedAddressSelector } from "./SavedAddressSelector";
 
 const EMPTY_CUSTOMER: CustomerInfoValue = { name: "", phone: "", email: "" };
 const EMPTY_ADDRESS: DeliveryAddressValue = { division: "", district: "", upazila: "", addressLine: "", landmark: "", notes: "" };
 
+function addressToDeliveryValue(address: Address): DeliveryAddressValue {
+  return {
+    division: address.division,
+    district: address.district,
+    upazila: address.upazila,
+    addressLine: address.addressLine,
+    landmark: address.landmark ?? "",
+    notes: address.notes ?? "",
+  };
+}
+
+interface CheckoutFormProps {
+  /** From the signed-in customer's profile — prefills Customer Information; absent entirely for guests. */
+  initialCustomer?: CustomerInfoValue;
+  /** The signed-in customer's saved addresses, if any — never required, never forces saving a new one. */
+  savedAddresses?: Address[];
+}
+
 /**
- * All checkout state lives here; the four sections below are controlled,
+ * All checkout state lives here; the sections below are controlled,
  * "dumb" components. `items`/`subtotal` from `useCart()` are read for
  * *display* only — `createOrder` re-derives everything price-related
  * server-side from `productId`/`quantity` alone (see
  * `src/actions/order-logic.ts`), so nothing submitted from this form's
- * cart snapshot is ever trusted as a price.
+ * cart snapshot is ever trusted as a price. Guest checkout is unaffected:
+ * with both props absent (the default), this renders identically to
+ * before — no login is ever required to place an order.
  */
-export function CheckoutForm() {
+export function CheckoutForm({ initialCustomer, savedAddresses = [] }: CheckoutFormProps) {
   const { items, subtotal, isHydrated, clearCart } = useCart();
   const router = useRouter();
 
-  const [customer, setCustomer] = useState<CustomerInfoValue>(EMPTY_CUSTOMER);
-  const [address, setAddress] = useState<DeliveryAddressValue>(EMPTY_ADDRESS);
+  const defaultSavedAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0];
+
+  const [customer, setCustomer] = useState<CustomerInfoValue>(initialCustomer ?? EMPTY_CUSTOMER);
+  const [address, setAddress] = useState<DeliveryAddressValue>(defaultSavedAddress ? addressToDeliveryValue(defaultSavedAddress) : EMPTY_ADDRESS);
+  const [addressMode, setAddressMode] = useState<"saved" | "new">(savedAddresses.length > 0 ? "saved" : "new");
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string | null>(defaultSavedAddress?.id ?? null);
   const [method, setMethod] = useState<PaymentMethod>("cash_on_delivery");
   const [transactionId, setTransactionId] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -39,6 +65,24 @@ export function CheckoutForm() {
   function handleMethodChange(next: PaymentMethod) {
     setMethod(next);
     if (next === "cash_on_delivery") setTransactionId("");
+  }
+
+  function handleSelectSavedAddress(saved: Address) {
+    setSelectedSavedAddressId(saved.id);
+    setAddress(addressToDeliveryValue(saved));
+  }
+
+  function handleUseNewAddress() {
+    setAddressMode("new");
+    setSelectedSavedAddressId(null);
+    setAddress(EMPTY_ADDRESS);
+  }
+
+  function handleUseSavedAddress() {
+    setAddressMode("saved");
+    if (defaultSavedAddress) {
+      handleSelectSavedAddress(defaultSavedAddress);
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -98,18 +142,34 @@ export function CheckoutForm() {
               email: fieldErrors["customer.email"],
             }}
           />
-          <DeliveryAddressSection
-            value={address}
-            onChange={setAddress}
-            errors={{
-              division: fieldErrors["shippingAddress.division"],
-              district: fieldErrors["shippingAddress.district"],
-              upazila: fieldErrors["shippingAddress.upazila"],
-              addressLine: fieldErrors["shippingAddress.addressLine"],
-              landmark: fieldErrors["shippingAddress.landmark"],
-              notes: fieldErrors["shippingAddress.notes"],
-            }}
-          />
+          {addressMode === "saved" && savedAddresses.length > 0 ? (
+            <SavedAddressSelector
+              addresses={savedAddresses}
+              selectedId={selectedSavedAddressId}
+              onSelect={handleSelectSavedAddress}
+              onUseNewAddress={handleUseNewAddress}
+            />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {savedAddresses.length > 0 && (
+                <button type="button" onClick={handleUseSavedAddress} className="self-end text-small font-medium text-accent hover:underline">
+                  ← Use a saved address
+                </button>
+              )}
+              <DeliveryAddressSection
+                value={address}
+                onChange={setAddress}
+                errors={{
+                  division: fieldErrors["shippingAddress.division"],
+                  district: fieldErrors["shippingAddress.district"],
+                  upazila: fieldErrors["shippingAddress.upazila"],
+                  addressLine: fieldErrors["shippingAddress.addressLine"],
+                  landmark: fieldErrors["shippingAddress.landmark"],
+                  notes: fieldErrors["shippingAddress.notes"],
+                }}
+              />
+            </div>
+          )}
           <PaymentMethodSection
             method={method}
             transactionId={transactionId}

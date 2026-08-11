@@ -591,3 +591,75 @@ link). On success, shows status, payment method/status, total, and delivery area
 `supplier_submitted` displays as "Processing," never the internal fulfillment term. On failure,
 the same generic "No matching order found" message renders regardless of whether the order number
 or the phone was wrong.
+
+## 14. Authentication + customer account (`/login`, `/signup`, `/account/*`, Phase 9)
+
+All new UI reuses the existing checkout-era input styling (`h-11 rounded-lg border-border`, `text-red-600`
+inline errors, the same submit-button treatment) rather than introducing new form conventions —
+see §13. `/login` and `/signup` are `noindex,nofollow` (customer PII entry points, never indexed);
+so is the whole `/account/*` subtree (set once in `src/app/account/layout.tsx`'s metadata export,
+inherited by every nested page).
+
+**`/login`** (`LoginForm.tsx`, Client): Email/Password. A failed sign-in always shows "Invalid
+email or password" — deliberately generic, matching Better Auth's own `/sign-in/email` error,
+which already never distinguishes a wrong password from a nonexistent email (verified live: both
+cases return the identical message). A `callbackURL` query param (set by `proxy.ts` when
+redirecting an unauthenticated `/account/*` visit) is validated as a same-origin relative path
+(`getSafeRedirectPath`, `src/utils/safe-redirect.ts`) before ever being used as a redirect target —
+open-redirect protection, since a query param is untrusted input like any other.
+
+**`/signup`** (`SignupForm.tsx`, Client): Full Name/Email/Password/Confirm Password. Password
+match and an 8-character minimum are checked client-side before ever calling `signUp.email()`;
+Better Auth re-validates length server-side regardless. A duplicate email shows Better Auth's own
+specific message ("User already exists...") — unlike login, revealing this on the *signup* form is
+normal, expected UX, not an enumeration risk. `autoSignIn: true` means a successful signup already
+has a session, so this redirects straight to `/account` — no separate login step.
+
+**`/account/*`** (`src/app/account/layout.tsx` gates the whole subtree — see
+`docs/ARCHITECTURE.md`'s "Authentication & customer accounts" section for the security model, this
+section is UI only): `AccountLayout.tsx` — desktop `grid lg:grid-cols-[220px_1fr]` (`AccountSidebar`,
+Client, `usePathname()`-driven active state, matching `NavLinks.tsx`'s existing pattern) + content;
+mobile — a horizontal scrollable pill nav above content (`AccountMobileNav.tsx`, same idiom as
+`CategoryTabs.tsx`). Both share one `accountNavItems` list (My Account/Orders/Addresses/Profile) so
+link targets live in one place. `SignOutButton.tsx` sits at the bottom of the sidebar.
+
+- **`/account`**: name/email/phone-if-present, three quick-link cards, and up to 5 recent orders
+  (reusing the `/account/orders` row projection).
+- **`/account/orders`**: full order history table (Order Number/Date/Status/Payment/Total/View),
+  newest first; empty state links to `/shop`.
+- **`/account/orders/[orderNumber]`**: fuller than `/order-success` — items with unit price ×
+  quantity, subtotal, delivery fee, and total broken out, plus the full address line (not just the
+  division/district/upazila summary `/track-order` and `/order-success` use) — appropriate here
+  since this page is already authenticated-and-ownership-checked, unlike those two public routes.
+- **`/account/profile`** (`ProfileForm.tsx`, Client): Name/Phone editable via Better Auth's own
+  `authClient.updateUser()`; Email shown as plain read-only text, no edit control at all — no
+  verified email-change flow exists yet, so this deliberately doesn't offer one rather than
+  building an insecure shortcut.
+- **`/account/addresses`** (`AddressList.tsx` + `AddressForm.tsx`, Client): each saved address is a
+  card (Label, Default badge if applicable, recipient/phone, full address, Landmark if set) with
+  Edit/Set as Default/Delete actions; Delete asks a native `window.confirm()` first. Editing swaps
+  the card for `AddressForm` inline; "+ Add New Address" reveals the same form in create mode.
+  `AddressForm` composes the shared `BangladeshAddressFields` (see below) plus Label/Recipient
+  Name/Phone/"Set as default" fields. Every mutation calls the real Server Action then
+  `router.refresh()` — no separate client-side copy of the address list to keep in sync.
+
+**Shared cascading-select extraction**: `src/components/ui/BangladeshAddressFields.tsx` holds the
+Division → District → Upazila/Thana dependent selects plus Area/Landmark/Notes (disabled-until-
+parent-selected, resets on parent change, backed by `src/data/bangladesh-locations.ts`) — both
+`DeliveryAddressSection.tsx` (checkout) and `AddressForm.tsx` (saved addresses) compose it, each
+adding their own heading/copy. One field-group implementation, not two near-identical copies.
+
+**Checkout integration** (`CheckoutForm.tsx`, extended not rebuilt): when `initialCustomer`/
+`savedAddresses` props are present (passed down from `checkout/page.tsx`'s server-side session
+check), Customer Information prefills and, if any saved addresses exist, `SavedAddressSelector.tsx`
+replaces the manual address form by default — a radio list of saved addresses (Default one
+pre-selected) plus "+ Enter a new address," with a symmetric "← Use a saved address" link back.
+With neither prop (always true for guests), the form renders byte-for-byte the same as Phase 8 —
+verified live: a fresh guest checkout produces the identical totals/statuses as before this phase.
+
+**Header** (`HeaderAccountLink.tsx`, Client, `useSession()` — see `docs/ARCHITECTURE.md` for why
+this is a client-side session read rather than a server-fetched prop): logged-out renders the
+original icon+"Login" link unchanged; logged-in renders a HeroUI `Dropdown` (same primitive
+`SecondaryNav.tsx` already uses) showing the first name, with My Account/Orders/Sign Out. The
+mobile drawer's account icon stays icon-only (unchanged visually) but its `href` now switches
+between `/login`/`/account` based on the same `useSession()` read.

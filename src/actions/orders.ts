@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 
 import { isPaymentMethodConfigured } from "@/config/payment";
+import { getCurrentUser } from "@/lib/auth-session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { findOrderByIdempotencyKey, findOrderByOrderNumber, generateOrderNumber, insertOrder, toOrderSummary, toTrackingSummary } from "@/services/orders";
 import type { OrderSummary, OrderTrackingSummary, PaymentStatus } from "@/types/order";
@@ -67,6 +68,16 @@ export async function createOrder(rawInput: unknown): Promise<CreateOrderResult>
 
   const paymentStatus: PaymentStatus = input.payment.method === "cash_on_delivery" ? "cod_pending" : "pending_verification";
 
+  // Guest checkout must work even if the auth subsystem itself has a problem — a session-lookup
+  // failure here degrades to "treat as guest," never blocks order creation.
+  let customerUserId: string | null = null;
+  try {
+    const user = await getCurrentUser();
+    customerUserId = user?.id ?? null;
+  } catch (error) {
+    console.error("createOrder: session lookup failed, proceeding as guest", error);
+  }
+
   // Everything from here touches MongoDB — one try/catch so a connection failure at *any* step
   // (idempotency lookup, order-number generation, or insert) is a clean `{ ok: false }`, never an
   // unhandled exception surfaced raw to the client.
@@ -82,6 +93,7 @@ export async function createOrder(rawInput: unknown): Promise<CreateOrderResult>
     const record = await insertOrder({
       orderNumber,
       idempotencyKey: input.idempotencyKey,
+      customerUserId,
       customer: {
         name: input.customer.name,
         phone: input.customer.phone,

@@ -215,8 +215,52 @@ this session's testing. No browser automation was available either, so the check
 client-side interactive states (payment-method disabled styling, inline field errors) were
 verified by code review and compiled-CSS inspection, not a live click-through.
 
-## Phase 9 — Authentication / customer accounts
-Customer registration/login, order history, saved addresses, wishlist persistence.
+## Phase 9 — Authentication / customer accounts ✅
+Built customer sign-up/sign-in/sign-out, a protected `/account` area, saved addresses, and order
+history/detail — using Better Auth (email + password, extensible to social providers later) with
+its MongoDB adapter, alongside the existing Mongoose connection. See `docs/ARCHITECTURE.md`'s
+"Authentication & customer accounts" section for the full architecture and security model.
+
+**Core security property, mirroring Phase 8's price-recalculation rule**: `customerUserId` on an
+`Order` is always derived server-side from the session (`getCurrentUser()` in
+`src/lib/auth-session.ts`) — never accepted from the client, and there's no field for it in
+`order-schema.ts`'s input shape to even strip. The same applies to every address mutation
+(`src/actions/addresses.ts`): `userId` always comes from the session, and update/delete/
+set-default re-fetch the target scoped to `{ id, userId }` first — a cross-user attempt is treated
+identically to "not found," never "forbidden" (which would itself leak that the resource exists).
+Verified live with two real test accounts: cross-user address edit/delete/set-default and
+cross-user order list/detail access were all correctly rejected, with the target address/order
+unmodified in each case.
+
+**Guest checkout is unaffected** — `CheckoutForm` renders identically to before when there's no
+session (verified: a fresh guest COD order still produces `customerUserId: null`, the exact same
+totals/statuses as Phase 8). Logged-in checkout additionally prefills Customer Information and
+offers saved-address selection, never forces saving a new address, and never requires login to
+order.
+
+**Route protection is layered, not client-side-only**: `proxy.ts` does a fast, cookie-presence-only
+redirect for `/account/*` (verified: no cookie → redirect; a forged/garbage cookie also → redirect,
+since `proxy.ts` only checks presence); `src/app/account/layout.tsx` does the authoritative
+`auth.api.getSession()` check behind it (verified: the forged-cookie case is caught here, not
+silently let through). Every nested account page additionally re-derives data from the session
+itself rather than trusting any route param.
+
+**Deferred, per the brief's own preferred option**: historical guest-order linking (claiming past
+guest orders by email) is *not* implemented — only orders placed while signed in get a
+`customerUserId`; existing and future guest orders stay guest orders unless a customer is signed in
+at checkout time. Also deferred: email verification (not required this phase — `autoSignIn: true`
+means signup itself establishes a session), email change (kept read-only on the profile page — no
+verified-change flow exists yet), and social/OTP login (architecture stays extensible via
+`socialProviders`, per Better Auth's own config shape, but none are wired up).
+
+**Known, documented limitation**: profile `phone` updates go through Better Auth's own
+`authClient.updateUser()` directly (the correct, idiomatic way to mutate a custom
+`additionalFields` entry) rather than a custom Server Action — this means BD phone-format
+validation (`normalizeBdPhone`) only runs client-side for this one field, not server-side. This was
+a deliberate, approved tradeoff (self-owned, low-stakes profile data, unlike order pricing which is
+fully server-revalidated), confirmed live: bypassing the client and calling the raw endpoint
+directly can store a non-BD-format phone string. Not a cross-user or security issue, but worth
+knowing before treating this field as reliably normalized elsewhere.
 
 ## Phase 10 — Admin
 Admin dashboard: product management, order management, customer management.

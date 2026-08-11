@@ -4,12 +4,12 @@ Guidance for Claude Code (and any future session/agent) working in this reposito
 
 ## What Renvura is
 
-Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phases 1–8 are
+Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phases 1–9 are
 complete (foundation, product data model, storefront design system + homepage, listing, product
-detail, cart/wishlist, and checkout/order creation — see `docs/PRODUCT-ROADMAP.md`). The reusable
-UI, homepage, listing pages, product detail page, cart/wishlist, and checkout/order
-creation/tracking all exist and work end-to-end; customer accounts and the admin dashboard are not
-built yet.
+detail, cart/wishlist, checkout/order creation, and customer authentication/accounts — see
+`docs/PRODUCT-ROADMAP.md`). The reusable UI, homepage, listing pages, product detail page,
+cart/wishlist, checkout/order creation/tracking, and customer accounts (sign-up/in/out, saved
+addresses, order history) all exist and work end-to-end; the admin dashboard is not built yet.
 
 **Business model:**
 - A supplier provides products and wholesale pricing (source data currently captured as
@@ -35,6 +35,10 @@ built yet.
   mutation surface; revisit if a non-mutation or external-consumer API is ever needed
 - Zod for untrusted-input validation (`src/actions/order-schema.ts`) — the first place this
   codebase validates real network input rather than its own trusted seed data
+- Better Auth (`better-auth`, `src/lib/auth.ts`) for customer authentication (Phase 9) — email +
+  password only for now, kept extensible via `socialProviders`. No official Mongoose adapter, so
+  it uses its own native `mongodb` driver client pointed at the same `renvura` database as
+  Mongoose, not a second database
 - Vercel for deployment
 - ESLint (flat config; `next lint` is removed in Next 16 — use `npm run lint`, which runs
   `eslint` directly)
@@ -62,8 +66,11 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              electronics-gadgets/, health-beauty/ are the Phase 5 listing routes;
                              products/[slug]/ is the Phase 6 product detail route; cart/,
                              wishlist/ are the Phase 7 routes; checkout/, order-success/[orderNumber]/,
-                             track-order/ are the Phase 8 routes; ui-preview/ is TEMPORARY — see below
-  src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
+                             track-order/ are the Phase 8 routes; login/, signup/, account/
+                             (layout.tsx gates the whole subtree), api/auth/[...all]/ are the Phase
+                             9 routes; ui-preview/ is TEMPORARY — see below
+  src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx, BangladeshAddressFields.tsx
+                             (Phase 9 — shared by checkout and saved addresses) — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
                              NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
   src/components/ecommerce/ ProductCard, ProductGrid, Price, Badges, SearchBar — generic reusable
@@ -80,23 +87,38 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   src/components/wishlist/  Wishlist composition (Phase 7): WishlistToggleButton, WishlistCountBadge,
                              WishlistGrid
   src/components/checkout/  Checkout composition (Phase 8): CheckoutForm, CustomerInfoSection,
-                             DeliveryAddressSection, PaymentMethodSection, OrderSummary, TrackOrderForm
-  src/actions/               Server Actions (Phase 8, "use server"): orders.ts (createOrder,
-                              trackOrder), order-schema.ts (Zod), order-logic.ts (DB-free
-                              validate-and-recalculate — see the checkout security rules below)
+                             DeliveryAddressSection, PaymentMethodSection, OrderSummary,
+                             TrackOrderForm, SavedAddressSelector (Phase 9)
+  src/components/auth/      Auth forms (Phase 9): LoginForm, SignupForm
+  src/components/account/   Account-area composition (Phase 9): AccountLayout, AccountSidebar,
+                             AccountMobileNav, SignOutButton, HeaderAccountLink, ProfileForm,
+                             AddressList, AddressForm
+  src/actions/               Server Actions ("use server"): orders.ts (createOrder, trackOrder,
+                              Phase 8), order-schema.ts (Zod), order-logic.ts (DB-free
+                              validate-and-recalculate), address-schema.ts (Zod), addresses.ts
+                              (createAddress/updateAddress/deleteAddress/setDefaultAddress, Phase 9)
   src/contexts/              CartContext.tsx, WishlistContext.tsx (Phase 7) — see the untrusted-
                               client-state rule below
-  src/config/               brand.ts, navigation.ts, delivery.ts, payment.ts, address.ts (Phase 8)
-  src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
+  src/config/               brand.ts, navigation.ts, delivery.ts, payment.ts (Phase 8)
+  src/data/                 categories.ts, products.ts (Phase 2), bangladesh-locations.ts (Phase 8
+                              — single source of truth for both checkout and saved addresses)
   src/hooks/                 client-side hooks
   src/lib/                   framework-agnostic utilities (validate-product.ts, local-storage.ts,
-                              rate-limit.ts), db.ts (MongoDB connection helper, Phase 8)
+                              rate-limit.ts, bangladesh-address-validation.ts), db.ts (MongoDB
+                              connection helper, Phase 8), auth.ts/auth-client.ts/auth-session.ts
+                              (Better Auth server config, client instance, getCurrentUser() — Phase 9)
   src/models/                 Mongoose schemas: Product.ts, Category.ts (not yet connected),
-                              Order.ts (connected, Phase 8)
+                              Order.ts (connected, Phase 8), Address.ts (Phase 9). User/Session/
+                              Account/Verification are Better Auth-managed, not Mongoose models.
   src/services/               data-access layer: products.ts (reads src/data/ until MongoDB is
-                              wired up for products), orders.ts (MongoDB-backed, Phase 8)
-  src/types/                  shared TypeScript types: product.ts, category.ts, cart.ts, order.ts
-  src/utils/                  small pure helpers: currency.ts, slug.ts, pricing.ts, phone.ts, delivery.ts
+                              wired up for products), orders.ts (MongoDB-backed, Phase 8),
+                              addresses.ts (MongoDB-backed, Phase 9)
+  src/types/                  shared TypeScript types: product.ts, category.ts, cart.ts, order.ts,
+                              address.ts (Phase 9)
+  src/utils/                  small pure helpers: currency.ts, slug.ts, pricing.ts, phone.ts,
+                              delivery.ts, safe-redirect.ts (Phase 9)
+  proxy.ts                  repo root — Next 16 route protection (Phase 9), optimistic redirect
+                              for /account/*, was middleware.ts pre-Next-16
   ```
 - Keep UI, business logic, and data-access layers separate — don't put Mongoose queries or
   business rules directly in components or route handlers.
@@ -233,6 +255,52 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   single client hammering one warm instance, not distributed abuse. Don't treat it as sufficient
   for a real production launch without adding a distributed limiter in front of it.
 
+## Authentication & customer account rules (Phase 9)
+
+- **Session identity is always server-derived, never trusted from the client** — the same rule
+  `createOrder`'s price recalculation already follows, extended to "who is this." `getCurrentUser()`
+  (`src/lib/auth-session.ts`) is the *only* place server code should call `auth.api.getSession()`
+  directly; every other file (Server Components, Server Actions) calls `getCurrentUser()` instead.
+  It returns just `{ id, name, email, phone } | null` — **never** the raw session object, which
+  carries the session token. Passing the raw session into a Client Component would leak that
+  token into the RSC payload, the same class of leak this project already fixed once for
+  `wholesalePrice` — don't reintroduce it for auth data.
+- **`Order.customerUserId` and every `Address.userId` are always derived server-side from the
+  session**, never accepted as a client-submitted field. `createOrder` sets `customerUserId` itself
+  after calling `getCurrentUser()`; every address Server Action
+  (`src/actions/addresses.ts`) does the same for `userId`. A session-lookup failure in `createOrder`
+  degrades to "treat as guest" — checkout must never depend on the auth subsystem being healthy.
+- **Ownership checks return "not found," never "forbidden," on a mismatch.** Updating/deleting/
+  setting-default on another user's address, or viewing another user's order at
+  `/account/orders/[orderNumber]`, must look identical to that resource simply not existing — never
+  reveal that a resource exists but belongs to someone else.
+- **Route protection is layered, not client-side-only**: `proxy.ts` does a fast,
+  cookie-*presence*-only redirect for `/account/*` (no DB call, not authoritative);
+  `src/app/account/layout.tsx` does the real `getCurrentUser()` check behind it. Never rely on the
+  proxy check alone, and never gate real data behind only a client-side redirect.
+- **The header's account widget (`HeaderAccountLink.tsx`) reads session client-side via Better
+  Auth's `useSession()` hook, not a server-fetched prop from `Header.tsx`.** This is deliberate —
+  `Header` renders on every storefront page, and adding `headers()`/`cookies()` there would force
+  previously-static pages (`/`, `/shop`, etc.) into dynamic rendering. Keep this split: session
+  *display* in shared chrome stays client-side (same "untrusted, display-only" treatment as
+  cart/wishlist counts); every *protected read* stays server-side and independently re-validated.
+- **Division/District/Upazila validation for addresses reuses
+  `checkBangladeshLocationRelationship`** (`src/lib/bangladesh-address-validation.ts`) — the same
+  function `order-schema.ts` uses. Don't reimplement this check a third time.
+- **Historical guest-order linking is out of scope** — do not add a "claim my past orders by
+  email" feature without the user explicitly asking for it and specifying stronger verification
+  (e.g. order number + matching phone), per the Phase 9 brief's own stated preference.
+- **Email is read-only on `/account/profile`** — there is no verified email-change flow. Don't add
+  an editable email field until one exists.
+- **`phone` on the Better Auth `user` model has no server-side format validation** — profile
+  updates go through `authClient.updateUser()` directly (the correct, idiomatic way to mutate an
+  `additionalFields` entry), which only gets client-side `normalizeBdPhone` validation before the
+  call. This is an accepted, documented tradeoff for self-owned low-stakes profile data — don't
+  extend the same casualness to anything that isn't purely self-owned.
+- **Better Auth has its own rate limiting** (enabled in `src/lib/auth.ts`, layered on top of its
+  already-strict default `/sign-in/email` limit) — like `src/lib/rate-limit.ts`, it's in-memory and
+  process-local; the same "not sufficient alone for production" caveat applies.
+
 ## Design system contrast rule
 
 Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
@@ -247,13 +315,18 @@ contrast requirements, and looking de-emphasized is the intent there.
 
 BDT currency with `৳` symbol, Cash on Delivery as a first-class payment method (Phase 8), BD phone
 number normalization (`src/utils/phone.ts` — accepts `01XXXXXXXXX`/`+8801XXXXXXXXX`/
-`8801XXXXXXXXX`, always stores `01XXXXXXXXX`), address structure as Division (real 8-value enum,
-`src/config/address.ts`) → District → Upazila/Thana (free text — no invented district/upazila
-mapping) → Area/Road/House, and a Dhaka vs. outside-Dhaka delivery charge split
-(`src/utils/delivery.ts`) are all implemented as of Phase 8. Manual bKash/Nagad/Rocket payment
-(Transaction ID + manual verification, no gateway) also exists — see "Checkout & order rules"
-above. Courier API integration and an automated payment gateway (e.g. SSLCommerz) still come
-later — don't hardcode a specific provider prematurely.
+`8801XXXXXXXXX`, always stores `01XXXXXXXXX`), address structure as Division → District →
+Upazila/Thana → Area/Road/House backed by the real, verified hierarchy in
+`src/data/bangladesh-locations.ts` (8 divisions, 64 districts, 544 upazila/thana entries including
+Dhaka's 50 metropolitan thanas — see that file's doc comment for sourcing; do not hand-edit
+individual entries without checking the source), and a Dhaka vs. outside-Dhaka delivery charge
+split (`src/utils/delivery.ts`) are all implemented as of Phase 8. Manual bKash/Nagad/Rocket
+payment (Transaction ID + manual verification, no gateway) also exists — see "Checkout & order
+rules" above. As of Phase 9, saved addresses (`/account/addresses`) reuse this exact same
+hierarchy and validation — see "Authentication & customer account rules" below; never duplicate
+the location data or its dependent-select validation logic. Courier API integration and an
+automated payment gateway (e.g. SSLCommerz) still come later — don't hardcode a specific provider
+prematurely.
 
 ## Marketing / tracking / SEO (future-ready, not yet implemented)
 
@@ -278,18 +351,22 @@ redesign pass that pulled Phase 4's homepage forward into the same pass), 4 (Hom
 Category Highlights, Why Shop With Renvura, homepage SEO metadata), 5 (Shop/category listing —
 `/shop`, `/electronics-gadgets`, `/health-beauty`, real search), 6 (Product detail —
 `/products/[slug]`, gallery, buy box, related products, JSON-LD), 7 (Cart + wishlist — real
-client-side state, `/cart`, `/wishlist`, header counts), and 8 (Checkout + secure order creation —
-`/checkout`, `/order-success/[orderNumber]`, `/track-order`, MongoDB-backed `Order`) are done — see
-`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–13. The reusable
-UI shell, homepage, listing pages, product detail page, cart/wishlist, and checkout/order
-creation/tracking exist and are wired in, but do not build customer authentication/accounts, the
-admin dashboard, an automated payment gateway (bKash/Nagad/Rocket APIs), courier API integration,
-or marketing/tracking (Meta Pixel/CAPI, GA4) until asked. Do not connect the `Product`/`Category`
-MongoDB models (schemas exist but aren't wired up — only `Order` is connected), wire up real
-newsletter logic, or create fake products/reviews/prices. 20 of the 21 catalog products have real
-approved `sellingPrice` values; `skin1004-centella-ampoule-100ml` is deliberately held back
-(`sellingPrice: null`, unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable"
-and disabled Add to Cart/Buy Now are the correct, expected state for that one product only, not the
-whole catalog. `delivery.ts`'s delivery fee amounts are business-approved (৳80 inside Dhaka, ৳150
-outside Dhaka, `DELIVERY_FEE_CONFIG_IS_FINAL = true`) — see "Checkout & order rules" above. Confirm
-scope with the user before starting a new phase.
+client-side state, `/cart`, `/wishlist`, header counts), 8 (Checkout + secure order creation —
+`/checkout`, `/order-success/[orderNumber]`, `/track-order`, MongoDB-backed `Order`), and 9
+(Customer authentication + accounts — Better Auth email/password, `/login`, `/signup`,
+`/account/*`, saved addresses, order history, `Order.customerUserId`) are done — see
+`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–14. The reusable
+UI shell, homepage, listing pages, product detail page, cart/wishlist, checkout/order
+creation/tracking, and customer accounts exist and are wired in, but do not build the admin
+dashboard, an automated payment gateway (bKash/Nagad/Rocket APIs), courier API integration,
+marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, email verification/
+change, or social/OTP login until asked. Do not connect the `Product`/`Category` MongoDB models
+(schemas exist but aren't wired up — `Order` and `Address` are connected, plus Better Auth's own
+`user`/`session`/`account`/`verification` collections), wire up real newsletter logic, or create
+fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
+values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,
+unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable" and disabled Add to
+Cart/Buy Now are the correct, expected state for that one product only, not the whole catalog.
+`delivery.ts`'s delivery fee amounts are business-approved (৳80 inside Dhaka, ৳150 outside Dhaka,
+`DELIVERY_FEE_CONFIG_IS_FINAL = true`) — see "Checkout & order rules" above. Confirm scope with the
+user before starting a new phase.

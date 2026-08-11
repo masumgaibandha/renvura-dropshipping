@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { isValidDistrictForDivision, isValidDivision, isValidUpazilaForDistrict } from "@/data/bangladesh-locations";
+import { checkBangladeshLocationRelationship } from "@/lib/bangladesh-address-validation";
 import { normalizeBdPhone } from "@/utils/phone";
 import { MAX_QUANTITY_PER_ITEM, MAX_UNIQUE_ITEMS } from "./order-logic";
 
@@ -50,11 +50,9 @@ function optionalTrimmed(max: number) {
 
 /**
  * Division/District/Upazila are dependent selects in the UI, but the client
- * is never trusted to have kept them consistent — this re-validates the
- * whole combination against `src/data/bangladesh-locations.ts` (the same
- * dataset the UI's dropdowns read from), rejecting e.g. a Rangpur division
- * paired with a Dhaka district, or a Gaibandha district paired with a
- * Dhanmondi upazila.
+ * is never trusted to have kept them consistent — `checkBangladeshLocationRelationship`
+ * re-validates the whole combination server-side (shared with saved addresses,
+ * see `src/lib/bangladesh-address-validation.ts`).
  */
 const shippingAddressSchema = z
   .object({
@@ -65,19 +63,7 @@ const shippingAddressSchema = z
     landmark: optionalTrimmed(200),
     notes: optionalTrimmed(500),
   })
-  .superRefine((data, ctx) => {
-    if (!isValidDivision(data.division)) {
-      ctx.addIssue({ code: "custom", message: "Select a valid division.", path: ["division"] });
-      return;
-    }
-    if (!isValidDistrictForDivision(data.division, data.district)) {
-      ctx.addIssue({ code: "custom", message: "Select a district that belongs to the chosen division.", path: ["district"] });
-      return;
-    }
-    if (!isValidUpazilaForDistrict(data.division, data.district, data.upazila)) {
-      ctx.addIssue({ code: "custom", message: "Select an upazila/thana that belongs to the chosen district.", path: ["upazila"] });
-    }
-  });
+  .superRefine(checkBangladeshLocationRelationship);
 
 export const orderInputSchema = z
   .object({

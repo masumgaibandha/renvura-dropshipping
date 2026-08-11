@@ -62,6 +62,8 @@ const orderSchema = new Schema(
     orderNumber: { type: String, required: true, unique: true, trim: true },
     // Client-generated, server-enforced-unique — the primary duplicate-submission guard.
     idempotencyKey: { type: String, required: true, unique: true },
+    // Better Auth user id, server-derived from the session at creation time — null for guest orders.
+    customerUserId: { type: String, default: null, index: true },
 
     customer: { type: orderCustomerSchema, required: true },
     shippingAddress: { type: orderShippingAddressSchema, required: true },

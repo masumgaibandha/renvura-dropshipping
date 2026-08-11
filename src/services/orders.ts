@@ -1,6 +1,6 @@
 import { connectToDatabase } from "@/lib/db";
 import { OrderModel } from "@/models/Order";
-import type { Order, OrderSummary, OrderTrackingSummary } from "@/types/order";
+import type { Order, OrderListItem, OrderSummary, OrderTrackingSummary } from "@/types/order";
 
 /**
  * Order data-access layer — mirrors `src/services/products.ts`'s role.
@@ -58,9 +58,22 @@ export async function findOrderByOrderNumber(orderNumber: string): Promise<Order
   return OrderModel.findOne({ orderNumber }).lean<OrderRecord>();
 }
 
+/** Every order placed while signed in as this user — newest first. Guest orders (`customerUserId: null`) never match. */
+export async function getOrdersForCustomer(userId: string): Promise<OrderRecord[]> {
+  await connectToDatabase();
+  return OrderModel.find({ customerUserId: userId }).sort({ createdAt: -1 }).lean<OrderRecord[]>();
+}
+
+/** Ownership-scoped read for `/account/orders/[orderNumber]` — returns `null` if the order doesn't exist *or* belongs to a different user, so a caller can't distinguish the two. */
+export async function getOrderForCustomerDetail(orderNumber: string, userId: string): Promise<OrderRecord | null> {
+  await connectToDatabase();
+  return OrderModel.findOne({ orderNumber, customerUserId: userId }).lean<OrderRecord>();
+}
+
 export interface InsertOrderInput {
   orderNumber: string;
   idempotencyKey: string;
+  customerUserId: string | null;
   customer: Order["customer"];
   shippingAddress: Order["shippingAddress"];
   items: Order["items"];
@@ -93,6 +106,18 @@ export function toOrderSummary(record: OrderRecord): OrderSummary {
     orderStatus: record.orderStatus,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+/** Row projection for `/account/orders` — just enough to list, never the full item/address detail. */
+export function toOrderListItem(record: OrderRecord): OrderListItem {
+  return {
+    orderNumber: record.orderNumber,
+    createdAt: record.createdAt.toISOString(),
+    orderStatus: record.orderStatus,
+    paymentStatus: record.payment.status,
+    total: record.pricing.total,
+    itemCount: record.items.reduce((sum, item) => sum + item.quantity, 0),
   };
 }
 
