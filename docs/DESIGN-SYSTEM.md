@@ -1,7 +1,8 @@
 # Design System
 
 Status: **Phase 3 — Global storefront design system implemented; Phase 3 correction applied;
-Phase 3 redesign applied (homepage built).** The original Phase 1 visual reference (a jewelry
+Phase 3 redesign applied (homepage built); Phase 4 — homepage refinement applied (§9).** The
+original Phase 1 visual reference (a jewelry
 site) was replaced by the user with a new authoritative reference
 (`resources/reference-theme.png`/`.pdf`, a "TimTom"-style e-commerce homepage). Two passes
 followed: a **correction** pass (palette only — see §3) and a **redesign** pass, where the user
@@ -301,39 +302,72 @@ deployment** — it is not, and must never become, part of the public site.
 - Accessible by default: rely on HeroUI/React Aria's primitives, don't strip them out for a
   custom look.
 
-## 9. Homepage (`src/app/page.tsx`, Phase 3 redesign)
+## 9. Homepage (`src/app/page.tsx`, Phase 4)
 
-Built ahead of the normal phase order at the user's explicit direction (previously deferred to
-Phase 4 — see `docs/PRODUCT-ROADMAP.md`). Server Component; fetches `getAllProducts()`/
-`getAllCategories()` once and passes the results down — no client-side fetching. Section order
-matches the reference: `HeroBanner` → Popular Products (`CategoryTabs`, which renders its own
-title + category-tab row + filtered `ProductGrid`, since HeroUI's `Tabs.Root` has to wrap both) →
-centered "View All Products" link (→ `/shop`) → `FeaturedProductsRow` ("Featured Picks" — see
-below for why not "Best Sellers") → `BrandStory` ("Our Story").
+Initial build was pulled ahead of the normal phase order into the Phase 3 redesign pass; the
+section set below reflects the **Phase 4 refinement pass** (see `docs/PRODUCT-ROADMAP.md`) that
+added the two sections that were missing and audited everything else. Server Component; fetches
+`getAllProducts()`/`getAllCategories()` once and passes the results down — no client-side
+fetching. Exports page-level `metadata` (`title: { absolute: "Renvura — Gadgets, Electronics &
+Health and Beauty in Bangladesh" }`, using `absolute` so it bypasses the root layout's
+`"%s | Renvura"` template) — homepage-specific, truthful, no keyword stuffing; full per-product SEO
+(canonical URLs, JSON-LD, etc.) is still Phase 12.
+
+Section order: `HeroBanner` → Popular Products (`CategoryTabs`, which renders its own title +
+category-tab row + filtered `ProductGrid`, since HeroUI's `Tabs.Root` has to wrap both) → centered
+"View All Products" link (→ `/shop`) → `FeaturedProductsRow` ("Featured Picks" — see below for why
+not "Best Sellers") → `CategoryHighlights` → `WhyShopWithRenvura` → `BrandStory` ("Our Story").
+Section backgrounds alternate between the plain body background and `bg-background-secondary` for
+gentle separation — no dark backgrounds anywhere except the footer (see §3).
 
 New composite components live in `src/components/home/` (distinct from the generic reusable
 `ecommerce/` primitives and `layout/` chrome, since these are homepage-composition-specific, not
 meant for reuse across arbitrary pages):
 
-- **`HeroBanner.tsx`**: rounded, wide-landscape banner (reference proportions) with a real product
-  photo (not a fabricated lifestyle scene) faded into a soft gradient background, left-aligned
-  headline/subtext, CTA to `/shop`. The photo is a **temporary placeholder** pending real hero
-  photography — flagged in a code comment, not a visible on-page watermark, since this is the live
-  homepage.
-- **`CategoryTabs.tsx`**: All / Electronics & Gadgets / Health & Beauty tabs (HeroUI `Tabs`),
-  filtering an in-memory product array — no new data fetching or route change per tab.
+- **`HeroBanner.tsx`**: a single image-led banner using the approved campaign artwork
+  (`resources/hero.png`, copied to `public/images/home/hero.png` — the original is never modified).
+  The artwork already contains the full composition (branding, headline, copy, CTA, product
+  photography), so nothing is rendered on top of it — that would duplicate the same content in the
+  DOM/for screen readers. The whole banner is one link to `/shop` (`aria-label="Shop Renvura
+  products"`). The container's aspect ratio is set via an **inline style** (`aspectRatio: "3 / 1"`),
+  not only the matching Tailwind class — `next/image`'s `fill` mode makes the image
+  `position: absolute` (out of normal flow), so if the CSS class ever failed to compile (this
+  happened once, from a Turbopack dev-cache staleness bug — the class silently never made it into
+  the dev bundle even though `npm run build` compiled it correctly) the container would collapse to
+  zero height and the hero would disappear; the inline style can't be dropped by a CSS pipeline
+  issue since React applies it directly to the element.
+- **`CategoryTabs.tsx`**: All / Electronics & Gadgets / Health & Beauty tabs (HeroUI `Tabs`,
+  keyboard-accessible via react-aria out of the box), filtering an in-memory product array — no new
+  data fetching, no route change per tab, no global state.
 - **`ProductGrid.tsx`**: the shared dense responsive grid
   (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5`, ~5 columns at reference/1440px
   width) wrapping `ProductCard`s.
-- **`FeaturedProductsRow.tsx`**: horizontally-scrollable strip with prev/next controls (a plain
-  `ref.scrollBy`, not a new dependency), starting with a promotional category tile (real category,
-  e.g. "Health & Beauty Picks" → `/health-beauty`) followed by product cards. Titled **"Featured
-  Picks"**, not "Best Sellers"/"Daily Best Sells" — no sales-ranking data exists in the Phase 2
-  catalog to support a best-seller claim, so the section is named for what it honestly is.
-- **`BrandStory.tsx`**: a 2×2 collage of real product photos (not a fabricated lifestyle scene)
-  beside an "Our Story" eyebrow, heading, gold underline accent, and three short paragraphs using
-  `--secondary-text` for body copy (§3) — deliberately modest, no invented history, customer
-  counts, or market-leadership claims.
+- **`FeaturedProductsRow.tsx`**: horizontally-scrollable strip with prev/next controls (native
+  `<button>`s with `aria-label`s, a plain `ref.scrollBy` — not a new dependency), starting with a
+  promotional category tile (real category, `bg-surface-warm`, e.g. "Health & Beauty Picks" →
+  `/health-beauty`) followed by product cards. Titled **"Featured Picks"**, not "Best Sellers"/
+  "Daily Best Sells" — no sales-ranking data exists in the Phase 2 catalog to support a
+  best-seller claim.
+- **`CategoryHighlights.tsx`** (Phase 4): a 2-column editorial block (1-column on mobile), one
+  card per top-level category — real product photography (`x699-turbo-fan` for Electronics &
+  Gadgets, `dark-spot-correcting-glow-serum` for Health & Beauty; chosen to avoid repeating
+  `BrandStory`'s images), one hand-authored truthful sentence per category (generic — "what's
+  actually in the catalog," never invented counts/claims; lives in the component, not in
+  `src/data/categories.ts`, since it's homepage marketing copy, not product data), and a CTA
+  ("Shop Electronics" / "Shop Health & Beauty") to the real category route.
+- **`WhyShopWithRenvura.tsx`** (Phase 4): a compact 4-item trust grid — Cash on Delivery,
+  Nationwide Delivery, Selected Products, Secure Ordering Experience — each a short, currently-true
+  statement. Deliberately **excludes** "free delivery," "same-day delivery," "guaranteed warranty,"
+  and "verified reviews," since no policy backs any of those yet. Three new hand-authored SVG icons
+  (`IconCash`, `IconShieldCheck`, `IconTag`) were added to `src/components/ui/icons.tsx` in the
+  existing stroke style — no new icon-library dependency; `IconTruck` (already existed) is reused
+  for delivery.
+- **`BrandStory.tsx`**: a 2×2 collage of real product photos (not a fabricated lifestyle scene) on
+  a `bg-surface-warm` panel, beside an "Our Story" eyebrow, heading, gold underline accent, and
+  three short paragraphs using `--secondary-text` for body copy (§3) — deliberately modest, no
+  invented history, customer counts, or market-leadership claims. As of Phase 4, the copy also
+  avoids internal business/sourcing details (supplier fulfillment, wholesale pricing, dropshipping)
+  that don't belong on a customer-facing page.
 
 `/ui-preview` is unchanged and still useful for isolated component/token verification; the
 homepage does not link to it.

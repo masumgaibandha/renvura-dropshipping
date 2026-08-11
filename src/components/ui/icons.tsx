@@ -127,3 +127,31 @@ export function IconYoutube(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function IconCash(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.75" />
+      <path d="M5.5 9v.01M18.5 15v.01" />
+    </svg>
+  );
+}
+
+export function IconShieldCheck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 3.5 19 6v5.5c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6l7-2.5Z" />
+      <path d="m9 12 2 2 4-4.5" />
+    </svg>
+  );
+}
+
+export function IconTag(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M3.5 11.5 12 3h6a2.5 2.5 0 0 1 2.5 2.5v6L12.5 20 3.5 11.5Z" />
+      <circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

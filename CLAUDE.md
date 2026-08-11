@@ -176,12 +176,13 @@ phase — just don't design yourself into a corner that makes it hard later.
 
 ## Current status / what NOT to build yet
 
-Phases 1 (Foundation), 2 (Product data model), and 3 (Global storefront design system, including a
-redesign pass that pulled Phase 4's homepage forward into the same pass — see
-`docs/PRODUCT-ROADMAP.md`) are done — see also `docs/PRODUCT-DATA.md` and `docs/DESIGN-SYSTEM.md`.
-The reusable UI shell, components, and the real homepage (`src/app/page.tsx`) exist and are wired
-in, but do not build product/category listing pages, product detail pages, cart, checkout, auth,
-or admin dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up
+Phases 1 (Foundation), 2 (Product data model), 3 (Global storefront design system, including a
+redesign pass that pulled Phase 4's homepage forward into the same pass), and 4 (Homepage
+refinement — Category Highlights, Why Shop With Renvura, homepage SEO metadata) are done — see
+`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §9. The reusable UI
+shell, components, and the real homepage (`src/app/page.tsx`) exist and are wired in, but do not
+build product/category listing pages, product detail pages, cart, checkout, auth, or admin
+dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up
 real search/cart/newsletter logic, or create fake products/reviews/prices — every product still has
 `sellingPrice: null`, so "Price unavailable" and a disabled Add to Cart button are the correct,
 expected state everywhere, including on the homepage, until Phase 2's pricing gap is resolved.

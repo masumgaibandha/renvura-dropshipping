@@ -34,7 +34,7 @@ export function BrandStory() {
 
         <div className="mt-5 space-y-4 text-body text-secondary-text">
           <p>Renvura brings together practical electronics, gadgets, and health &amp; beauty essentials for everyday life in Bangladesh.</p>
-          <p>Every product is sourced from verified suppliers, and every order ships with Cash on Delivery available nationwide.</p>
+          <p>Every order ships with Cash on Delivery available nationwide, so you only pay when it arrives.</p>
           <p>We&apos;re building the catalog carefully, category by category, rather than listing everything at once.</p>
         </div>
       </div>

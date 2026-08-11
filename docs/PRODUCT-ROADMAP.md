@@ -54,14 +54,29 @@ search, cart, checkout, auth, admin, or MongoDB connection. Add to Cart is wired
 (disabled when unpriced/out of stock) but doesn't add anything anywhere yet. `/ui-preview` must be
 removed or gated before production launch.
 
-## Phase 4 — Homepage ✅ (completed inside Phase 3's redesign pass, out of the normal order)
+## Phase 4 — Homepage ✅ (initial build pulled into Phase 3's redesign pass; refined as its own pass)
 
 Built using real Phase 2 product data and the Phase 3 primitives, following the reference's actual
 section set rather than the originally-planned list below — see `docs/DESIGN-SYSTEM.md` §9 for
-what was actually built (`HeroBanner`, Popular Products with category tabs, Featured Picks, Our
-Story) and why some of the originally-planned sections (Best Sellers, Trending Products, Customer
-Reviews) were renamed or dropped: no sales/ranking/review data exists in the Phase 2 catalog to
-honestly support those claims.
+the full current section-by-section detail (this file doesn't restate it) and why some of the
+originally-planned sections (Best Sellers, Trending Products, Customer Reviews) were renamed or
+dropped: no sales/ranking/review data exists in the Phase 2 catalog to honestly support those
+claims.
+
+**Phase 4 refinement pass** (after the Phase 3 redesign, once the light premium palette was
+finalized at `78ea72e`): audited `ProductCard`, Popular Products, and Featured Picks against this
+phase's requirements and found them already compliant (no changes needed — real data, no dark
+backgrounds, keyboard-accessible tabs/carousel controls, lightweight local-state filtering, no
+global state). Added two new sections that were in the original planned list but hadn't been built
+yet — **Category Highlights** (`src/components/home/CategoryHighlights.tsx`: a 2-column editorial
+block, one card per top-level category, real product photography, a hand-authored truthful
+sentence, and a CTA to the real category route) and **Why Shop With Renvura**
+(`src/components/home/WhyShopWithRenvura.tsx`: a compact 4-item trust grid — Cash on Delivery,
+Nationwide Delivery, Selected Products, Secure Ordering Experience — using three new hand-authored
+icons in `src/components/ui/icons.tsx`, no new icon-library dependency). Added homepage-specific
+SEO metadata (`title`/`description` export in `src/app/page.tsx`, overriding the root layout's
+generic title). Reworded one `BrandStory` sentence that referenced "verified suppliers" — that's
+an internal sourcing detail, not customer-facing positioning.
 
 <details>
 <summary>Original Phase 4 scope as planned before the redesign (kept for history)</summary>

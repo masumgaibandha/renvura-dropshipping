@@ -1,18 +1,32 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { BrandStory } from "@/components/home/BrandStory";
+import { CategoryHighlights } from "@/components/home/CategoryHighlights";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { FeaturedProductsRow } from "@/components/home/FeaturedProductsRow";
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { WhyShopWithRenvura } from "@/components/home/WhyShopWithRenvura";
 import { Section } from "@/components/layout/Section";
 import { getAllCategories, getAllProducts, getCategoryBySlug } from "@/services/products";
 
 /**
+ * Overrides the root layout's generic title/description for `/` specifically.
+ * `title.absolute` bypasses the layout's "%s | Renvura" template so this
+ * doesn't become "...| Renvura" twice.
+ */
+export const metadata: Metadata = {
+  title: { absolute: "Renvura — Gadgets, Electronics & Health and Beauty in Bangladesh" },
+  description: "Shop electronics, gadgets, and health & beauty essentials in Bangladesh, with Cash on Delivery available nationwide.",
+};
+
+/**
  * Homepage — reference section order: hero, Popular Products (tabs + grid),
- * View All Products, Featured Picks (promo tile + carousel), Our Story.
- * Server Component: fetches the Phase 2 seed catalog once and passes it
- * down; no client-side fetching. Still no cart/checkout/auth/DB — Phase 3
- * redesign scope only. See docs/DESIGN-SYSTEM.md and docs/PRODUCT-ROADMAP.md.
+ * View All Products, Featured Picks (promo tile + carousel), Category
+ * Highlights, Why Shop With Renvura, Our Story. Server Component: fetches
+ * the Phase 2 seed catalog once and passes it down; no client-side
+ * fetching. Still no cart/checkout/auth/DB — Phase 4 scope only. See
+ * docs/DESIGN-SYSTEM.md and docs/PRODUCT-ROADMAP.md.
  */
 export default function Home() {
   const allProducts = getAllProducts();
@@ -45,6 +59,14 @@ export default function Home() {
           <FeaturedProductsRow products={featuredProducts} promoCategory={promoCategory} />
         </Section>
       )}
+
+      <Section>
+        <CategoryHighlights categories={topCategories} />
+      </Section>
+
+      <Section className="bg-background-secondary">
+        <WhyShopWithRenvura />
+      </Section>
 
       <Section>
         <BrandStory />

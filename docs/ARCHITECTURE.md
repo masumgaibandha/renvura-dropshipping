@@ -39,7 +39,7 @@ renvura-dropshipping/
 │                                 electronics-gadgets/x699-turbo-fan/image-1.jpg
 ├── src/
 │   ├── app/                    App Router routes, layouts, metadata
-│   │   ├── page.tsx               Homepage (Phase 3 redesign) — see docs/DESIGN-SYSTEM.md §9
+│   │   ├── page.tsx               Homepage (Phase 4) — see docs/DESIGN-SYSTEM.md §9
 │   │   └── ui-preview/           TEMPORARY design-system preview route — see docs/DESIGN-SYSTEM.md §7
 │   ├── components/
 │   │   ├── ui/                  icons.tsx, IconLinkButton.tsx — small generic primitives
@@ -48,7 +48,8 @@ renvura-dropshipping/
 │   │   ├── ecommerce/            ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
 │   │   └── home/                  Homepage-composition components (not generic/reusable across
 │   │                                pages): HeroBanner, CategoryTabs, ProductGrid,
-│   │                                FeaturedProductsRow, BrandStory — see docs/DESIGN-SYSTEM.md §9
+│   │                                FeaturedProductsRow, CategoryHighlights, WhyShopWithRenvura,
+│   │                                BrandStory — see docs/DESIGN-SYSTEM.md §9
 │   ├── config/                    brand.ts, navigation.ts
 │   ├── data/                       categories.ts, products.ts — verified seed data (Phase 2)
 │   ├── hooks/                      Client-side React hooks
