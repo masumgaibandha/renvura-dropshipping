@@ -1,9 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CartIcon } from "@/components/cart/CartIcon";
 import { SearchBar } from "@/components/ecommerce/SearchBar";
 import { IconLinkButton } from "@/components/ui/IconLinkButton";
-import { IconBag, IconHeart, IconUser } from "@/components/ui/icons";
+import { IconHeart, IconUser } from "@/components/ui/icons";
+import { WishlistCountBadge } from "@/components/wishlist/WishlistCountBadge";
 import { brand } from "@/config/brand";
 import { Container } from "./Container";
 import { MobileDrawer, MobileMenuTrigger, MobileNavProvider, MobileSearchTrigger } from "./MobileNav";
@@ -33,23 +36,22 @@ export function Header() {
 
             <div className="ml-auto flex items-center gap-1 md:gap-2">
               <MobileSearchTrigger className="md:hidden" />
-              <IconLinkButton href="/wishlist" aria-label="Wishlist" className="hidden md:inline-flex">
+              <IconLinkButton href="/wishlist" aria-label="Wishlist" className="relative hidden md:inline-flex">
                 <IconHeart className="size-5" />
+                <WishlistCountBadge />
               </IconLinkButton>
               <IconLinkButton href="/account" aria-label="Account" className="hidden md:inline-flex">
                 <IconUser className="size-5" />
                 <span className="text-small font-medium">Login</span>
               </IconLinkButton>
-              <IconLinkButton href="/cart" aria-label="Cart">
-                <IconBag className="size-5" />
-                <span className="hidden text-small font-medium md:inline">Cart</span>
-              </IconLinkButton>
+              <CartIcon />
             </div>
           </div>
         </Container>
       </header>
 
       <MobileDrawer />
+      <CartDrawer />
     </MobileNavProvider>
   );
 }

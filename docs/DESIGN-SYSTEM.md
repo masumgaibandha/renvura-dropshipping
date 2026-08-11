@@ -2,8 +2,8 @@
 
 Status: **Phase 3 — Global storefront design system implemented; Phase 3 correction applied;
 Phase 3 redesign applied (homepage built); Phase 4 — homepage refinement applied (§9); Phase 5 —
-shop/category listing applied (§10); Phase 6 — product detail applied (§11).** The original
-Phase 1 visual reference (a jewelry
+shop/category listing applied (§10); Phase 6 — product detail applied (§11); Phase 7 — cart +
+wishlist applied (§12).** The original Phase 1 visual reference (a jewelry
 site) was replaced by the user with a new authoritative reference
 (`resources/reference-theme.png`/`.pdf`, a "TimTom"-style e-commerce homepage). Two passes
 followed: a **correction** pass (palette only — see §3) and a **redesign** pass, where the user
@@ -486,3 +486,63 @@ entire `offers` object — not just `price` — is omitted whenever `sellingPric
 priceless `Offer` is itself a form of fabricated-looking structured data. `availability` maps from
 the real `inventory.status` (`in_stock`/`out_of_stock` → schema.org URLs; `"unknown"` omits the
 field rather than guessing). `wholesalePrice` is never read in this route, visibly or in JSON-LD.
+
+## 12. Cart + wishlist (Phase 7)
+
+State lives in `src/contexts/CartContext.tsx`/`WishlistContext.tsx` — see
+`docs/ARCHITECTURE.md`/`docs/PRODUCT-ROADMAP.md` for the `useSyncExternalStore` architecture and
+the untrusted-client-state rule. This section covers the UI surface.
+
+**Header** (`src/components/layout/Header.tsx`): the wishlist icon is unchanged structurally
+(`IconLinkButton` → `/wishlist`) but now carries a `WishlistCountBadge` (Client Component, hidden
+at 0). The **cart** icon is replaced by `CartIcon.tsx` — a real `<button>`, not a link, styled to
+match `IconLinkButton` — whose click opens `CartDrawer.tsx` instead of navigating; `/cart` is still
+reachable via the drawer's "View Cart" button or directly by URL. `MobileNav.tsx`'s footer Cart/
+Wishlist icons get the same count badges but stay plain navigable links rather than also opening
+the cart drawer — avoids stacking two HeroUI overlays (the mobile nav drawer + the cart drawer) at
+once.
+
+**`CartDrawer.tsx`**: same HeroUI `Drawer` composed-API pattern as `MobileNav.tsx`/
+`MobileFilterDrawer.tsx` (focus trap, Escape-to-close, focus return from react-aria), but
+*controlled* — `useOverlayState({ isOpen: isDrawerOpen, onOpenChange })` mirrors `CartContext`'s
+own open state in both directions, so closing the drawer any way (Escape, backdrop, the close
+button, or "View Cart") always leaves the context's `isDrawerOpen` in sync. Per line item: image,
+title (links to `/products/[slug]`, closes the drawer), quantity (`QuantitySelector`, capped at
+that line's `maxQuantity`), unit price, line total, remove. Footer: subtotal + one **"View Cart"**
+button — no disabled "Proceed to Checkout" here; a second, mostly-decorative button in a compact
+drawer is clutter without function.
+
+**`QuantitySelector.tsx`** (Phase 6) is now **controlled** (`value`/`onChange` props, was internal
+`useState`) — its two call sites, `BuyBox` and the cart drawer/page, both need the current quantity
+for their own purposes (Add to Cart quantity; updating an existing line), so ownership moved to
+each caller.
+
+**`/cart`** (`src/app/cart/page.tsx`, Client Component — its data is 100% client-only cart state,
+there's nothing to fetch server-side): `grid lg:grid-cols-[1fr_320px]` — items left, order summary
+right; collapses to one column on mobile. Order summary: subtotal, "Delivery: Calculated at
+checkout" (static text, never an invented number), **Total = Subtotal** (explicitly labeled as
+excluding delivery), a disabled **"Proceed to Checkout"** (appropriate here, unlike the drawer — a
+full cart page is where users expect to see it even before Phase 8 makes it real), "Continue
+Shopping" → `/shop`. Empty state: "Your cart is empty" + "Continue Shopping" → `/shop`.
+
+**`/wishlist`** (`src/app/wishlist/page.tsx`, Client Component): reads the wishlist context's
+stored slugs and filters `getAllProducts()` (already synchronous/local), rendering the existing
+`ProductGrid`. This is the one place a full product-data import into client code is an accepted
+tradeoff — it's a dedicated, code-split route (loaded only when visited), unlike the cart drawer
+which sits in global header chrome and therefore stores its own display fields instead. Empty
+state: "Your wishlist is empty" + "Browse Products" → `/shop` (deliberately different wording from
+the cart's empty state, matching the brief).
+
+**`ProductCard.tsx`** stays a Server Component — `AddToCartButton.tsx`
+(`src/components/cart/`) and `WishlistToggleButton.tsx` (`src/components/wishlist/`) are the only
+new client surfaces it gains, replacing what was previously an inert disabled button and (as of
+this phase) reintroducing the wishlist heart overlay that Phase 3's reference-matching redesign
+had removed — this phase explicitly asks for wishlist-from-`ProductCard`, so that's a deliberate,
+requested reversal, not a regression of the earlier decision. The wishlist toggle has no price/
+stock gate (saving something for later doesn't require either); Add to Cart keeps the exact
+`sellingPrice !== null && status !== "out_of_stock"` formula already established.
+
+**`BuyBox.tsx`** (product detail page, Phase 6) is now a Client Component so it can coordinate
+`QuantitySelector` with the Add to Cart/Buy Now handlers. Buy Now = `addItem(...)` then
+`router.push("/cart")` — "prepare the item, navigate to cart," exactly per the brief; still no
+checkout.

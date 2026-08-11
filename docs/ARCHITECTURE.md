@@ -44,6 +44,8 @@ renvura-dropshipping/
 │   │   ├── electronics-gadgets/    Category listing — same shared architecture as /shop
 │   │   ├── health-beauty/          Category listing — same shared architecture as /shop
 │   │   ├── products/[slug]/        Product detail (Phase 6) — see docs/DESIGN-SYSTEM.md §11
+│   │   ├── cart/                   Cart page (Phase 7) — see docs/DESIGN-SYSTEM.md §12
+│   │   ├── wishlist/               Wishlist page (Phase 7) — see docs/DESIGN-SYSTEM.md §12
 │   │   └── ui-preview/           TEMPORARY design-system preview route — see docs/DESIGN-SYSTEM.md §7
 │   ├── components/
 │   │   ├── ui/                  icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
@@ -57,16 +59,23 @@ renvura-dropshipping/
 │   │   │                            docs/DESIGN-SYSTEM.md §9
 │   │   ├── shop/                   Listing-page composition (Phase 5): ProductListingPage,
 │   │   │                            SortSelect, MobileFilterDrawer — see docs/DESIGN-SYSTEM.md §10
-│   │   └── product/                Product-detail-page composition (Phase 6): ProductGallery,
-│   │                                BuyBox, QuantitySelector, DeliveryPaymentInfo, ProductDetails —
-│   │                                see docs/DESIGN-SYSTEM.md §11
+│   │   ├── product/                Product-detail-page composition (Phase 6): ProductGallery,
+│   │   │                            BuyBox, QuantitySelector, DeliveryPaymentInfo, ProductDetails —
+│   │   │                            see docs/DESIGN-SYSTEM.md §11
+│   │   ├── cart/                   Cart composition (Phase 7): AddToCartButton, CartIcon,
+│   │   │                            CartCountBadge, CartDrawer — see docs/DESIGN-SYSTEM.md §12
+│   │   └── wishlist/                Wishlist composition (Phase 7): WishlistToggleButton,
+│   │                                 WishlistCountBadge — see docs/DESIGN-SYSTEM.md §12
 │   ├── config/                    brand.ts, navigation.ts
+│   ├── contexts/                   CartContext.tsx, WishlistContext.tsx (Phase 7) — guest cart/
+│   │                                 wishlist state; see the untrusted-client-state note below
 │   ├── data/                       categories.ts, products.ts — verified seed data (Phase 2)
 │   ├── hooks/                      Client-side React hooks
-│   ├── lib/                         Framework-agnostic utilities (validate-product.ts), DB/client setup
+│   ├── lib/                         Framework-agnostic utilities (validate-product.ts,
+│   │                                  local-storage.ts), DB/client setup
 │   ├── models/                       Mongoose schemas: Product.ts, Category.ts (not yet connected)
 │   ├── services/                      Data-access layer: products.ts (reads src/data/ for now)
-│   ├── types/                          product.ts, category.ts — shared TypeScript domain types
+│   ├── types/                          product.ts, category.ts, cart.ts — shared TypeScript domain types
 │   └── utils/                          currency.ts, slug.ts, pricing.ts — small pure helpers
 ├── CLAUDE.md
 └── package.json
@@ -132,23 +141,34 @@ component only needs to return its own content. Full rules and rationale for eac
   `/shop?q=...`, plus `useSearchParams()` to prefill — wrapped in its own `<Suspense>` boundary
   since it renders on every route including statically-prerendered ones) /
   `NewsletterSignup.tsx` (real form, `preventDefault`, no backend yet), `MobileNav.tsx`/
-  `MobileFilterDrawer.tsx` (shared drawer open/close state), `NavLinks.tsx` (`usePathname()`-driven
-  active link styling), `providers.tsx` (theme context), `CategoryTabs.tsx`/
-  `FeaturedProductsRow.tsx` (HeroUI `Tabs` selection state / a scroll-ref for the prev-next
-  carousel), `SortSelect.tsx` (`router.push` on a native `<select>`'s `onChange` — the only
-  navigation a `<select>` can't do with a plain `href`), and `ProductGallery.tsx`/
-  `QuantitySelector.tsx` (active-thumbnail state / a local quantity counter — Phase 6 scopes
-  Client Components to exactly these two interactions on the product page, nothing else). Everything
-  else — `Header`, `Footer`, `SecondaryNav`, `ProductCard`, `ProductGrid`, `Price`, `Badges`,
-  `AnnouncementBar`, `Container`, `Section`, `IconLinkButton`, `Breadcrumbs`, `HeroBanner`,
-  `BrandStory`, `ProductListingPage`, `BuyBox`, `DeliveryPaymentInfo`, `ProductDetails` — is a
+  `MobileFilterDrawer.tsx`/`CartDrawer.tsx` (shared drawer open/close state), `NavLinks.tsx`
+  (`usePathname()`-driven active link styling), `providers.tsx` (theme + cart + wishlist context),
+  `CategoryTabs.tsx`/`FeaturedProductsRow.tsx` (HeroUI `Tabs` selection state / a scroll-ref for the
+  prev-next carousel), `SortSelect.tsx` (`router.push` on a native `<select>`'s `onChange` — the
+  only navigation a `<select>` can't do with a plain `href`), `ProductGallery.tsx`/
+  `QuantitySelector.tsx` (active-thumbnail state / a controlled quantity value), and (Phase 7)
+  `AddToCartButton.tsx`/`WishlistToggleButton.tsx`/`CartIcon.tsx`/`CartCountBadge.tsx`/
+  `WishlistCountBadge.tsx`/`BuyBox.tsx`/`/cart`/`/wishlist` (real cart/wishlist mutations and
+  live counts — `BuyBox` graduated from Server to Client Component in Phase 7 specifically to
+  coordinate its quantity value with the Add to Cart/Buy Now handlers; `/cart`/`/wishlist` are
+  Client Components outright since their data is 100% client-only state, nothing to fetch
+  server-side). Everything else — `Header`, `Footer`, `SecondaryNav`, `ProductCard`, `ProductGrid`,
+  `Price`, `Badges`, `AnnouncementBar`, `Container`, `Section`, `IconLinkButton`, `Breadcrumbs`,
+  `HeroBanner`, `BrandStory`, `ProductListingPage`, `DeliveryPaymentInfo`, `ProductDetails` — is a
   Server Component, even where it renders HeroUI components that are themselves Client Components
   internally (Next.js allows a Server Component to import and render a Client Component directly;
   the boundary starts at the child, not the parent).
 - `ProductCard`/`Price`/`Badges` read the real `Product` type from Phase 2 and render nothing
   they can't verify (no ratings, no invented badges, "Price unavailable" instead of showing
   `wholesalePrice` as if it were a customer price). Add to Cart is disabled based on real state
-  (`sellingPrice === null` or out of stock), not stubbed with a fake handler.
+  (`sellingPrice === null` or out of stock), not stubbed with a fake handler; the reducer behind it
+  (`src/contexts/CartContext.tsx`) enforces the same rule as a second line of defense, so an
+  invalid cart line can't be constructed even by a mis-wired caller.
+- **Client cart/wishlist state is untrusted** (Phase 7): `localStorage`-persisted cart/wishlist
+  data is a display convenience only, never a source of truth. Phase 8's order creation must
+  re-fetch and validate price/availability from real product data (or a real backend) before
+  creating an order — nothing in `CartContext`/`WishlistContext` should ever be trusted directly
+  for that.
 - HeroUI is rethemed via CSS custom properties in `src/app/globals.css` (see
   `docs/DESIGN-SYSTEM.md` §3), not forked or wrapped — `Button`, `Chip`, `SearchField`, `Drawer`,
   `Dropdown`, `Tabs`, `TextField`/`Input` are used directly from `@heroui/react` throughout.
@@ -185,14 +205,16 @@ are still Phase 12 work, but nothing in the current structure blocks adding them
 ## Explicitly deferred (not built yet)
 
 The homepage was built ahead of schedule in the Phase 3 redesign, catalog/category listing
-(`/shop`, `/electronics-gadgets`, `/health-beauty`) is done as of Phase 5, and the product detail
-page (`/products/[slug]`) is done as of Phase 6 (see `docs/DESIGN-SYSTEM.md` §§9–11 and
-`docs/PRODUCT-ROADMAP.md`) — still deferred: cart, checkout, customer accounts, and the admin
-dashboard. Phase 3 built the **UI foundation** several of these reuse (`ProductCard`,
-`ProductGrid`, `Price`, `SearchBar`, `Header`/`Footer` chrome, the homepage's `home/` components,
-the listing pages' `shop/` components, and now the product page's `product/` components) but
-deliberately stopped short of real behavior: Add to Cart / Buy Now don't add to a cart, wishlist
-doesn't persist, the newsletter form doesn't subscribe anyone. Search itself does now work (Phase
-5) — that's the one exception. The folder structure above exists to receive the rest of that logic
-without restructuring — it plugs into
-`src/services/` once there's something real to call.
+(`/shop`, `/electronics-gadgets`, `/health-beauty`) is done as of Phase 5, the product detail page
+(`/products/[slug]`) is done as of Phase 6, and cart + wishlist (`/cart`, `/wishlist`) is done as
+of Phase 7 (see `docs/DESIGN-SYSTEM.md` §§9–12 and `docs/PRODUCT-ROADMAP.md`) — still deferred:
+checkout, order creation, payment, customer accounts, and the admin dashboard. Phase 3 built the
+**UI foundation** several of these reuse (`ProductCard`, `ProductGrid`, `Price`, `SearchBar`,
+`Header`/`Footer` chrome, the homepage's `home/` components, the listing pages' `shop/` components,
+the product page's `product/` components, and now the `cart/`/`wishlist/` components) but
+deliberately stopped short of real behavior: the newsletter form doesn't subscribe anyone, and
+there's no checkout past "Buy Now adds the item and takes you to `/cart`." Search (Phase 5) and
+cart/wishlist (Phase 7) now genuinely work — Add to Cart really adds an item, wishlist really
+persists — but Phase 7's cart/wishlist state is explicitly untrusted client state (see above), not
+yet backed by anything server-side. The folder structure above exists to receive the rest of that
+logic without restructuring — it plugs into `src/services/` once there's something real to call.

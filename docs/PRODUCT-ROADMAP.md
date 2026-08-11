@@ -1,6 +1,6 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Phases 1–6 are complete.** Phase 4 (Homepage) was
+This roadmap defines the intended build order. **Phases 1–7 are complete.** Phase 4 (Homepage) was
 pulled forward and completed inside Phase 3's redesign pass (see the Phase 3 entry below for why).
 Do not start a later phase without explicit confirmation — each phase should be scoped and agreed
 before work begins.
@@ -136,8 +136,31 @@ read anywhere in this route, in the visible buy box or in JSON-LD.
 admin, MongoDB, payments, or tracking. Add to Cart / Buy Now / the quantity selector are UI
 foundations only, disabled via the same real-state formula `ProductCard` already uses.
 
-## Phase 7 — Cart
-Cart state, add/remove/update, persistence strategy, wishlist.
+## Phase 7 — Cart + wishlist ✅
+Built real client-side cart and wishlist state — see `docs/DESIGN-SYSTEM.md` §12 for full UI
+detail. `CartContext`/`WishlistContext` (`src/contexts/`) each wrap a small module-level store
+backed by `useSyncExternalStore` (not `useReducer`+`useEffect` — reading `localStorage` needs to be
+hydration-safe, and `useSyncExternalStore` is React's own mechanism for that, not a
+`useEffect`-based read-on-mount, which the project's React Compiler lint rule correctly flags as
+an anti-pattern); item mutations still go through a plain reducer function internally. Persisted
+to versioned `localStorage` keys (`renvura:cart:v1`, `renvura:wishlist:v1`) via
+`src/lib/local-storage.ts`'s type-guarded safe read/write — corrupt or wrong-shape stored data is
+discarded, never trusted.
+
+**Untrusted client state**: cart/wishlist `localStorage` data is a **display convenience only**.
+Phase 8's order creation must re-fetch and validate price/availability from real product data (or
+a real backend) before creating an order — nothing client-side here is a source of truth for that.
+`CartItem.sellingPrice` is only ever populated from a real, non-null `sellingPrice`; the `addItem`
+reducer path defensively rejects `null`/invalid adds as a second line of defense beyond the UI's
+own disabled-button gating. `wholesalePrice` is never read anywhere in this feature.
+
+**Current price limitation**: every product in the real catalog still has `sellingPrice: null`, so
+Add to Cart/Buy Now are correctly disabled everywhere today (verified live — all 18 rendered Add to
+Cart buttons and both Buy Now buttons carry `disabled`/`data-disabled="true"`). Since no real
+product can be added through the UI yet, the cart reducer itself was verified via a standalone
+state-level test (add/duplicate-increment/maxQuantity-cap/remove/update-quantity/clear/itemCount/
+subtotal — 12 checks, all passing) rather than an end-to-end UI click-through. The wishlist has no
+such price gate and was verified fully end-to-end (toggle, persistence, `/wishlist` page).
 
 ## Phase 8 — Checkout / orders
 Guest checkout, Bangladesh address form (Division/District/Upazila), Cash on Delivery, online

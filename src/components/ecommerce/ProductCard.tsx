@@ -1,7 +1,8 @@
-import { Button } from "@heroui/react";
 import Image from "next/image";
 import Link from "next/link";
 
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { WishlistToggleButton } from "@/components/wishlist/WishlistToggleButton";
 import { getCategoryBySlug } from "@/services/products";
 import type { Product } from "@/types/product";
 import { SaleBadge, StockBadge } from "./Badges";
@@ -17,9 +18,12 @@ interface ProductCardProps {
  * label, title, price row, single full-width Add to Cart button. Only
  * renders fields the product actually has — see docs/DESIGN-SYSTEM.md for
  * what's intentionally omitted (ratings, review counts, "Best Seller"/
- * "Trending" badges) until real data backs them. Add to Cart is disabled
- * until the product has a real `sellingPrice` — there's nothing fake to add
- * to a cart otherwise.
+ * "Trending" badges) until real data backs them. Stays a Server Component —
+ * `AddToCartButton`/`WishlistToggleButton` are the only client surfaces
+ * (Phase 7). Add to Cart is disabled until the product has a real
+ * `sellingPrice` — there's nothing real to add to a cart otherwise; the
+ * wishlist toggle has no such gate (saving something for later doesn't
+ * require a price).
  */
 export function ProductCard({ product, className }: ProductCardProps) {
   const { pricing, media, inventory } = product;
@@ -54,6 +58,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
           <SaleBadge discountPercentage={discountPercentage} />
           {inventory.status === "out_of_stock" && <StockBadge status="out_of_stock" />}
         </div>
+
+        <WishlistToggleButton slug={product.slug} title={product.title} className="absolute top-2 right-2 bg-surface/85 backdrop-blur" />
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-2 md:gap-1.5 md:p-3">
@@ -68,9 +74,20 @@ export function ProductCard({ product, className }: ProductCardProps) {
         <div className="mt-auto flex flex-col gap-1 pt-0.5 md:gap-2 md:pt-1">
           <Price sellingPrice={pricing.sellingPrice} regularPrice={pricing.regularPrice} size="sm" showDiscountBadge={false} />
 
-          <Button variant="primary" size="sm" fullWidth isDisabled={!canPurchase} className="text-xs md:text-small" aria-label={`Add ${product.title} to cart`}>
-            Add to Cart
-          </Button>
+          <AddToCartButton
+            item={{
+              productId: product.id,
+              slug: product.slug,
+              title: product.title,
+              image,
+              sellingPrice: pricing.sellingPrice,
+              maxQuantity: inventory.stock,
+            }}
+            disabled={!canPurchase}
+            label="Add to Cart"
+            ariaLabel={`Add ${product.title} to cart`}
+            className="text-xs md:text-small"
+          />
         </div>
       </div>
     </article>

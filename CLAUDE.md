@@ -54,8 +54,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   ```
   src/app/                 routes (App Router); page.tsx is the real homepage; shop/,
                              electronics-gadgets/, health-beauty/ are the Phase 5 listing routes;
-                             products/[slug]/ is the Phase 6 product detail route; ui-preview/ is
-                             TEMPORARY — see below
+                             products/[slug]/ is the Phase 6 product detail route; cart/,
+                             wishlist/ are the Phase 7 routes; ui-preview/ is TEMPORARY — see below
   src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
                              NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
@@ -68,10 +68,15 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              MobileFilterDrawer — shared by all three Phase 5 routes
   src/components/product/   Product-detail-page-only composition: ProductGallery, BuyBox,
                              QuantitySelector, DeliveryPaymentInfo, ProductDetails (Phase 6)
+  src/components/cart/      Cart composition (Phase 7): AddToCartButton, CartIcon,
+                             CartCountBadge, CartDrawer
+  src/components/wishlist/  Wishlist composition (Phase 7): WishlistToggleButton, WishlistCountBadge
+  src/contexts/              CartContext.tsx, WishlistContext.tsx (Phase 7) — see the untrusted-
+                              client-state rule below
   src/config/               brand.ts, navigation.ts
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
-  src/lib/                   framework-agnostic utilities (validate-product.ts), DB/client setup
+  src/lib/                   framework-agnostic utilities (validate-product.ts, local-storage.ts), DB/client setup
   src/models/                 Mongoose schemas: Product.ts, Category.ts (not yet connected)
   src/services/               data-access layer: products.ts (reads src/data/ until MongoDB is wired up)
   src/types/                  shared TypeScript types: product.ts, category.ts
@@ -147,7 +152,18 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   correct/expected state for every current product until Phase 2's pricing gap is resolved. This
   extends to structured data too: `/products/[slug]`'s Product JSON-LD never reads
   `wholesalePrice`, and omits the entire `offers` object (not just `price`) when `sellingPrice` is
-  `null` — a priceless `Offer` is itself a form of fabricated-looking data.
+  `null` — a priceless `Offer` is itself a form of fabricated-looking data. It also extends to the
+  cart (Phase 7): `CartItem.sellingPrice` (`src/types/cart.ts`) is only ever populated from a real,
+  non-null `sellingPrice` — `CartContext`'s `addItem` reducer path defensively rejects `null`/
+  invalid adds as a second line of defense beyond the UI's own disabled-button gating, so an
+  invalid cart line can never be constructed even by a mis-wired caller.
+- **Client cart/wishlist state is untrusted** (`src/contexts/CartContext.tsx`/
+  `WishlistContext.tsx`, Phase 7): `localStorage`-persisted cart/wishlist data is a **display
+  convenience only**, never a source of truth. A future checkout/order-creation phase must
+  re-fetch and validate price and availability from real product data (or a real backend) before
+  creating an order — never trust a stored price/subtotal/quantity directly for that. Corrupt or
+  wrong-shape stored data (`src/lib/local-storage.ts`'s type-guarded read) is discarded, not
+  trusted either.
 - `src/app/ui-preview/` is a **temporary, noindex, dev-only** route for visually verifying the
   design system. It must be removed or gated before production deployment — never link to it from
   real pages, and don't treat its existence as permission to skip building real pages later.
@@ -197,13 +213,15 @@ phase — just don't design yourself into a corner that makes it hard later.
 Phases 1 (Foundation), 2 (Product data model), 3 (Global storefront design system, including a
 redesign pass that pulled Phase 4's homepage forward into the same pass), 4 (Homepage refinement —
 Category Highlights, Why Shop With Renvura, homepage SEO metadata), 5 (Shop/category listing —
-`/shop`, `/electronics-gadgets`, `/health-beauty`, real search), and 6 (Product detail —
-`/products/[slug]`, gallery, buy box, related products, JSON-LD) are done — see
-`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–11. The reusable
-UI shell, homepage, listing pages, and product detail page exist and are wired in, but do not build
-cart, checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist but
-aren't wired up), wire up real cart/newsletter logic, or create fake products/reviews/prices —
-every product still has `sellingPrice: null`, so "Price unavailable" and disabled Add to Cart/Buy
-Now buttons are the correct, expected state everywhere until Phase 2's pricing gap is resolved.
-Search now works end-to-end (Phase 5) — that's no longer a stub. Confirm scope with the user before
-starting a new phase.
+`/shop`, `/electronics-gadgets`, `/health-beauty`, real search), 6 (Product detail —
+`/products/[slug]`, gallery, buy box, related products, JSON-LD), and 7 (Cart + wishlist — real
+client-side state, `/cart`, `/wishlist`, header counts) are done — see `docs/PRODUCT-ROADMAP.md`,
+`docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–12. The reusable UI shell, homepage,
+listing pages, product detail page, and cart/wishlist exist and are wired in, but do not build
+checkout, order creation, payment, auth, or admin dashboard until asked. Do not connect MongoDB
+(schemas exist but aren't wired up), wire up real newsletter logic, or create fake products/
+reviews/prices — every product still has `sellingPrice: null`, so "Price unavailable" and disabled
+Add to Cart/Buy Now buttons are the correct, expected state everywhere until Phase 2's pricing gap
+is resolved. Search (Phase 5) and cart/wishlist (Phase 7) now work end-to-end — those are no
+longer stubs, but Phase 7's cart/wishlist state is explicitly untrusted client state (see above),
+not a source of truth for a future order. Confirm scope with the user before starting a new phase.

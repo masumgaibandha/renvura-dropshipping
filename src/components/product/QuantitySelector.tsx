@@ -1,29 +1,29 @@
 "use client";
 
-import { useState } from "react";
-
 interface QuantitySelectorProps {
+  value: number;
+  onChange: (value: number) => void;
   /** Real verified stock count, when known — caps the selector rather than allowing an arbitrary number. */
   max?: number | null;
   className?: string;
 }
 
 /**
- * UI foundation only — no cart to add a quantity to yet, so this isn't
- * wired to anything. Minimum 1; capped at real `inventory.stock` when
- * that's a known number, not an invented limit.
+ * Controlled — the caller owns the quantity (BuyBox needs it for the Add
+ * to Cart/Buy Now click, CartDrawer/cart page need it to update an
+ * existing line). Minimum 1; capped at real `inventory.stock`/
+ * `maxQuantity` when known, never an invented limit.
  */
-export function QuantitySelector({ max, className }: QuantitySelectorProps) {
-  const [quantity, setQuantity] = useState(1);
+export function QuantitySelector({ value, onChange, max, className }: QuantitySelectorProps) {
   const hasMax = typeof max === "number" && max > 0;
-  const atMax = hasMax && quantity >= max;
+  const atMax = hasMax && value >= max;
 
   function decrement() {
-    setQuantity((current) => Math.max(1, current - 1));
+    onChange(Math.max(1, value - 1));
   }
 
   function increment() {
-    setQuantity((current) => (hasMax ? Math.min(max, current + 1) : current + 1));
+    onChange(hasMax ? Math.min(max, value + 1) : value + 1);
   }
 
   return (
@@ -31,14 +31,14 @@ export function QuantitySelector({ max, className }: QuantitySelectorProps) {
       <button
         type="button"
         onClick={decrement}
-        disabled={quantity <= 1}
+        disabled={value <= 1}
         aria-label="Decrease quantity"
         className="flex h-full w-10 items-center justify-center text-foreground transition-colors hover:text-accent disabled:pointer-events-none disabled:text-foreground/40"
       >
         −
       </button>
       <span aria-live="polite" className="w-8 text-center text-small font-medium tabular-nums text-foreground">
-        {quantity}
+        {value}
       </span>
       <button
         type="button"

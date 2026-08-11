@@ -5,9 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { createContext, use, type ReactNode } from "react";
 
+import { CartCountBadge } from "@/components/cart/CartCountBadge";
 import { IconLinkButton } from "@/components/ui/IconLinkButton";
 import { IconBag, IconHeart, IconMenu, IconUser } from "@/components/ui/icons";
 import { SearchBar } from "@/components/ecommerce/SearchBar";
+import { WishlistCountBadge } from "@/components/wishlist/WishlistCountBadge";
 import { brand } from "@/config/brand";
 import { NavLinks } from "./NavLinks";
 
@@ -83,14 +85,16 @@ export function MobileDrawer() {
 
             <Drawer.Footer className="border-t border-border px-2 py-3">
               <div className="flex items-center justify-around">
-                <IconLinkButton href="/wishlist" aria-label="Wishlist">
+                <IconLinkButton href="/wishlist" aria-label="Wishlist" className="relative">
                   <IconHeart className="size-5" />
+                  <WishlistCountBadge />
                 </IconLinkButton>
                 <IconLinkButton href="/account" aria-label="Account">
                   <IconUser className="size-5" />
                 </IconLinkButton>
-                <IconLinkButton href="/cart" aria-label="Cart">
+                <IconLinkButton href="/cart" aria-label="Cart" className="relative">
                   <IconBag className="size-5" />
+                  <CartCountBadge />
                 </IconLinkButton>
               </div>
             </Drawer.Footer>
