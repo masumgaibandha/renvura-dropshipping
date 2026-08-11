@@ -1,9 +1,9 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Phases 1–3 are complete, and Phase 4 (Homepage)
-was pulled forward and completed inside Phase 3's redesign pass** (see the Phase 3 entry below for
-why). Do not start a later phase without explicit confirmation — each phase should be scoped and
-agreed before work begins.
+This roadmap defines the intended build order. **Phases 1–5 are complete.** Phase 4 (Homepage) was
+pulled forward and completed inside Phase 3's redesign pass (see the Phase 3 entry below for why).
+Do not start a later phase without explicit confirmation — each phase should be scoped and agreed
+before work begins.
 
 ## Phase 1 — Foundation ✅
 Project initialization, Next.js/TypeScript/Tailwind/HeroUI setup, folder structure, brand
@@ -88,8 +88,29 @@ Customer Reviews, Newsletter — built against real product data from Phase 2 us
 
 </details>
 
-## Phase 5 — Categories / product listing
-Category and subcategory pages, product grids, filters, sorting, search.
+## Phase 5 — Categories / product listing ✅
+Built `/shop`, `/electronics-gadgets`, `/health-beauty` on one shared listing architecture — see
+`docs/DESIGN-SYSTEM.md` §10 for full component/UI detail. `getProductListing()`
+(`src/services/products.ts`) is the single place category filtering, search (title/model/category
+name), sorting, and pagination happen, reused by all three routes so the logic isn't duplicated
+per page. `ProductGrid` moved from `src/components/home/` to `src/components/ecommerce/` since
+it's a generic reusable primitive, not homepage-specific.
+
+**Data-driven filter/sort activation** (a rule worth calling out because it's not obvious from the
+UI alone): every product in the Phase 2 catalog currently has `sellingPrice: null` and
+`inventory.status: "in_stock"`. Price sort (`price-asc`/`price-desc`) and the "in stock only"
+toggle are real, working code paths, but only render in the UI once the current result set
+actually has variance to act on (`products.some(p => p.pricing.sellingPrice !== null)` /
+`products.some(p => p.inventory.status === "out_of_stock")`) — so with today's data, `/shop` shows
+only Featured/Name A–Z/Name Z–A sort and a category filter (the only two things that currently do
+anything), and both price sort and the stock toggle will appear automatically, with no code
+change, the moment real pricing or a real out-of-stock product exists. Filtering/sorting never
+reads `pricing.wholesalePrice` — see CLAUDE.md.
+
+Search is wired end-to-end: the header `SearchBar` (previously UI-only) now navigates to
+`/shop?q=<term>` on submit; `ProductListingPage` runs the actual search server-side. All listing
+state (`category`, `sort`, `q`, `availability`, `page`) lives in the URL — shareable, and no global
+client state.
 
 ## Phase 6 — Product detail
 Product detail page: gallery, variants, specs, related products, structured data.

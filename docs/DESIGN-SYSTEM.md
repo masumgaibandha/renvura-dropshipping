@@ -1,8 +1,8 @@
 # Design System
 
 Status: **Phase 3 — Global storefront design system implemented; Phase 3 correction applied;
-Phase 3 redesign applied (homepage built); Phase 4 — homepage refinement applied (§9).** The
-original Phase 1 visual reference (a jewelry
+Phase 3 redesign applied (homepage built); Phase 4 — homepage refinement applied (§9); Phase 5 —
+shop/category listing applied (§10).** The original Phase 1 visual reference (a jewelry
 site) was replaced by the user with a new authoritative reference
 (`resources/reference-theme.png`/`.pdf`, a "TimTom"-style e-commerce homepage). Two passes
 followed: a **correction** pass (palette only — see §3) and a **redesign** pass, where the user
@@ -371,3 +371,57 @@ meant for reuse across arbitrary pages):
 
 `/ui-preview` is unchanged and still useful for isolated component/token verification; the
 homepage does not link to it.
+
+## 10. Shop & category listing (`/shop`, `/electronics-gadgets`, `/health-beauty`, Phase 5)
+
+Three routes share one listing architecture rather than duplicating it per page:
+`src/services/products.ts`'s `getProductListing()` does category filtering, search, sorting, and
+pagination (business logic, kept out of components); `src/components/shop/ProductListingPage.tsx`
+is the one Server Component all three `page.tsx` files render, parameterized by an optional
+`categorySlug` (present for the two category routes, absent for `/shop`). All listing state lives
+in the URL (`?category=`, `?sort=`, `?q=`, `?availability=`, `?page=`) — shareable links, no global
+client state.
+
+**Data-driven filter/sort activation**: price sort and the "in stock only" toggle are real,
+working code paths that only appear in the UI once the current result set has real variance to
+act on — see `docs/PRODUCT-ROADMAP.md` Phase 5 for why (every product currently has
+`sellingPrice: null` and `inventory.status: "in_stock"`). Neither ever reads
+`pricing.wholesalePrice`. With today's data, the only controls that render are category pills
+(`/shop` only) and Featured/Name A–Z/Name Z–A sort.
+
+**Components** (`src/components/shop/`, plus one moved primitive):
+- **`ProductListingPage.tsx`**: breadcrumb (`Breadcrumbs`, `src/components/ui/`), `h1` title +
+  one-sentence description + real product count ("21 products"), a filter row (category pills +
+  `SortSelect`, composed once and shown both inline on desktop (`hidden md:flex`) and inside
+  `MobileFilterDrawer` on mobile (`md:hidden`) — not duplicated markup), the product grid, and
+  numbered pagination (plain server-rendered `<Link>`s, page size 12 — with 21 products total,
+  `/shop` is the only route that currently shows more than one page). Category filtering, search,
+  sort, and pagination are computed server-side from the awaited `searchParams`.
+- **`SortSelect.tsx`** (Client Component): the one control that needs `router.push` — a native
+  `<select>` has no href to navigate to on its own change event.
+- **`MobileFilterDrawer.tsx`** (Client Component): same HeroUI `Drawer` composed-API pattern as
+  `layout/MobileNav.tsx` (focus trapping, Escape-to-close, focus return come from react-aria, not
+  reimplemented).
+- **`src/components/ui/Breadcrumbs.tsx`**: generic `nav[aria-label="Breadcrumb"]`, reusable beyond
+  the shop routes; the current page is `aria-current="page"`, not a link.
+- **`ProductGrid.tsx`** moved from `src/components/home/` to `src/components/ecommerce/` — it was
+  never actually homepage-specific, and Phase 5 needed the same grid, so it now lives with the
+  other generic reusable primitives (`ProductCard`, `Price`, `Badges`).
+
+**Empty state**: "No products found for the selected filters." + a "Clear filters" link (the base
+route with no query params) + a "Back to Shop" link (only on the two category routes, where it
+isn't redundant with the page itself).
+
+**Search**: `SearchBar.tsx` (Header, both desktop and the mobile drawer) now navigates to
+`/shop?q=<term>` on submit instead of only calling `preventDefault()`. It's prefilled from
+`useSearchParams()` when already on `/shop?q=...`, which requires wrapping the hook usage in
+`<Suspense>` (`SearchBar` is rendered on every route via `StoreShell`, including statically
+prerendered ones like `/_not-found` — without the boundary, `next build` fails). The actual search
+(`getProductListing`'s `q` handling) matches product title, model, and category name —
+case-insensitive substring, no new dependency, no autocomplete.
+
+**SEO**: each route sets a truthful title/description; `alternates.canonical` (pointing at the
+clean, query-free path) and the root layout's `metadataBase` are both gated behind
+`isConfigured(brand.urls.site)` — that's still a `TODO` placeholder, so canonical URLs are wired
+but inactive until a real production domain is configured, the same pattern used for every other
+unconfigured `brand.*` field in this project.

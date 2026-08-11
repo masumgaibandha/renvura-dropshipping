@@ -40,16 +40,22 @@ renvura-dropshipping/
 ├── src/
 │   ├── app/                    App Router routes, layouts, metadata
 │   │   ├── page.tsx               Homepage (Phase 4) — see docs/DESIGN-SYSTEM.md §9
+│   │   ├── shop/                   All-products listing (Phase 5) — see docs/DESIGN-SYSTEM.md §10
+│   │   ├── electronics-gadgets/    Category listing — same shared architecture as /shop
+│   │   ├── health-beauty/          Category listing — same shared architecture as /shop
 │   │   └── ui-preview/           TEMPORARY design-system preview route — see docs/DESIGN-SYSTEM.md §7
 │   ├── components/
-│   │   ├── ui/                  icons.tsx, IconLinkButton.tsx — small generic primitives
+│   │   ├── ui/                  icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
 │   │   ├── layout/               Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
 │   │   │                          NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
-│   │   ├── ecommerce/            ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
-│   │   └── home/                  Homepage-composition components (not generic/reusable across
-│   │                                pages): HeroBanner, CategoryTabs, ProductGrid,
-│   │                                FeaturedProductsRow, CategoryHighlights, WhyShopWithRenvura,
-│   │                                BrandStory — see docs/DESIGN-SYSTEM.md §9
+│   │   ├── ecommerce/            ProductCard, ProductGrid, Price, Badges, SearchBar — generic
+│   │   │                          reusable primitives (no cart/search business logic)
+│   │   ├── home/                  Homepage-composition components (not generic/reusable across
+│   │   │                            pages): HeroBanner, CategoryTabs, FeaturedProductsRow,
+│   │   │                            CategoryHighlights, WhyShopWithRenvura, BrandStory — see
+│   │   │                            docs/DESIGN-SYSTEM.md §9
+│   │   └── shop/                   Listing-page composition (Phase 5): ProductListingPage,
+│   │                                SortSelect, MobileFilterDrawer — see docs/DESIGN-SYSTEM.md §10
 │   ├── config/                    brand.ts, navigation.ts
 │   ├── data/                       categories.ts, products.ts — verified seed data (Phase 2)
 │   ├── hooks/                      Client-side React hooks
@@ -118,16 +124,20 @@ swapping the implementation to query `ProductModel` later doesn't require changi
 component only needs to return its own content. Full rules and rationale for each piece are in
 `docs/DESIGN-SYSTEM.md`; the architectural point here is the client/server split:
 
-- Client Components are each for a concrete, stated reason: `SearchBar.tsx`/
-  `NewsletterSignup.tsx` (real forms, `preventDefault`, no backend yet), `MobileNav.tsx` (shared
-  drawer open/close state), `NavLinks.tsx` (`usePathname()`-driven active link styling),
-  `providers.tsx` (theme context), and `CategoryTabs.tsx`/`FeaturedProductsRow.tsx` (HeroUI `Tabs`
-  selection state / a scroll-ref for the prev-next carousel). Everything else — `Header`, `Footer`,
-  `SecondaryNav`, `ProductCard`, `Price`, `Badges`, `AnnouncementBar`, `Container`, `Section`,
-  `IconLinkButton`, `HeroBanner`, `ProductGrid`, `BrandStory` — is a Server Component, even where
-  it renders HeroUI components that are themselves Client Components internally (Next.js allows a
-  Server Component to import and render a Client Component directly; the boundary starts at the
-  child, not the parent).
+- Client Components are each for a concrete, stated reason: `SearchBar.tsx` (real navigation to
+  `/shop?q=...`, plus `useSearchParams()` to prefill — wrapped in its own `<Suspense>` boundary
+  since it renders on every route including statically-prerendered ones) /
+  `NewsletterSignup.tsx` (real form, `preventDefault`, no backend yet), `MobileNav.tsx`/
+  `MobileFilterDrawer.tsx` (shared drawer open/close state), `NavLinks.tsx` (`usePathname()`-driven
+  active link styling), `providers.tsx` (theme context), `CategoryTabs.tsx`/
+  `FeaturedProductsRow.tsx` (HeroUI `Tabs` selection state / a scroll-ref for the prev-next
+  carousel), and `SortSelect.tsx` (`router.push` on a native `<select>`'s `onChange` — the only
+  navigation a `<select>` can't do with a plain `href`). Everything else — `Header`, `Footer`,
+  `SecondaryNav`, `ProductCard`, `ProductGrid`, `Price`, `Badges`, `AnnouncementBar`, `Container`,
+  `Section`, `IconLinkButton`, `Breadcrumbs`, `HeroBanner`, `BrandStory`, `ProductListingPage` —
+  is a Server Component, even where it renders HeroUI components that are themselves Client
+  Components internally (Next.js allows a Server Component to import and render a Client
+  Component directly; the boundary starts at the child, not the parent).
 - `ProductCard`/`Price`/`Badges` read the real `Product` type from Phase 2 and render nothing
   they can't verify (no ratings, no invented badges, "Price unavailable" instead of showing
   `wholesalePrice` as if it were a customer price). Add to Cart is disabled based on real state
@@ -156,19 +166,24 @@ them addable later without rewiring UI: events fire from `services/`, not from c
 
 ## SEO readiness
 
-Next.js Metadata API is already in use for base metadata (`src/app/layout.tsx`). Dynamic
-per-product metadata, canonical URLs, `sitemap.ts`, `robots.ts`, Open Graph images, and JSON-LD
-`Product` schema are Phase 12 work, but nothing in the current structure blocks adding them
-per-route later.
+Next.js Metadata API is already in use for base metadata (`src/app/layout.tsx`) and per-route
+metadata on the homepage and the three Phase 5 listing routes (truthful titles/descriptions,
+`alternates.canonical` pointing at the clean query-free path). Canonical URLs and the root
+layout's `metadataBase` are gated behind `isConfigured(brand.urls.site)` — wired, but inactive
+until a real production domain replaces that `TODO`. Dynamic per-product metadata, `sitemap.ts`,
+`robots.ts`, Open Graph images, and JSON-LD `Product` schema are still Phase 12 work, but nothing
+in the current structure blocks adding them per-route later.
 
 ## Explicitly deferred (not built yet)
 
-The homepage was built ahead of schedule in the Phase 3 redesign (see
-`docs/DESIGN-SYSTEM.md` §9 and `docs/PRODUCT-ROADMAP.md`) — everything else here is still
-deferred: catalog/category listing pages, product detail pages, cart, checkout, customer accounts,
-and the admin dashboard. Phase 3 built the **UI foundation** several of these will reuse
-(`ProductCard`, `Price`, `SearchBar`, `Header`/`Footer` chrome, and now the homepage's own
-`home/` components) but deliberately stopped short of real behavior: search doesn't search, Add to
-Cart doesn't add to a cart, wishlist doesn't persist, the newsletter form doesn't subscribe anyone.
-The folder structure above exists to receive that logic without restructuring — it plugs into
+The homepage was built ahead of schedule in the Phase 3 redesign, and catalog/category listing
+(`/shop`, `/electronics-gadgets`, `/health-beauty`) is done as of Phase 5 (see
+`docs/DESIGN-SYSTEM.md` §§9–10 and `docs/PRODUCT-ROADMAP.md`) — still deferred: product detail
+pages, cart, checkout, customer accounts, and the admin dashboard. Phase 3 built the **UI
+foundation** several of these reuse (`ProductCard`, `ProductGrid`, `Price`, `SearchBar`,
+`Header`/`Footer` chrome, the homepage's `home/` components, and now the listing pages' `shop/`
+components) but deliberately stopped short of real behavior: Add to Cart doesn't add to a cart,
+wishlist doesn't persist, the newsletter form doesn't subscribe anyone. Search itself does now
+work (Phase 5) — that's the one exception. The folder structure above exists to receive the rest
+of that logic without restructuring — it plugs into
 `src/services/` once there's something real to call.

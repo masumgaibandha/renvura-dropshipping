@@ -52,14 +52,19 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - Import alias `@/*` maps to `src/*`.
 - Folder layout (see `docs/ARCHITECTURE.md` for the full rationale):
   ```
-  src/app/                 routes (App Router); page.tsx is the real homepage; ui-preview/ is
-                             TEMPORARY — see below
-  src/components/ui/       icons.tsx, IconLinkButton.tsx — small generic primitives
+  src/app/                 routes (App Router); page.tsx is the real homepage; shop/,
+                             electronics-gadgets/, health-beauty/ are the Phase 5 listing routes;
+                             ui-preview/ is TEMPORARY — see below
+  src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
                              NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
-  src/components/ecommerce/ ProductCard, Price, Badges, SearchBar (UI only, no cart/search logic)
-  src/components/home/      Homepage-only composition: HeroBanner, CategoryTabs, ProductGrid,
-                             FeaturedProductsRow, BrandStory — not meant for reuse elsewhere
+  src/components/ecommerce/ ProductCard, ProductGrid, Price, Badges, SearchBar — generic reusable
+                             primitives (SearchBar now navigates to /shop?q=..., real search)
+  src/components/home/      Homepage-only composition: HeroBanner, CategoryTabs,
+                             FeaturedProductsRow, CategoryHighlights, WhyShopWithRenvura,
+                             BrandStory — not meant for reuse elsewhere
+  src/components/shop/      Listing-page-only composition: ProductListingPage, SortSelect,
+                             MobileFilterDrawer — shared by all three Phase 5 routes
   src/config/               brand.ts, navigation.ts
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
@@ -140,6 +145,13 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - `src/app/ui-preview/` is a **temporary, noindex, dev-only** route for visually verifying the
   design system. It must be removed or gated before production deployment — never link to it from
   real pages, and don't treat its existence as permission to skip building real pages later.
+- **Listing filters/sort** (`/shop`, `/electronics-gadgets`, `/health-beauty`,
+  `getProductListing()` in `src/services/products.ts`): never filter or sort on
+  `pricing.wholesalePrice` — only `sellingPrice`. A filter or sort control (price sort, "in stock
+  only") should only render in the UI once the current data actually has variance for it to act
+  on (e.g. `products.some(p => p.pricing.sellingPrice !== null)`) — build the real code path, but
+  don't show a control that would currently do nothing. This mirrors the existing `Price`/`Badges`
+  "gracefully omit, never fabricate" pattern; see `docs/DESIGN-SYSTEM.md` §10.
 
 ## Design system contrast rule
 
@@ -177,13 +189,14 @@ phase — just don't design yourself into a corner that makes it hard later.
 ## Current status / what NOT to build yet
 
 Phases 1 (Foundation), 2 (Product data model), 3 (Global storefront design system, including a
-redesign pass that pulled Phase 4's homepage forward into the same pass), and 4 (Homepage
-refinement — Category Highlights, Why Shop With Renvura, homepage SEO metadata) are done — see
-`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §9. The reusable UI
-shell, components, and the real homepage (`src/app/page.tsx`) exist and are wired in, but do not
-build product/category listing pages, product detail pages, cart, checkout, auth, or admin
-dashboard until asked. Do not connect MongoDB (schemas exist but aren't wired up), wire up
-real search/cart/newsletter logic, or create fake products/reviews/prices — every product still has
-`sellingPrice: null`, so "Price unavailable" and a disabled Add to Cart button are the correct,
-expected state everywhere, including on the homepage, until Phase 2's pricing gap is resolved.
-Confirm scope with the user before starting a new phase.
+redesign pass that pulled Phase 4's homepage forward into the same pass), 4 (Homepage refinement —
+Category Highlights, Why Shop With Renvura, homepage SEO metadata), and 5 (Shop/category listing —
+`/shop`, `/electronics-gadgets`, `/health-beauty`, real search) are done — see
+`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–10. The reusable
+UI shell, homepage, and listing pages exist and are wired in, but do not build the product detail
+page, cart, checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist
+but aren't wired up), wire up real cart/newsletter logic, or create fake products/reviews/prices —
+every product still has `sellingPrice: null`, so "Price unavailable" and a disabled Add to Cart
+button are the correct, expected state everywhere until Phase 2's pricing gap is resolved. Search
+now works end-to-end (Phase 5) — that's no longer a stub. Confirm scope with the user before
+starting a new phase.

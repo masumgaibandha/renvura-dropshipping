@@ -1,4 +1,4 @@
-import { ProductCard } from "@/components/ecommerce/ProductCard";
+import { ProductCard } from "./ProductCard";
 import type { Product } from "@/types/product";
 
 interface ProductGridProps {

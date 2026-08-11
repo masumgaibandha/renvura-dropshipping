@@ -5,7 +5,7 @@ import "./globals.css";
 
 import { Providers } from "@/components/layout/providers";
 import { StoreShell } from "@/components/layout/StoreShell";
-import { brand } from "@/config/brand";
+import { brand, isConfigured } from "@/config/brand";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,6 +18,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Only set once a real production domain exists — without it, relative canonical
+  // URLs on individual routes (see /shop, /electronics-gadgets, /health-beauty)
+  // would resolve incorrectly, so those routes gate their own canonical the same way.
+  ...(isConfigured(brand.urls.site) ? { metadataBase: new URL(brand.urls.site) } : {}),
   title: {
     default: brand.name,
     template: `%s | ${brand.name}`,

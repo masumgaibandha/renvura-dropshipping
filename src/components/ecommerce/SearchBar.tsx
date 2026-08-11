@@ -1,7 +1,8 @@
 "use client";
 
 import { SearchField } from "@heroui/react";
-import type { FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
 
 interface SearchBarProps {
   className?: string;
@@ -10,19 +11,48 @@ interface SearchBarProps {
 }
 
 /**
- * Search UI foundation only — input, icon, and clear state work, but
- * submitting does not run a real search or show results yet. Wire this
- * up to real product search in a later phase (see docs/PRODUCT-ROADMAP.md).
+ * `useSearchParams()` (used to prefill the box when already on
+ * `/shop?q=...`) requires a Suspense boundary — SearchBar renders on every
+ * page via Header/MobileNav, including statically-prerendered ones, so
+ * without this boundary `next build` fails. The boundary lives here, at
+ * the source of the dynamic API, so callers don't need to add their own.
  */
-export function SearchBar({ className, placeholder = "Search products…", "aria-label": ariaLabel = "Search products" }: SearchBarProps) {
+export function SearchBar(props: SearchBarProps) {
+  return (
+    <Suspense fallback={<SearchBarFallback {...props} />}>
+      <SearchBarField {...props} />
+    </Suspense>
+  );
+}
+
+function SearchBarField({ className, placeholder = "Search products…", "aria-label": ariaLabel = "Search products" }: SearchBarProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [value, setValue] = useState(() => searchParams.get("q") ?? "");
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    // No search backend yet — prevent a full page reload without pretending
-    // to return results.
     event.preventDefault();
+    const trimmed = value.trim();
+    router.push(trimmed ? `/shop?q=${encodeURIComponent(trimmed)}` : "/shop");
   }
 
   return (
     <form role="search" onSubmit={handleSubmit} className={className}>
+      <SearchField.Root aria-label={ariaLabel} fullWidth className="w-full" value={value} onChange={setValue}>
+        <SearchField.Group>
+          <SearchField.SearchIcon />
+          <SearchField.Input placeholder={placeholder} />
+          <SearchField.ClearButton />
+        </SearchField.Group>
+      </SearchField.Root>
+    </form>
+  );
+}
+
+/** Pre-hydration/static fallback — same markup, uncontrolled, so there's no layout shift. */
+function SearchBarFallback({ className, placeholder = "Search products…", "aria-label": ariaLabel = "Search products" }: SearchBarProps) {
+  return (
+    <form role="search" className={className}>
       <SearchField.Root aria-label={ariaLabel} fullWidth className="w-full">
         <SearchField.Group>
           <SearchField.SearchIcon />

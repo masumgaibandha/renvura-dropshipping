@@ -2,9 +2,9 @@
 
 import { Tabs } from "@heroui/react";
 
+import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import type { Category } from "@/types/category";
 import type { Product } from "@/types/product";
-import { ProductGrid } from "./ProductGrid";
 
 interface CategoryTabsProps {
   products: Product[];
