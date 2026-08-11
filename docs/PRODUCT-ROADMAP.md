@@ -196,10 +196,9 @@ matching order" message whether the order doesn't exist or the phone is wrong �
 to enumerate either one. The response (`toTrackingSummary`) omits the Transaction ID and the full
 address (division/district/upazila only), and never includes the Mongo `_id`.
 
-**Known limitation, reported not hidden — delivery fee amounts**: no delivery fee has been
-approved by the business yet. `src/config/delivery.ts` ships round placeholder numbers (৳70 inside
-Dhaka / ৳130 outside Dhaka) behind an explicit `DELIVERY_FEE_CONFIG_IS_FINAL = false` flag. These
-must be replaced with real, approved amounts before production launch.
+**Delivery fee — business-approved**: `src/config/delivery.ts` (`DELIVERY_FEE_CONFIG_IS_FINAL =
+true`): ৳80 inside Dhaka, ৳150 outside Dhaka, paid by the customer and added to the product
+subtotal to produce the order total.
 
 **Known limitation — no live database this session**: no `MONGODB_URI` was available while
 building this phase. The DB-free core (`recalculateOrder` + the Zod schemas — the actual security

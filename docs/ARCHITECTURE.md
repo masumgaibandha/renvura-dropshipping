@@ -241,10 +241,9 @@ client-side, but **never** submits its own computed prices as authoritative. `cr
 same generic "no matching order" message whether the order number doesn't exist or the phone
 doesn't match, so it can't be used to enumerate either one.
 
-**Delivery fee — not yet business-approved.** `src/config/delivery.ts` ships round placeholder
-amounts (৳70 inside Dhaka / ৳130 outside Dhaka) behind an explicit
-`DELIVERY_FEE_CONFIG_IS_FINAL = false` flag. These must be replaced with real, approved figures
-before production use — see CLAUDE.md.
+**Delivery fee — business-approved.** `src/config/delivery.ts` (`DELIVERY_FEE_CONFIG_IS_FINAL =
+true`): ৳80 inside Dhaka, ৳150 outside Dhaka, paid by the customer and added to the product
+subtotal to produce the order total — see CLAUDE.md.
 
 ## Bangladesh-specific concerns baked into the architecture
 

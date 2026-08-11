@@ -202,10 +202,10 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - **`wholesalePrice` must never appear in `Order`, anywhere.** `src/models/Order.ts`'s
   `orderItemSchema` only ever stores `unitPrice` (the real `sellingPrice` at order time). This
   extends the existing wholesalePrice-privacy rule from product pages/cart to orders.
-- **Delivery fee is a temporary, flagged placeholder, not an approved business figure.**
-  `src/config/delivery.ts`'s `deliveryFees` (৳70 inside Dhaka / ৳130 outside Dhaka) ship behind
-  `DELIVERY_FEE_CONFIG_IS_FINAL = false`. Do not treat these numbers as real/final, and do not
-  quietly "fix" the flag to `true` — that requires an actual business decision.
+- **Delivery fee is business-approved.** `src/config/delivery.ts`'s `deliveryFees`: ৳80 inside
+  Dhaka, ৳150 outside Dhaka (`DELIVERY_FEE_CONFIG_IS_FINAL = true`), paid by the customer and
+  added to the product subtotal to produce the order total. Don't change these numbers without an
+  actual business decision to do so.
 - **Manual payment only — no gateway exists.** bKash/Nagad/Rocket collect a Transaction ID and
   land in `payment.status: "pending_verification"`; nothing is ever marked `"paid"`
   automatically. Manual payment numbers come from `NEXT_PUBLIC_BKASH_NUMBER`/
@@ -290,6 +290,6 @@ newsletter logic, or create fake products/reviews/prices. 20 of the 21 catalog p
 approved `sellingPrice` values; `skin1004-centella-ampoule-100ml` is deliberately held back
 (`sellingPrice: null`, unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable"
 and disabled Add to Cart/Buy Now are the correct, expected state for that one product only, not the
-whole catalog. `delivery.ts`'s delivery fee amounts are an explicitly flagged temporary placeholder
-(`DELIVERY_FEE_CONFIG_IS_FINAL = false`), not an approved business figure — see "Checkout & order
-rules" above. Confirm scope with the user before starting a new phase.
+whole catalog. `delivery.ts`'s delivery fee amounts are business-approved (৳80 inside Dhaka, ৳150
+outside Dhaka, `DELIVERY_FEE_CONFIG_IS_FINAL = true`) — see "Checkout & order rules" above. Confirm
+scope with the user before starting a new phase.
