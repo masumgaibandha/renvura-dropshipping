@@ -35,6 +35,10 @@ export function getProductBySlug(slug: string): Product | undefined {
   return products.find((record) => record.product.slug === slug)?.product;
 }
 
+export function getProductById(id: string): Product | undefined {
+  return products.find((record) => record.product.id === id)?.product;
+}
+
 export function getVerifiedProductRecordBySlug(slug: string): VerifiedProductRecord | undefined {
   return products.find((record) => record.product.slug === slug);
 }

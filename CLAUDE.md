@@ -4,11 +4,12 @@ Guidance for Claude Code (and any future session/agent) working in this reposito
 
 ## What Renvura is
 
-Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phase 1
-(foundation), Phase 2 (product data model), and Phase 3 (global storefront design system,
-including a redesign pass that also built the real homepage — see below) are complete. The
-reusable UI (header, footer, product cards, price/badges) and the homepage exist; catalog/category
-listing, product detail, cart, checkout, and admin pages are not built yet.
+Renvura is a production-quality, Bangladesh-focused dropshipping e-commerce store. Phases 1–8 are
+complete (foundation, product data model, storefront design system + homepage, listing, product
+detail, cart/wishlist, and checkout/order creation — see `docs/PRODUCT-ROADMAP.md`). The reusable
+UI, homepage, listing pages, product detail page, cart/wishlist, and checkout/order
+creation/tracking all exist and work end-to-end; customer accounts and the admin dashboard are not
+built yet.
 
 **Business model:**
 - A supplier provides products and wholesale pricing (source data currently captured as
@@ -26,9 +27,14 @@ listing, product detail, cart, checkout, and admin pages are not built yet.
 - Tailwind CSS v4 (CSS-first config, no `tailwind.config.js`)
 - HeroUI v3 (`@heroui/react` + `@heroui/styles`) — React Aria based, no `HeroUIProvider` needed
 - `next-themes` for light/dark mode (class-based, see `src/components/layout/providers.tsx`)
-- MongoDB / MongoDB Atlas + Mongoose (schemas defined in `src/models/`; **no DB connection wired
-  up yet** — current data access reads `src/data/products.ts`)
-- Next.js Route Handlers for server-side APIs (not yet built)
+- MongoDB / MongoDB Atlas + Mongoose — `Order` is connected as of Phase 8 (`src/lib/db.ts`,
+  `src/models/Order.ts`); `Product`/`Category` schemas still exist but aren't wired up, so product
+  data access still reads `src/data/products.ts`
+- Next.js Server Actions for mutations (`src/actions/`, Phase 8: `createOrder`, `trackOrder`) —
+  Route Handlers remain unused/not yet built, since Server Actions fit the current all-forms
+  mutation surface; revisit if a non-mutation or external-consumer API is ever needed
+- Zod for untrusted-input validation (`src/actions/order-schema.ts`) — the first place this
+  codebase validates real network input rather than its own trusted seed data
 - Vercel for deployment
 - ESLint (flat config; `next lint` is removed in Next 16 — use `npm run lint`, which runs
   `eslint` directly)
@@ -55,7 +61,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   src/app/                 routes (App Router); page.tsx is the real homepage; shop/,
                              electronics-gadgets/, health-beauty/ are the Phase 5 listing routes;
                              products/[slug]/ is the Phase 6 product detail route; cart/,
-                             wishlist/ are the Phase 7 routes; ui-preview/ is TEMPORARY — see below
+                             wishlist/ are the Phase 7 routes; checkout/, order-success/[orderNumber]/,
+                             track-order/ are the Phase 8 routes; ui-preview/ is TEMPORARY — see below
   src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
                              NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
@@ -70,17 +77,26 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              QuantitySelector, DeliveryPaymentInfo, ProductDetails (Phase 6)
   src/components/cart/      Cart composition (Phase 7): AddToCartButton, CartIcon,
                              CartCountBadge, CartDrawer
-  src/components/wishlist/  Wishlist composition (Phase 7): WishlistToggleButton, WishlistCountBadge
+  src/components/wishlist/  Wishlist composition (Phase 7): WishlistToggleButton, WishlistCountBadge,
+                             WishlistGrid
+  src/components/checkout/  Checkout composition (Phase 8): CheckoutForm, CustomerInfoSection,
+                             DeliveryAddressSection, PaymentMethodSection, OrderSummary, TrackOrderForm
+  src/actions/               Server Actions (Phase 8, "use server"): orders.ts (createOrder,
+                              trackOrder), order-schema.ts (Zod), order-logic.ts (DB-free
+                              validate-and-recalculate — see the checkout security rules below)
   src/contexts/              CartContext.tsx, WishlistContext.tsx (Phase 7) — see the untrusted-
                               client-state rule below
-  src/config/               brand.ts, navigation.ts
+  src/config/               brand.ts, navigation.ts, delivery.ts, payment.ts, address.ts (Phase 8)
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
-  src/lib/                   framework-agnostic utilities (validate-product.ts, local-storage.ts), DB/client setup
-  src/models/                 Mongoose schemas: Product.ts, Category.ts (not yet connected)
-  src/services/               data-access layer: products.ts (reads src/data/ until MongoDB is wired up)
-  src/types/                  shared TypeScript types: product.ts, category.ts
-  src/utils/                  small pure helpers: currency.ts, slug.ts, pricing.ts
+  src/lib/                   framework-agnostic utilities (validate-product.ts, local-storage.ts,
+                              rate-limit.ts), db.ts (MongoDB connection helper, Phase 8)
+  src/models/                 Mongoose schemas: Product.ts, Category.ts (not yet connected),
+                              Order.ts (connected, Phase 8)
+  src/services/               data-access layer: products.ts (reads src/data/ until MongoDB is
+                              wired up for products), orders.ts (MongoDB-backed, Phase 8)
+  src/types/                  shared TypeScript types: product.ts, category.ts, cart.ts, order.ts
+  src/utils/                  small pure helpers: currency.ts, slug.ts, pricing.ts, phone.ts, delivery.ts
   ```
 - Keep UI, business logic, and data-access layers separate — don't put Mongoose queries or
   business rules directly in components or route handlers.
@@ -159,9 +175,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   invalid cart line can never be constructed even by a mis-wired caller.
 - **Client cart/wishlist state is untrusted** (`src/contexts/CartContext.tsx`/
   `WishlistContext.tsx`, Phase 7): `localStorage`-persisted cart/wishlist data is a **display
-  convenience only**, never a source of truth. A future checkout/order-creation phase must
-  re-fetch and validate price and availability from real product data (or a real backend) before
-  creating an order — never trust a stored price/subtotal/quantity directly for that. Corrupt or
+  convenience only**, never a source of truth. As of Phase 8, `createOrder`
+  (`src/actions/orders.ts`) actually enforces this — see "Checkout & order rules" below. Corrupt or
   wrong-shape stored data (`src/lib/local-storage.ts`'s type-guarded read) is discarded, not
   trusted either.
 - `src/app/ui-preview/` is a **temporary, noindex, dev-only** route for visually verifying the
@@ -175,6 +190,49 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   don't show a control that would currently do nothing. This mirrors the existing `Price`/`Badges`
   "gracefully omit, never fabricate" pattern; see `docs/DESIGN-SYSTEM.md` §10.
 
+## Checkout & order rules (Phase 8)
+
+- **`createOrder` never trusts a client-submitted price, subtotal, or total.** Only
+  `productId`/`quantity` are read from the client cart; `recalculateOrder`
+  (`src/actions/order-logic.ts`) re-fetches every product from the trusted server-side catalog
+  and recomputes `unitPrice`/`lineTotal`/`subtotal`/`deliveryFee`/`total` from scratch, using the
+  same purchasability formula as everywhere else (`sellingPrice !== null && status !==
+  "out_of_stock"`) — extend this same distrust to any future order-mutation code path (refunds,
+  admin edits, etc.), never accept a client-provided final price as authoritative.
+- **`wholesalePrice` must never appear in `Order`, anywhere.** `src/models/Order.ts`'s
+  `orderItemSchema` only ever stores `unitPrice` (the real `sellingPrice` at order time). This
+  extends the existing wholesalePrice-privacy rule from product pages/cart to orders.
+- **Delivery fee is a temporary, flagged placeholder, not an approved business figure.**
+  `src/config/delivery.ts`'s `deliveryFees` (৳70 inside Dhaka / ৳130 outside Dhaka) ship behind
+  `DELIVERY_FEE_CONFIG_IS_FINAL = false`. Do not treat these numbers as real/final, and do not
+  quietly "fix" the flag to `true` — that requires an actual business decision.
+- **Manual payment only — no gateway exists.** bKash/Nagad/Rocket collect a Transaction ID and
+  land in `payment.status: "pending_verification"`; nothing is ever marked `"paid"`
+  automatically. Manual payment numbers come from `NEXT_PUBLIC_BKASH_NUMBER`/
+  `NEXT_PUBLIC_NAGAD_NUMBER`/`NEXT_PUBLIC_ROCKET_NUMBER` (`src/config/payment.ts`) — never
+  hardcode a payment number in a component; a method with no configured number must render
+  disabled, not with a blank/fabricated number.
+- **Order/payment status enums are fixed** (`src/types/order.ts`): `OrderStatus` = `pending` |
+  `confirmed` | `processing` | `supplier_submitted` | `shipped` | `delivered` | `cancelled` |
+  `returned` (new orders start `pending`; `supplier_submitted` is internal — always show the
+  `ORDER_STATUS_LABELS` customer-facing label, never the raw enum value); `PaymentStatus` =
+  `unpaid` | `cod_pending` | `pending_verification` | `paid` | `failed` | `refunded` (COD starts
+  `cod_pending`, manual methods start `pending_verification`).
+- **Idempotency is required for any new order-mutating entry point.** `createOrder` requires a
+  client-generated `idempotencyKey` (unique-indexed on `Order`) and treats a repeat call with the
+  same key as "return the existing order," not "create another one."
+- **Order numbers, not Mongo `_id`s, are customer-facing.** `generateOrderNumber()`
+  (`src/services/orders.ts`) produces `RV-YYYYMMDD-XXXXXX`, collision-checked against the DB.
+  Never expose a Mongo `_id` in a URL, response, or UI.
+- **`/track-order` and `/order-success/[orderNumber]` return sanitized projections only**
+  (`toTrackingSummary`/`toOrderSummary`) — no Mongo `_id`, no `idempotencyKey`; the tracking
+  projection additionally omits the Transaction ID and the full address (division/district/
+  upazila only). `trackOrder` returns the identical generic "no matching order" message whether
+  the order number doesn't exist or the phone is wrong — never reveal which one failed.
+- **Rate limiting is interim/process-local** (`src/lib/rate-limit.ts`) — it protects against a
+  single client hammering one warm instance, not distributed abuse. Don't treat it as sufficient
+  for a real production launch without adding a distributed limiter in front of it.
+
 ## Design system contrast rule
 
 Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
@@ -187,10 +245,15 @@ contrast requirements, and looking de-emphasized is the intent there.
 
 ## Bangladesh localization
 
-Plan/build for: BDT currency with `৳` symbol, Cash on Delivery as a first-class payment method,
-Bangladesh phone number formats, address structure as Division → District → Upazila/Thana, and a
-Dhaka vs. outside-Dhaka delivery charge split. Courier and payment gateway (e.g. SSLCommerz)
-integration come later — don't hardcode a specific provider prematurely.
+BDT currency with `৳` symbol, Cash on Delivery as a first-class payment method (Phase 8), BD phone
+number normalization (`src/utils/phone.ts` — accepts `01XXXXXXXXX`/`+8801XXXXXXXXX`/
+`8801XXXXXXXXX`, always stores `01XXXXXXXXX`), address structure as Division (real 8-value enum,
+`src/config/address.ts`) → District → Upazila/Thana (free text — no invented district/upazila
+mapping) → Area/Road/House, and a Dhaka vs. outside-Dhaka delivery charge split
+(`src/utils/delivery.ts`) are all implemented as of Phase 8. Manual bKash/Nagad/Rocket payment
+(Transaction ID + manual verification, no gateway) also exists — see "Checkout & order rules"
+above. Courier API integration and an automated payment gateway (e.g. SSLCommerz) still come
+later — don't hardcode a specific provider prematurely.
 
 ## Marketing / tracking / SEO (future-ready, not yet implemented)
 
@@ -214,14 +277,19 @@ Phases 1 (Foundation), 2 (Product data model), 3 (Global storefront design syste
 redesign pass that pulled Phase 4's homepage forward into the same pass), 4 (Homepage refinement —
 Category Highlights, Why Shop With Renvura, homepage SEO metadata), 5 (Shop/category listing —
 `/shop`, `/electronics-gadgets`, `/health-beauty`, real search), 6 (Product detail —
-`/products/[slug]`, gallery, buy box, related products, JSON-LD), and 7 (Cart + wishlist — real
-client-side state, `/cart`, `/wishlist`, header counts) are done — see `docs/PRODUCT-ROADMAP.md`,
-`docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–12. The reusable UI shell, homepage,
-listing pages, product detail page, and cart/wishlist exist and are wired in, but do not build
-checkout, order creation, payment, auth, or admin dashboard until asked. Do not connect MongoDB
-(schemas exist but aren't wired up), wire up real newsletter logic, or create fake products/
-reviews/prices — every product still has `sellingPrice: null`, so "Price unavailable" and disabled
-Add to Cart/Buy Now buttons are the correct, expected state everywhere until Phase 2's pricing gap
-is resolved. Search (Phase 5) and cart/wishlist (Phase 7) now work end-to-end — those are no
-longer stubs, but Phase 7's cart/wishlist state is explicitly untrusted client state (see above),
-not a source of truth for a future order. Confirm scope with the user before starting a new phase.
+`/products/[slug]`, gallery, buy box, related products, JSON-LD), 7 (Cart + wishlist — real
+client-side state, `/cart`, `/wishlist`, header counts), and 8 (Checkout + secure order creation —
+`/checkout`, `/order-success/[orderNumber]`, `/track-order`, MongoDB-backed `Order`) are done — see
+`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–13. The reusable
+UI shell, homepage, listing pages, product detail page, cart/wishlist, and checkout/order
+creation/tracking exist and are wired in, but do not build customer authentication/accounts, the
+admin dashboard, an automated payment gateway (bKash/Nagad/Rocket APIs), courier API integration,
+or marketing/tracking (Meta Pixel/CAPI, GA4) until asked. Do not connect the `Product`/`Category`
+MongoDB models (schemas exist but aren't wired up — only `Order` is connected), wire up real
+newsletter logic, or create fake products/reviews/prices. 20 of the 21 catalog products have real
+approved `sellingPrice` values; `skin1004-centella-ampoule-100ml` is deliberately held back
+(`sellingPrice: null`, unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable"
+and disabled Add to Cart/Buy Now are the correct, expected state for that one product only, not the
+whole catalog. `delivery.ts`'s delivery fee amounts are an explicitly flagged temporary placeholder
+(`DELIVERY_FEE_CONFIG_IS_FINAL = false`), not an approved business figure — see "Checkout & order
+rules" above. Confirm scope with the user before starting a new phase.

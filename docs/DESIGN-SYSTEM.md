@@ -521,9 +521,9 @@ each caller.
 there's nothing to fetch server-side): `grid lg:grid-cols-[1fr_320px]` — items left, order summary
 right; collapses to one column on mobile. Order summary: subtotal, "Delivery: Calculated at
 checkout" (static text, never an invented number), **Total = Subtotal** (explicitly labeled as
-excluding delivery), a disabled **"Proceed to Checkout"** (appropriate here, unlike the drawer — a
-full cart page is where users expect to see it even before Phase 8 makes it real), "Continue
-Shopping" → `/shop`. Empty state: "Your cart is empty" + "Continue Shopping" → `/shop`.
+excluding delivery), **"Proceed to Checkout"** → `/checkout` (real as of Phase 8 — was a disabled
+placeholder button before), "Continue Shopping" → `/shop`. Empty state: "Your cart is empty" +
+"Continue Shopping" → `/shop`.
 
 **`/wishlist`** (`src/app/wishlist/page.tsx`, Client Component): reads the wishlist context's
 stored slugs and filters `getAllProducts()` (already synchronous/local), rendering the existing
@@ -544,5 +544,50 @@ stock gate (saving something for later doesn't require either); Add to Cart keep
 
 **`BuyBox.tsx`** (product detail page, Phase 6) is now a Client Component so it can coordinate
 `QuantitySelector` with the Add to Cart/Buy Now handlers. Buy Now = `addItem(...)` then
-`router.push("/cart")` — "prepare the item, navigate to cart," exactly per the brief; still no
-checkout.
+`router.push("/cart")` — "prepare the item, navigate to cart," exactly per the brief. Checkout
+itself is Phase 8 — see §13.
+
+## 13. Checkout, order success, and order tracking (Phase 8)
+
+Three new routes, all reusing existing primitives (`Container`, `Breadcrumbs`, the input styling
+established by `NewsletterSignup.tsx`'s `TextField.Root`/`Input`, native `<select>` matching
+`SortSelect.tsx`'s established pattern) rather than introducing new form-component conventions.
+See `docs/ARCHITECTURE.md`'s "Checkout & order creation" section for the security model this UI
+sits on top of — this section is UI/layout only.
+
+**`/checkout`** (`src/app/checkout/page.tsx`, Server Component shell + `CheckoutForm.tsx`, Client):
+desktop `grid lg:grid-cols-[1fr_360px]` — left column stacks `CustomerInfoSection` (Full Name,
+Mobile Number, optional Email), `DeliveryAddressSection` (Division `<select>` of the real 8 BD
+divisions, District/Upazila/Thana/Area free text, optional Landmark/Notes — "Delivery fee
+calculated based on delivery location" shown under the fields), `PaymentMethodSection` (radio list
+of all 4 methods; a manual method with no configured public number renders disabled with a
+"Temporarily unavailable" label instead of a blank number; selecting a configured manual method
+reveals the number + instructions + a required Transaction ID field, with a line stating payment
+is awaiting manual verification — never claiming automatic gateway confirmation); right column is
+`OrderSummary` (cart line items, subtotal, a **live delivery-fee estimate** computed client-side
+from the entered district via the same `src/utils/delivery.ts` used server-side — delivery fee
+isn't sensitive data, unlike `wholesalePrice`, so sharing that one small config is fine — labeled
+"Estimated — final total confirmed when your order is placed" so it's never presented as
+authoritative) and the submit button. Mobile: single column, summary after the form sections. An
+`idempotencyKey` is generated once per checkout session (`useState(() => crypto.randomUUID())`)
+and the submit button disables for the whole `useTransition` pending window — duplicate-submit
+protection layered on top of the server-side idempotency check. Field-level errors returned by
+`createOrder` render directly under the relevant input; a form-level error renders above the
+submit button. Empty-cart state matches `/cart`'s existing pattern (message + "Continue Shopping"
+→ `/shop`) rather than a hard redirect.
+
+**`/order-success/[orderNumber]`** (Server Component, async `params` per Next 16): looks up the
+order server-side by its customer-facing `orderNumber`, 404s via `notFound()` if missing. Shows
+order number, customer name, payment method, payment status, itemized lines, order total, and a
+**summarized** delivery address (division/district/upazila only — not the full house/road/
+landmark) since this URL's only protection is the order number's random suffix. A plain-language
+next-step line: "Payment will be collected on delivery." for COD, "Payment is awaiting
+verification." for manual methods. No Mongo `_id`, `idempotencyKey`, or Transaction ID rendered.
+
+**`/track-order`** (Server Component shell + `TrackOrderForm.tsx`, Client): the two-field lookup
+(Order Number, Mobile Number) the header's `AnnouncementBar` already linked to (previously a dead
+link). On success, shows status, payment method/status, total, and delivery area
+(upazila/district only) via `ORDER_STATUS_LABELS`/`PAYMENT_STATUS_LABELS` (`src/types/order.ts`) —
+`supplier_submitted` displays as "Processing," never the internal fulfillment term. On failure,
+the same generic "No matching order found" message renders regardless of whether the order number
+or the phone was wrong.

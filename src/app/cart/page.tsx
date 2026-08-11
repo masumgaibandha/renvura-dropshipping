@@ -16,8 +16,9 @@ const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label
  * there's no server data to fetch. Total = Subtotal for now; delivery is
  * "Calculated at checkout," never an invented number. IMPORTANT: this page
  * only ever displays the cart's own stored snapshot — it is not a trusted
- * source for a real order. Phase 8 order creation must re-fetch/validate
- * price and availability from real product data before creating an order.
+ * source for a real order. `/checkout`'s `createOrder` Server Action
+ * re-fetches and validates price/availability from the real product
+ * catalog before creating an order — nothing shown here is trusted for that.
  */
 export default function CartPage() {
   const { items, itemCount, subtotal, isHydrated, removeItem, updateQuantity } = useCart();
@@ -93,13 +94,12 @@ export default function CartPage() {
             </div>
             <p className="mt-1 text-xs text-foreground/70">Excludes delivery, calculated at checkout.</p>
 
-            <button
-              type="button"
-              disabled
-              className="mt-5 flex h-11 w-full items-center justify-center rounded-full bg-accent text-small font-medium text-white opacity-50"
+            <Link
+              href="/checkout"
+              className="mt-5 flex h-11 w-full items-center justify-center rounded-full bg-accent text-small font-medium text-white transition-colors hover:bg-accent-hover"
             >
               Proceed to Checkout
-            </button>
+            </Link>
             <Link
               href="/shop"
               className="mt-3 flex h-11 w-full items-center justify-center rounded-full border border-border text-small font-medium text-foreground transition-colors hover:border-accent"

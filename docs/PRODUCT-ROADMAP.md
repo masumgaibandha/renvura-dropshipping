@@ -1,6 +1,6 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Phases 1–7 are complete.** Phase 4 (Homepage) was
+This roadmap defines the intended build order. **Phases 1–8 are complete.** Phase 4 (Homepage) was
 pulled forward and completed inside Phase 3's redesign pass (see the Phase 3 entry below for why).
 Do not start a later phase without explicit confirmation — each phase should be scoped and agreed
 before work begins.
@@ -162,9 +162,59 @@ state-level test (add/duplicate-increment/maxQuantity-cap/remove/update-quantity
 subtotal — 12 checks, all passing) rather than an end-to-end UI click-through. The wishlist has no
 such price gate and was verified fully end-to-end (toggle, persistence, `/wishlist` page).
 
-## Phase 8 — Checkout / orders
-Guest checkout, Bangladesh address form (Division/District/Upazila), Cash on Delivery, online
-payment gateway integration (e.g. SSLCommerz), order creation and confirmation.
+## Phase 8 — Checkout + secure order creation ✅
+Built `/checkout`, `/order-success/[orderNumber]`, `/track-order`, and the `createOrder`/
+`trackOrder` Server Actions (`src/actions/orders.ts`) — see `docs/ARCHITECTURE.md`'s "Checkout &
+order creation" section for the full security model and `docs/DESIGN-SYSTEM.md` §13 for UI detail.
+MongoDB Atlas is connected for the first time (`src/lib/db.ts`, `src/models/Order.ts`) — product
+data still reads `src/data/products.ts`.
+
+**Core security property**: `createOrder` never trusts a client-submitted price, subtotal, or
+total. Only `productId`/`quantity` come from the client cart; `recalculateOrder`
+(`src/actions/order-logic.ts`) re-derives everything from the trusted server-side product catalog,
+using the same purchasability formula (`sellingPrice !== null && status !== "out_of_stock"`)
+already used by `ProductCard`/`BuyBox` — so Skin1004 100ml is correctly rejected here too, with no
+special-casing. Delivery fee is computed server-side from the shipping district
+(`src/utils/delivery.ts`). `wholesalePrice` is never read anywhere in this phase.
+
+**Payment methods**: Cash on Delivery (no transaction ID, `cod_pending`) and manual bKash/Nagad/
+Rocket (Transaction ID required, `pending_verification` — there is no payment gateway yet, so
+nothing is ever marked `paid` automatically). Manual payment numbers come from
+`NEXT_PUBLIC_BKASH_NUMBER`/`NEXT_PUBLIC_NAGAD_NUMBER`/`NEXT_PUBLIC_ROCKET_NUMBER`
+(`src/config/payment.ts`); a method with no configured number renders disabled in the UI rather
+than with a blank/fabricated number.
+
+**Idempotency & abuse protection**: a client-generated `idempotencyKey` (unique-indexed on
+`Order`) makes a double-submit safe — a repeat call with the same key returns the existing order
+rather than creating a second one. A per-IP in-memory rate limiter
+(`src/lib/rate-limit.ts`) guards both Server Actions; it's explicitly documented as process-local,
+not a substitute for a distributed limiter in production. Payload limits: 30 unique items max, 20
+per line, string-length caps on every text field (all enforced in `src/actions/order-schema.ts`).
+
+**Order tracking**: `/track-order` looks up by order number + phone, returns the same generic "no
+matching order" message whether the order doesn't exist or the phone is wrong — it can't be used
+to enumerate either one. The response (`toTrackingSummary`) omits the Transaction ID and the full
+address (division/district/upazila only), and never includes the Mongo `_id`.
+
+**Known limitation, reported not hidden — delivery fee amounts**: no delivery fee has been
+approved by the business yet. `src/config/delivery.ts` ships round placeholder numbers (৳70 inside
+Dhaka / ৳130 outside Dhaka) behind an explicit `DELIVERY_FEE_CONFIG_IS_FINAL = false` flag. These
+must be replaced with real, approved amounts before production launch.
+
+**Known limitation — no live database this session**: no `MONGODB_URI` was available while
+building this phase. The DB-free core (`recalculateOrder` + the Zod schemas — the actual security
+logic: purchasability, quantity limits, price recalculation, phone/division/payment validation)
+was verified directly via an isolated script (20 checks, all passing — valid COD/bKash/Nagad/
+Rocket inputs, missing transaction ID, invalid phone, empty cart, unknown product, excessive
+quantity, over-limit item count, Skin1004 100ml rejection, inside/outside-Dhaka delivery fee,
+invalid division). The DB-touching path (`createOrder`'s idempotency check, order-number
+generation, insert; `trackOrder`'s lookup) is correct by code review and framework-standard
+patterns, but wasn't exercised against a live database — the `try`/`catch` added around the whole
+DB-touching span (so a connection failure degrades to a clean `{ ok: false }` instead of an
+unhandled exception) was specifically added and confirmed necessary after that gap surfaced during
+this session's testing. No browser automation was available either, so the checkout form's
+client-side interactive states (payment-method disabled styling, inline field errors) were
+verified by code review and compiled-CSS inspection, not a live click-through.
 
 ## Phase 9 — Authentication / customer accounts
 Customer registration/login, order history, saved addresses, wishlist persistence.
