@@ -1,6 +1,6 @@
 # Product Roadmap
 
-This roadmap defines the intended build order. **Phases 1–5 are complete.** Phase 4 (Homepage) was
+This roadmap defines the intended build order. **Phases 1–6 are complete.** Phase 4 (Homepage) was
 pulled forward and completed inside Phase 3's redesign pass (see the Phase 3 entry below for why).
 Do not start a later phase without explicit confirmation — each phase should be scoped and agreed
 before work begins.
@@ -112,8 +112,29 @@ Search is wired end-to-end: the header `SearchBar` (previously UI-only) now navi
 state (`category`, `sort`, `q`, `availability`, `page`) lives in the URL — shareable, and no global
 client state.
 
-## Phase 6 — Product detail
-Product detail page: gallery, variants, specs, related products, structured data.
+## Phase 6 — Product detail ✅
+Built `/products/[slug]` — see `docs/DESIGN-SYSTEM.md` §11 for full component detail.
+`generateStaticParams()` pre-renders all 21 real product pages at build time (static catalog, no
+DB). Page order: breadcrumb → gallery + buy box → delivery/payment info → description/features/
+specifications (plain stacked sections, each only rendered if that product actually has the field)
+→ related products (`getRelatedProducts()` in `src/services/products.ts`: same subcategory → same
+category → other `"active"` products as a dormant fallback, same "real code path, currently empty
+until real data exists" pattern as Phase 5's price sort — every product is still `"draft"`).
+
+**Gallery reality**: 20 of the 21 real products have exactly one image; only
+`c16-ai-selfie-stick-gimbal` has two. `ProductGallery` renders no thumbnail strip/controls for a
+single-image product, and one simple horizontal thumbnail row (not a desktop-column/mobile-row
+split) when there's more than one — a fancier layout would be complexity with no real content to
+justify it.
+
+**Structured data**: Product JSON-LD is emitted per page, but the entire `offers` object — not
+just the price field — is omitted whenever `sellingPrice` is `null` (true for every product today),
+since a priceless `Offer` is itself a form of fabricated-looking data. `wholesalePrice` is never
+read anywhere in this route, in the visible buy box or in JSON-LD.
+
+**Not done in Phase 6** (deferred, per explicit scope): no real cart mutation, checkout, auth,
+admin, MongoDB, payments, or tracking. Add to Cart / Buy Now / the quantity selector are UI
+foundations only, disabled via the same real-state formula `ProductCard` already uses.
 
 ## Phase 7 — Cart
 Cart state, add/remove/update, persistence strategy, wishlist.

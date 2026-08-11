@@ -2,7 +2,8 @@
 
 Status: **Phase 3 — Global storefront design system implemented; Phase 3 correction applied;
 Phase 3 redesign applied (homepage built); Phase 4 — homepage refinement applied (§9); Phase 5 —
-shop/category listing applied (§10).** The original Phase 1 visual reference (a jewelry
+shop/category listing applied (§10); Phase 6 — product detail applied (§11).** The original
+Phase 1 visual reference (a jewelry
 site) was replaced by the user with a new authoritative reference
 (`resources/reference-theme.png`/`.pdf`, a "TimTom"-style e-commerce homepage). Two passes
 followed: a **correction** pass (palette only — see §3) and a **redesign** pass, where the user
@@ -425,3 +426,63 @@ clean, query-free path) and the root layout's `metadataBase` are both gated behi
 `isConfigured(brand.urls.site)` — that's still a `TODO` placeholder, so canonical URLs are wired
 but inactive until a real production domain is configured, the same pattern used for every other
 unconfigured `brand.*` field in this project.
+
+## 11. Product detail (`/products/[slug]`, Phase 6)
+
+`src/app/products/[slug]/page.tsx`: `generateStaticParams()` pre-renders all 21 real product pages
+at build time. `params: Promise<{ slug: string }>` (Next 16's async dynamic-segment convention,
+confirmed against `node_modules/next/dist/docs/`); `notFound()` (from `next/navigation`) when
+`getProductBySlug()` returns nothing — Next's default 404 boundary handles the rest, no custom
+`not-found.tsx` needed. Uses `Container` directly with hand-rolled spacing, not `Section` — the
+same "utility page, not a marketing page" precedent `ProductListingPage.tsx` set in Phase 5.
+
+**Section order**: `Breadcrumbs` → `grid lg:grid-cols-2` (`ProductGallery` | `BuyBox` +
+`DeliveryPaymentInfo`) → `ProductDetails` → Related Products (`ProductGrid`, reused). On mobile the
+grid collapses to one column with the gallery first in DOM order — "gallery first" on mobile
+requires no extra reordering logic.
+
+**Components** (`src/components/product/`, new folder — parallel to `home/`/`shop/`):
+- **`ProductGallery.tsx`** (Client Component — `activeIndex` state): single-image products (20 of
+  21 in the real catalog) render just the main image, no thumbnail strip or controls. Multi-image
+  products (currently only `c16-ai-selfie-stick-gimbal`) get one simple horizontal thumbnail row —
+  not a desktop-column/mobile-row split, since the catalog never exceeds 2 images and that split
+  would be complexity with nothing real to justify it. `object-contain`, not `object-cover` (unlike
+  `ProductCard`'s grid thumbnail) — a full-size hero image shouldn't crop a real supplier photo's
+  composition, the same lesson already applied to the homepage hero.
+- **`QuantitySelector.tsx`** (Client Component, local `useState`): `[-] qty [+]`, minimum 1, capped
+  at real `inventory.stock` when known (never an invented limit), `aria-label`s on both buttons,
+  count in `aria-live="polite"`. Not wired to anything — there's no real cart yet.
+- **`BuyBox.tsx`** (Server Component): category label, the page's real `<h1>` (product title),
+  model/SKU meta line (each part individually omitted when null), `Price` (`size="lg"`),
+  `StockBadge`, `shortDescription` only if present (the full `description` lives in
+  `ProductDetails`, not duplicated here), `QuantitySelector`, and both **Add to Cart** and **Buy
+  Now** — disabled via the same `sellingPrice !== null && inventory.status !== "out_of_stock"`
+  formula `ProductCard` already uses. (Buy Now was removed from the compact grid card in the Phase
+  3 redesign to match the reference; a product detail page is a different context where the brief
+  explicitly asked for both CTAs, so this isn't walking that decision back.)
+- **`DeliveryPaymentInfo.tsx`** (Server Component): Cash on Delivery, Nationwide Delivery, manual
+  bKash/Nagad/Rocket — reuses `IconTruck`/`IconCash` (`src/components/ui/icons.tsx`), no new icons.
+  No free/same-day/guaranteed-delivery claims.
+- **`ProductDetails.tsx`** (Server Component — plain stacked sections, not tabs/an accordion):
+  Phase 6's own performance rule scopes Client Components to gallery/quantity interactions only, so
+  tabs/accordion (which need client JS to switch panels) aren't what's actually compliant here.
+  Description / Features / Specifications each render only if that product actually has the field;
+  the whole component returns `null` if none do.
+
+**Related products** (`getRelatedProducts()`, `src/services/products.ts`): same subcategory
+(excluding self) → same category → other `"active"` products as a fallback (currently always
+empty — every product is still `"draft"`), capped at 5, reuses `ProductGrid`/`ProductCard`
+directly.
+
+**`ProductCard` linking**: already correct, no change needed — `ProductCard.tsx` was built in
+Phase 3 already linking its image and title to `/products/${product.slug}`, ahead of this route
+existing.
+
+**SEO / structured data**: `generateMetadata()` sets a truthful per-product title/description;
+canonical + OG image resolution follow the same `isConfigured(brand.urls.site)` gate as Phase 5.
+Product JSON-LD (`<script type="application/ld+json">`, the standard documented Next.js pattern —
+no new dependency) includes `name`/`description`/`sku`/`image`/`brand` (only if present), and the
+entire `offers` object — not just `price` — is omitted whenever `sellingPrice` is `null`, since a
+priceless `Offer` is itself a form of fabricated-looking structured data. `availability` maps from
+the real `inventory.status` (`in_stock`/`out_of_stock` → schema.org URLs; `"unknown"` omits the
+field rather than guessing). `wholesalePrice` is never read in this route, visibly or in JSON-LD.

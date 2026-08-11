@@ -152,3 +152,34 @@ export function getProductListing(source: Product[], params: ProductListingParam
     hasOutOfStock,
   };
 }
+
+/**
+ * Related products for a product detail page — same subcategory first, then
+ * same category, then other `"active"` products as a fallback (currently
+ * always empty; every product is still `"draft"` in Phase 2 — built for
+ * correctness anyway, the same "ready but dormant until real data supports
+ * it" pattern as getProductListing's price sort). Always excludes the
+ * current product; never pads with anything invented.
+ */
+export function getRelatedProducts(product: Product, source: Product[], limit = 5): Product[] {
+  const others = source.filter((candidate) => candidate.id !== product.id);
+  const picked: Product[] = [];
+  const pickedIds = new Set<string>();
+
+  function addFrom(candidates: Product[]) {
+    for (const candidate of candidates) {
+      if (picked.length >= limit) return;
+      if (pickedIds.has(candidate.id)) continue;
+      picked.push(candidate);
+      pickedIds.add(candidate.id);
+    }
+  }
+
+  if (product.subcategory) {
+    addFrom(others.filter((candidate) => candidate.subcategory === product.subcategory));
+  }
+  addFrom(others.filter((candidate) => candidate.category === product.category));
+  addFrom(others.filter((candidate) => candidate.status === "active"));
+
+  return picked.slice(0, limit);
+}

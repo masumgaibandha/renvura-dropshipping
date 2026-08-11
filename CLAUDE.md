@@ -54,7 +54,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   ```
   src/app/                 routes (App Router); page.tsx is the real homepage; shop/,
                              electronics-gadgets/, health-beauty/ are the Phase 5 listing routes;
-                             ui-preview/ is TEMPORARY — see below
+                             products/[slug]/ is the Phase 6 product detail route; ui-preview/ is
+                             TEMPORARY — see below
   src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
                              NewsletterSignup, StoreShell, NavLinks, MobileNav, providers
@@ -65,6 +66,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              BrandStory — not meant for reuse elsewhere
   src/components/shop/      Listing-page-only composition: ProductListingPage, SortSelect,
                              MobileFilterDrawer — shared by all three Phase 5 routes
+  src/components/product/   Product-detail-page-only composition: ProductGallery, BuyBox,
+                             QuantitySelector, DeliveryPaymentInfo, ProductDetails (Phase 6)
   src/config/               brand.ts, navigation.ts
   src/data/                 categories.ts, products.ts — verified seed data (Phase 2)
   src/hooks/                 client-side hooks
@@ -141,7 +144,10 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   badges — if the data model doesn't support a claim, don't display it.
 - `Price` never displays `pricing.wholesalePrice` to a customer — that's Renvura's cost, not a
   selling price. When `sellingPrice` is `null` it renders "Price unavailable", which is the
-  correct/expected state for every current product until Phase 2's pricing gap is resolved.
+  correct/expected state for every current product until Phase 2's pricing gap is resolved. This
+  extends to structured data too: `/products/[slug]`'s Product JSON-LD never reads
+  `wholesalePrice`, and omits the entire `offers` object (not just `price`) when `sellingPrice` is
+  `null` — a priceless `Offer` is itself a form of fabricated-looking data.
 - `src/app/ui-preview/` is a **temporary, noindex, dev-only** route for visually verifying the
   design system. It must be removed or gated before production deployment — never link to it from
   real pages, and don't treat its existence as permission to skip building real pages later.
@@ -190,13 +196,14 @@ phase — just don't design yourself into a corner that makes it hard later.
 
 Phases 1 (Foundation), 2 (Product data model), 3 (Global storefront design system, including a
 redesign pass that pulled Phase 4's homepage forward into the same pass), 4 (Homepage refinement —
-Category Highlights, Why Shop With Renvura, homepage SEO metadata), and 5 (Shop/category listing —
-`/shop`, `/electronics-gadgets`, `/health-beauty`, real search) are done — see
-`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–10. The reusable
-UI shell, homepage, and listing pages exist and are wired in, but do not build the product detail
-page, cart, checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist
-but aren't wired up), wire up real cart/newsletter logic, or create fake products/reviews/prices —
-every product still has `sellingPrice: null`, so "Price unavailable" and a disabled Add to Cart
-button are the correct, expected state everywhere until Phase 2's pricing gap is resolved. Search
-now works end-to-end (Phase 5) — that's no longer a stub. Confirm scope with the user before
+Category Highlights, Why Shop With Renvura, homepage SEO metadata), 5 (Shop/category listing —
+`/shop`, `/electronics-gadgets`, `/health-beauty`, real search), and 6 (Product detail —
+`/products/[slug]`, gallery, buy box, related products, JSON-LD) are done — see
+`docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, and `docs/DESIGN-SYSTEM.md` §§9–11. The reusable
+UI shell, homepage, listing pages, and product detail page exist and are wired in, but do not build
+cart, checkout, auth, or admin dashboard until asked. Do not connect MongoDB (schemas exist but
+aren't wired up), wire up real cart/newsletter logic, or create fake products/reviews/prices —
+every product still has `sellingPrice: null`, so "Price unavailable" and disabled Add to Cart/Buy
+Now buttons are the correct, expected state everywhere until Phase 2's pricing gap is resolved.
+Search now works end-to-end (Phase 5) — that's no longer a stub. Confirm scope with the user before
 starting a new phase.
