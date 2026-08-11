@@ -1,4 +1,4 @@
-import { bangladeshDivisions } from "@/config/address";
+import { bangladeshDivisionNames, getDistrictsForDivision, getUpazilasForDistrict } from "@/data/bangladesh-locations";
 
 export interface DeliveryAddressValue {
   division: string;
@@ -16,16 +16,35 @@ interface DeliveryAddressSectionProps {
 }
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-small text-foreground placeholder:text-foreground/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
+  "h-11 w-full rounded-lg border border-border bg-surface px-3 text-small text-foreground placeholder:text-foreground/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-50";
 const labelClass = "text-small font-medium text-foreground";
 
 /**
- * Division is a real, fixed 8-option select (see `src/config/address.ts`);
- * District/Upazila/Thana stay free text deliberately — no invented
- * district/upazila mapping. Delivery fee is computed server-side from
- * `district` — see `src/utils/delivery.ts`.
+ * Division → District → Upazila/Thana are dependent selects backed by the
+ * verified hierarchy in `src/data/bangladesh-locations.ts` (8 divisions, 64
+ * districts, 544 upazila/thana entries — see that file's doc comment for
+ * sourcing; Dhaka district's 55 entries include its 5 rural upazilas plus
+ * the 50 Dhaka Metropolitan Police thanas). District/Upazila reset
+ * whenever their parent changes, and stay disabled until a parent is
+ * picked, so a stale combination can never be submitted from the UI —
+ * `order-schema.ts` re-validates the combination server-side regardless,
+ * since a client can submit whatever it wants. Area/Village/Road/House
+ * stays free text — that level of detail isn't in any administrative
+ * dataset. Delivery fee is computed server-side from `district` — see
+ * `src/utils/delivery.ts`.
  */
 export function DeliveryAddressSection({ value, onChange, errors }: DeliveryAddressSectionProps) {
+  const districts = value.division ? getDistrictsForDivision(value.division) : [];
+  const upazilas = value.division && value.district ? getUpazilasForDistrict(value.division, value.district) : [];
+
+  function handleDivisionChange(division: string) {
+    onChange({ ...value, division, district: "", upazila: "" });
+  }
+
+  function handleDistrictChange(district: string) {
+    onChange({ ...value, district, upazila: "" });
+  }
+
   return (
     <section className="rounded-2xl border border-border bg-surface p-5">
       <h2 className="text-h3 text-foreground">Delivery Address</h2>
@@ -38,13 +57,13 @@ export function DeliveryAddressSection({ value, onChange, errors }: DeliveryAddr
             id="checkout-division"
             required
             value={value.division}
-            onChange={(event) => onChange({ ...value, division: event.target.value })}
+            onChange={(event) => handleDivisionChange(event.target.value)}
             className={inputClass}
           >
             <option value="" disabled>
               Select division
             </option>
-            {bangladeshDivisions.map((division) => (
+            {bangladeshDivisionNames.map((division) => (
               <option key={division} value={division}>
                 {division}
               </option>
@@ -57,14 +76,23 @@ export function DeliveryAddressSection({ value, onChange, errors }: DeliveryAddr
           <label htmlFor="checkout-district" className={labelClass}>
             District
           </label>
-          <input
+          <select
             id="checkout-district"
-            type="text"
             required
+            disabled={!value.division}
             value={value.district}
-            onChange={(event) => onChange({ ...value, district: event.target.value })}
+            onChange={(event) => handleDistrictChange(event.target.value)}
             className={inputClass}
-          />
+          >
+            <option value="" disabled>
+              Select district
+            </option>
+            {districts.map((district) => (
+              <option key={district} value={district}>
+                {district}
+              </option>
+            ))}
+          </select>
           {errors.district && <p className="text-xs text-red-600">{errors.district}</p>}
         </div>
 
@@ -72,14 +100,23 @@ export function DeliveryAddressSection({ value, onChange, errors }: DeliveryAddr
           <label htmlFor="checkout-upazila" className={labelClass}>
             Upazila / Thana
           </label>
-          <input
+          <select
             id="checkout-upazila"
-            type="text"
             required
+            disabled={!value.district}
             value={value.upazila}
             onChange={(event) => onChange({ ...value, upazila: event.target.value })}
             className={inputClass}
-          />
+          >
+            <option value="" disabled>
+              Select upazila / thana
+            </option>
+            {upazilas.map((upazila) => (
+              <option key={upazila} value={upazila}>
+                {upazila}
+              </option>
+            ))}
+          </select>
           {errors.upazila && <p className="text-xs text-red-600">{errors.upazila}</p>}
         </div>
 

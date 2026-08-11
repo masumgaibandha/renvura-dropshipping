@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { bangladeshDivisions } from "@/config/address";
+import { isValidDistrictForDivision, isValidDivision, isValidUpazilaForDistrict } from "@/data/bangladesh-locations";
 import { normalizeBdPhone } from "@/utils/phone";
 import { MAX_QUANTITY_PER_ITEM, MAX_UNIQUE_ITEMS } from "./order-logic";
 
@@ -48,6 +48,37 @@ function optionalTrimmed(max: number) {
     .transform((value) => (value && value.length > 0 ? value : undefined));
 }
 
+/**
+ * Division/District/Upazila are dependent selects in the UI, but the client
+ * is never trusted to have kept them consistent — this re-validates the
+ * whole combination against `src/data/bangladesh-locations.ts` (the same
+ * dataset the UI's dropdowns read from), rejecting e.g. a Rangpur division
+ * paired with a Dhaka district, or a Gaibandha district paired with a
+ * Dhanmondi upazila.
+ */
+const shippingAddressSchema = z
+  .object({
+    division: z.string().trim().min(1, "Select a division."),
+    district: z.string().trim().min(1, "Select a district."),
+    upazila: z.string().trim().min(1, "Select an upazila/thana."),
+    addressLine: z.string().trim().min(2, "Enter your address (area/road/house).").max(200, "Address is too long."),
+    landmark: optionalTrimmed(200),
+    notes: optionalTrimmed(500),
+  })
+  .superRefine((data, ctx) => {
+    if (!isValidDivision(data.division)) {
+      ctx.addIssue({ code: "custom", message: "Select a valid division.", path: ["division"] });
+      return;
+    }
+    if (!isValidDistrictForDivision(data.division, data.district)) {
+      ctx.addIssue({ code: "custom", message: "Select a district that belongs to the chosen division.", path: ["district"] });
+      return;
+    }
+    if (!isValidUpazilaForDistrict(data.division, data.district, data.upazila)) {
+      ctx.addIssue({ code: "custom", message: "Select an upazila/thana that belongs to the chosen district.", path: ["upazila"] });
+    }
+  });
+
 export const orderInputSchema = z
   .object({
     items: z
@@ -59,14 +90,7 @@ export const orderInputSchema = z
       phone: phoneSchema,
       email: optionalEmailSchema,
     }),
-    shippingAddress: z.object({
-      division: z.enum([...bangladeshDivisions]),
-      district: z.string().trim().min(2, "Enter your district.").max(200, "District is too long."),
-      upazila: z.string().trim().min(2, "Enter your upazila/thana.").max(200, "Upazila/Thana is too long."),
-      addressLine: z.string().trim().min(2, "Enter your address (area/road/house).").max(200, "Address is too long."),
-      landmark: optionalTrimmed(200),
-      notes: optionalTrimmed(500),
-    }),
+    shippingAddress: shippingAddressSchema,
     payment: z.object({
       method: z.enum(["cash_on_delivery", "bkash", "nagad", "rocket"]),
       transactionId: optionalTrimmed(50),
