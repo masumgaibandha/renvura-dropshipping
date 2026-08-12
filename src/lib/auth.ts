@@ -7,6 +7,29 @@ import { MongoClient } from "mongodb";
 import { normalizeBdPhone } from "@/utils/phone";
 
 /**
+ * Every origin, beyond `baseURL` itself, that a real sign-up/sign-in
+ * request can legitimately arrive from. Better Auth always trusts
+ * `baseURL`'s own origin automatically (http://localhost:3000 in dev,
+ * whatever `BETTER_AUTH_URL` resolves to in production) — this only adds
+ * the apex/`www` pair, since a browser's `Origin` header is scheme+host
+ * exact, so `https://www.renvura.com` is a genuinely different origin from
+ * `https://renvura.com`, not a variant of it.
+ *
+ * Kept as an explicit, reviewed, version-controlled list rather than a
+ * second Vercel dashboard env var (Better Auth also supports
+ * `BETTER_AUTH_TRUSTED_ORIGINS`, but that's one more setting someone has to
+ * remember to keep correct) — and as a deliberate safety net: if
+ * `BETTER_AUTH_URL` is ever left unset or wrong in an environment, requests
+ * to the real production domain still pass the origin check instead of
+ * failing closed with "Invalid origin." Always including this list is safe
+ * even outside production: it's purely additive (a local dev browser never
+ * sends `Origin: https://renvura.com`), never a wildcard, and never
+ * sourced from user input — see CLAUDE.md's "Authentication & customer
+ * account rules" for the full production-origin story.
+ */
+const PRODUCTION_TRUSTED_ORIGINS = ["https://renvura.com", "https://www.renvura.com"];
+
+/**
  * Better Auth has no official Mongoose adapter — only the native MongoDB
  * driver — so this is a second driver instance pointed at the *same*
  * `renvura` database as the Mongoose connection in `src/lib/db.ts`, not a
@@ -97,6 +120,7 @@ export const auth = betterAuth({
   database: mongodbAdapter(db, { client }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,
+  trustedOrigins: PRODUCTION_TRUSTED_ORIGINS,
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,

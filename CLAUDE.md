@@ -341,6 +341,18 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
 - **Better Auth has its own rate limiting** (enabled in `src/lib/auth.ts`, layered on top of its
   already-strict default `/sign-in/email` limit) — like `src/lib/rate-limit.ts`, it's in-memory and
   process-local; the same "not sufficient alone for production" caveat applies.
+- **Origin/CSRF checks stay on — never `disableOriginCheck`/`disableCSRFCheck`.** `baseURL`
+  (`process.env.BETTER_AUTH_URL`) must be the exact scheme+host the request actually arrives on —
+  Vercel Production must have it set to `https://renvura.com` (no trailing slash), not left unset
+  (Better Auth then guesses from the request, which behind Vercel's proxy can resolve to the wrong
+  internal origin and reject every state-changing request with "Invalid origin") and not a preview
+  URL. `PRODUCTION_TRUSTED_ORIGINS` in `src/lib/auth.ts` additionally trusts `https://www.renvura.com`
+  as its own origin (apex and `www` are different origins to a browser's `Origin` header) and acts
+  as a safety net if `baseURL` is ever misconfigured — it's a small, explicit, version-controlled
+  list, not an env-driven or wildcard allowlist. Local dev is unaffected (`baseURL` is
+  `http://localhost:3000` there); Vercel Preview deployments get their own per-deployment origin
+  that isn't in this list and isn't currently supported — not needed today, but worth knowing if
+  someone tries to sign up from a preview URL and hits the same error.
 
 ## Admin dashboard & authorization (Phase 10)
 
