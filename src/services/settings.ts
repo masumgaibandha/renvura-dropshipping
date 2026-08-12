@@ -63,7 +63,7 @@ export const getStoreSettings = cache(async (): Promise<StoreSettings> => {
         lowStockThreshold: DEFAULT_LOW_STOCK_THRESHOLD,
       },
     },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: "after" },
   ).lean<StoreSettingsLeanDoc>();
   return toStoreSettings(doc);
 });
@@ -88,7 +88,7 @@ export async function updateStoreSettings(input: StoreSettingsInput): Promise<St
   const doc = await StoreSettingsModel.findOneAndUpdate(
     { singletonKey: "store" },
     { $set: input },
-    { upsert: true, new: true },
+    { upsert: true, returnDocument: "after" },
   ).lean<StoreSettingsLeanDoc>();
   return toStoreSettings(doc);
 }

@@ -113,7 +113,7 @@ export async function updateAddressDoc(id: string, userId: string, input: Addres
       notes: input.notes ?? null,
       isDefault: input.isDefault,
     },
-    { new: true },
+    { returnDocument: "after" },
   ).lean<AddressLeanDoc>();
   return doc ? toAddress(doc) : null;
 }
@@ -141,6 +141,6 @@ export async function setAddressAsDefault(id: string, userId: string): Promise<A
     return null;
   }
   await connectToDatabase();
-  const doc = await AddressModel.findOneAndUpdate({ _id: id, userId }, { isDefault: true }, { new: true }).lean<AddressLeanDoc>();
+  const doc = await AddressModel.findOneAndUpdate({ _id: id, userId }, { isDefault: true }, { returnDocument: "after" }).lean<AddressLeanDoc>();
   return doc ? toAddress(doc) : null;
 }

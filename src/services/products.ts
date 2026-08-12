@@ -444,7 +444,7 @@ export async function updateProductForAdmin(slug: string, input: AdminProductInp
         featured: input.featured,
       },
     },
-    { new: true },
+    { returnDocument: "after" },
   ).lean<ProductLeanDoc>();
   return doc ? toProduct(doc) : null;
 }
@@ -489,14 +489,14 @@ export async function createProductForAdmin(slug: string, input: AdminProductInp
 /** Sets only `inventory.stock` — used by /admin/inventory's adjustment form. Returns `null` if no product with this slug exists. */
 export async function adjustProductStockForAdmin(slug: string, newStock: number): Promise<Product | null> {
   await connectToDatabase();
-  const doc = await ProductModel.findOneAndUpdate({ slug }, { $set: { "inventory.stock": newStock } }, { new: true }).lean<ProductLeanDoc>();
+  const doc = await ProductModel.findOneAndUpdate({ slug }, { $set: { "inventory.stock": newStock } }, { returnDocument: "after" }).lean<ProductLeanDoc>();
   return doc ? toProduct(doc) : null;
 }
 
 /** Sets only `featured` — used by /admin/homepage. Returns `null` if no product with this slug exists. */
 export async function setProductFeaturedForAdmin(slug: string, featured: boolean): Promise<Product | null> {
   await connectToDatabase();
-  const doc = await ProductModel.findOneAndUpdate({ slug }, { $set: { featured } }, { new: true }).lean<ProductLeanDoc>();
+  const doc = await ProductModel.findOneAndUpdate({ slug }, { $set: { featured } }, { returnDocument: "after" }).lean<ProductLeanDoc>();
   return doc ? toProduct(doc) : null;
 }
 
@@ -526,7 +526,7 @@ export async function updateCategoryForAdmin(slug: string, input: AdminCategoryI
   const doc = await CategoryModel.findOneAndUpdate(
     { slug },
     { $set: { name: input.name, description: input.description, parentSlug: input.parentSlug, displayOrder: input.displayOrder } },
-    { new: true },
+    { returnDocument: "after" },
   ).lean<CategoryLeanDoc>();
   return doc ? toCategory(doc) : null;
 }
@@ -534,6 +534,6 @@ export async function updateCategoryForAdmin(slug: string, input: AdminCategoryI
 /** Activate/deactivate — never deletes a category, since existing products may still reference its slug. */
 export async function setCategoryActiveForAdmin(slug: string, isActive: boolean): Promise<Category | null> {
   await connectToDatabase();
-  const doc = await CategoryModel.findOneAndUpdate({ slug }, { $set: { isActive } }, { new: true }).lean<CategoryLeanDoc>();
+  const doc = await CategoryModel.findOneAndUpdate({ slug }, { $set: { isActive } }, { returnDocument: "after" }).lean<CategoryLeanDoc>();
   return doc ? toCategory(doc) : null;
 }

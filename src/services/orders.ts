@@ -271,7 +271,7 @@ export async function updateOrderStatusForAdmin(orderNumber: string, newStatus: 
       $set: { orderStatus: newStatus },
       $push: { statusHistory: { status: newStatus, changedAt: new Date(), changedBy: adminUserId } },
     },
-    { new: true },
+    { returnDocument: "after" },
   ).lean<OrderRecord>();
   return doc;
 }
@@ -279,7 +279,7 @@ export async function updateOrderStatusForAdmin(orderNumber: string, newStatus: 
 /** Sets `payment.status` only — used by the /admin/payments verification queue (Mark Paid / Mark Failed). Returns `null` if the order doesn't exist. */
 export async function updatePaymentStatusForAdmin(orderNumber: string, newPaymentStatus: PaymentStatus): Promise<OrderRecord | null> {
   await connectToDatabase();
-  const doc = await OrderModel.findOneAndUpdate({ orderNumber }, { $set: { "payment.status": newPaymentStatus } }, { new: true }).lean<OrderRecord>();
+  const doc = await OrderModel.findOneAndUpdate({ orderNumber }, { $set: { "payment.status": newPaymentStatus } }, { returnDocument: "after" }).lean<OrderRecord>();
   return doc;
 }
 
