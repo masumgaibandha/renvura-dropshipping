@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { clsx } from "clsx";
 
-import { IconGrid, IconMapPin, IconPackage, IconUser } from "@/components/ui/icons";
+import { IconGrid, IconMapPin, IconPackage, IconShieldCheck, IconUser } from "@/components/ui/icons";
 import { SignOutButton } from "./SignOutButton";
 
 export const accountNavItems = [
@@ -19,12 +19,26 @@ function isAccountLinkActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+interface AccountSidebarProps {
+  /** Server-derived from `getCurrentUser()` (see AccountLayout.tsx) — never trusted from the client. Purely a navigation convenience: `/admin/layout.tsx` independently re-checks role on every request. */
+  isAdmin?: boolean;
+}
+
 /** Desktop sidebar nav for the /account/* area. See AccountMobileNav.tsx for the small-screen equivalent. */
-export function AccountSidebar() {
+export function AccountSidebar({ isAdmin = false }: AccountSidebarProps) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Account" className="flex flex-col gap-1">
+      {isAdmin && (
+        <Link
+          href="/admin"
+          className="mb-2 flex items-center gap-2 rounded-lg border-b border-border px-3 py-2 pb-3 text-small font-medium text-accent transition-colors hover:bg-accent/10"
+        >
+          <IconShieldCheck className="size-5" />
+          Admin Dashboard
+        </Link>
+      )}
       {accountNavItems.map((item) => {
         const active = isAccountLinkActive(pathname, item.href);
         const Icon = item.icon;

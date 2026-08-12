@@ -3,7 +3,7 @@
 import { Dropdown } from "@heroui/react";
 import { useRouter } from "next/navigation";
 
-import { IconChevronDown, IconUser } from "@/components/ui/icons";
+import { IconChevronDown, IconShieldCheck, IconUser } from "@/components/ui/icons";
 import { signOut, useSession } from "@/lib/auth-client";
 
 const linkClass =
@@ -39,6 +39,10 @@ export function HeaderAccountLink() {
   }
 
   const firstName = session.user.name.split(" ")[0] || "Account";
+  // Purely a display convenience, same posture as the rest of this widget (see the doc comment
+  // above) — hiding/showing a link here is not what protects /admin. `src/app/admin/layout.tsx`
+  // independently re-checks role server-side on every request regardless of what this menu shows.
+  const isAdmin = session.user.role === "admin";
 
   return (
     <Dropdown.Root>
@@ -49,6 +53,14 @@ export function HeaderAccountLink() {
       </Dropdown.Trigger>
       <Dropdown.Popover placement="bottom end" className="min-w-48">
         <Dropdown.Menu aria-label="Account menu">
+          {isAdmin && (
+            <Dropdown.Item href="/admin" textValue="Admin Dashboard">
+              <span className="flex items-center gap-2 text-accent">
+                <IconShieldCheck className="size-4" />
+                Admin Dashboard
+              </span>
+            </Dropdown.Item>
+          )}
           <Dropdown.Item href="/account" textValue="My Account">
             My Account
           </Dropdown.Item>

@@ -23,5 +23,5 @@ export default async function AccountRootLayout({ children }: { children: ReactN
     redirect("/login");
   }
 
-  return <AccountLayout>{children}</AccountLayout>;
+  return <AccountLayout isAdmin={user.role === "admin"}>{children}</AccountLayout>;
 }
