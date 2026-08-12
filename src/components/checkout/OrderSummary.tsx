@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-import { calculateDeliveryFee } from "@/utils/delivery";
+import { calculateDeliveryFee, type DeliveryFeeTable } from "@/utils/delivery";
 import { formatBDT } from "@/utils/currency";
 import type { CartItem } from "@/types/cart";
 
@@ -8,6 +8,8 @@ interface OrderSummaryProps {
   items: CartItem[];
   subtotal: number;
   district: string;
+  /** Current admin-editable delivery fees, passed down from the checkout page — see `CheckoutForm`'s doc comment. */
+  deliveryFees: DeliveryFeeTable;
 }
 
 /**
@@ -17,9 +19,9 @@ interface OrderSummaryProps {
  * server wins (see `/order-success/[orderNumber]`, which only ever shows
  * the server-returned total).
  */
-export function OrderSummary({ items, subtotal, district }: OrderSummaryProps) {
+export function OrderSummary({ items, subtotal, district, deliveryFees }: OrderSummaryProps) {
   const hasDistrict = district.trim().length > 0;
-  const deliveryFee = hasDistrict ? calculateDeliveryFee(district) : null;
+  const deliveryFee = hasDistrict ? calculateDeliveryFee(district, deliveryFees) : null;
   const total = deliveryFee !== null ? subtotal + deliveryFee : null;
 
   return (

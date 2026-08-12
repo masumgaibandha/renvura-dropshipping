@@ -10,6 +10,8 @@ interface CategoryTabsProps {
   /** Must be `PublicProduct` (wholesalePrice stripped) — this is a Client Component, see `PublicProduct`'s doc comment. */
   products: PublicProduct[];
   categories: Category[];
+  /** slug -> display name, built server-side — see `ProductCard`'s `categoryLabel` doc comment. */
+  categoryLabels?: Record<string, string>;
 }
 
 /**
@@ -21,7 +23,7 @@ interface CategoryTabsProps {
  * already-fetched product list (passed down once from the Server Component
  * homepage) — no new data fetching or route change per tab.
  */
-export function CategoryTabs({ products, categories }: CategoryTabsProps) {
+export function CategoryTabs({ products, categories, categoryLabels }: CategoryTabsProps) {
   return (
     <Tabs.Root defaultSelectedKey="all">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -39,11 +41,14 @@ export function CategoryTabs({ products, categories }: CategoryTabsProps) {
       </div>
 
       <Tabs.Panel id="all">
-        <ProductGrid products={products} />
+        <ProductGrid products={products} categoryLabels={categoryLabels} />
       </Tabs.Panel>
       {categories.map((category) => (
         <Tabs.Panel key={category.id} id={category.slug}>
-          <ProductGrid products={products.filter((product) => product.category === category.slug)} />
+          <ProductGrid
+            products={products.filter((product) => product.category === category.slug)}
+            categoryLabels={categoryLabels}
+          />
         </Tabs.Panel>
       ))}
     </Tabs.Root>

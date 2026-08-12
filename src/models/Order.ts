@@ -52,7 +52,30 @@ const orderPaymentSchema = new Schema(
       type: String,
       enum: ["unpaid", "cod_pending", "pending_verification", "paid", "failed", "refunded"],
       required: true,
+      index: true,
     },
+  },
+  { _id: false },
+);
+
+/**
+ * Phase 10: lightweight audit trail of order-status changes, appended to
+ * (never mutated/removed) by `adminUpdateOrderStatus`
+ * (`src/actions/admin/orders.ts`). `changedBy` is the admin's Better Auth
+ * user id — never the raw session, never a name/email snapshot that could
+ * go stale; resolve it against `/admin/customers` if a display name is
+ * ever needed. `null` marks the initial `"pending"` status set by
+ * `createOrder` itself (no admin involved yet).
+ */
+const orderStatusHistoryEntrySchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "processing", "supplier_submitted", "shipped", "delivered", "cancelled", "returned"],
+      required: true,
+    },
+    changedAt: { type: Date, required: true, default: Date.now },
+    changedBy: { type: String, default: null },
   },
   { _id: false },
 );
@@ -78,9 +101,12 @@ const orderSchema = new Schema(
       required: true,
       index: true,
     },
+    statusHistory: { type: [orderStatusHistoryEntrySchema], default: [] },
   },
   { timestamps: true },
 );
+
+orderSchema.index({ createdAt: -1 });
 
 export type OrderDocument = InferSchemaType<typeof orderSchema>;
 

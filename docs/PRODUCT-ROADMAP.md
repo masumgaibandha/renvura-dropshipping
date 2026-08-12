@@ -262,8 +262,42 @@ fully server-revalidated), confirmed live: bypassing the client and calling the 
 directly can store a non-BD-format phone string. Not a cross-user or security issue, but worth
 knowing before treating this field as reliably normalized elsewhere.
 
-## Phase 10 — Admin
-Admin dashboard: product management, order management, customer management.
+## Phase 10 — Admin dashboard + store management ✅
+Built a role-gated `/admin/*` dashboard: dashboard overview, order management (list/detail/status
+workflow), manual-payment verification queue, product management (now MongoDB-backed CRUD),
+category management, customer views, inventory (stock adjustment), homepage curation (featured
+products, category highlight order), basic analytics, and store settings (delivery fees, support
+contact, low-stock threshold). See `docs/ARCHITECTURE.md`'s "Admin dashboard & authorization"
+section for the full architecture and security model, and CLAUDE.md's matching rules section.
+
+**Core architectural decision**: the product/category catalog moved from static seed data
+(`src/data/products.ts`/`categories.ts`) to MongoDB as part of this phase — the Phase 10 brief's
+central risk (an admin CRUD UI editing data the storefront ignores) doesn't apply, because the
+storefront and the admin dashboard now read the exact same `ProductModel`/`CategoryModel` records.
+The static files remain as the original human-verified record; `scripts/seed-catalog.ts` performed
+the one-time, idempotent migration.
+
+**Authorization mirrors Phase 9's proven pattern exactly**: a `role` field on Better Auth's `user`
+document (`input: false`, so no client-reachable API can set it), a manual-only bootstrap script
+(`scripts/promote-admin.ts`), a layout-level `getCurrentUser()` + role check that renders
+`notFound()` for a non-admin (never a 403), and every admin Server Action independently calling
+`requireAdmin()` again rather than trusting the layout ran.
+
+**Revenue/analytics numbers are deliberately conservative** rather than counting every pending
+order — see `getOrderDashboardStats`/`getAverageOrderValue`/`getSalesByDay` in
+`src/services/orders.ts`. An audit trail (`AdminAuditLog`) records every order-status change,
+payment verification, and product/category/inventory/homepage/settings write.
+
+**Verification**: `tsc --noEmit`, `eslint`, and `next build` all pass clean. No automated test
+suite exists in this repo (no Jest/Vitest/Playwright configured), so authorization and mutation
+correctness were verified by code review plus manual/browser checks, not committed test files —
+see `docs/ARCHITECTURE.md`'s "Known limitations" for what that leaves untested going forward.
+
+**Deferred, matching the brief's own explicit scope**: automated payment gateway integration,
+courier API integration, Meta Pixel/CAPI/GA4, advanced CRM, supplier API, complex warehouse
+management, multi-vendor support, advanced accounting, "log in as customer" impersonation, product
+image upload UI (image/thumbnail fields are text paths under `/products/`, no upload
+infrastructure), and bulk product import/export.
 
 ## Phase 11 — Tracking / retargeting
 Meta Pixel, Meta Conversions API, GA4, GTM, event wiring (PageView, ViewContent, Search,

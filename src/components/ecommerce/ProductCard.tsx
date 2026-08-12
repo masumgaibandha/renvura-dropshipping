@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { AddToCartButton } from "@/components/cart/AddToCartButton";
 import { WishlistToggleButton } from "@/components/wishlist/WishlistToggleButton";
-import { getCategoryBySlug } from "@/services/products";
 import type { PublicProduct } from "@/types/product";
 import { SaleBadge, StockBadge } from "./Badges";
 import { Price } from "./Price";
@@ -11,6 +10,14 @@ import { Price } from "./Price";
 interface ProductCardProps {
   /** `PublicProduct` (never the full `Product`) — see its doc comment; a real `Product` is still accepted since it's structurally a superset. */
   product: PublicProduct;
+  /**
+   * Resolved by the caller, never looked up in here — this component is
+   * rendered directly by several Client Components (`CategoryTabs`,
+   * `FeaturedProductsRow`, `WishlistGrid`'s `ProductGrid`), so it must stay
+   * free of any server-only import (as of Phase 10, `src/services/products.ts`
+   * pulls in Mongoose/MongoDB, which cannot be bundled for the browser).
+   */
+  categoryLabel?: string;
   className?: string;
 }
 
@@ -26,11 +33,10 @@ interface ProductCardProps {
  * wishlist toggle has no such gate (saving something for later doesn't
  * require a price).
  */
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({ product, categoryLabel, className }: ProductCardProps) {
   const { pricing, media, inventory } = product;
-  const categoryLabel = getCategoryBySlug(product.subcategory ?? product.category)?.name;
   const image = media.thumbnail ?? media.images[0] ?? null;
-  const canPurchase = pricing.sellingPrice !== null && inventory.status !== "out_of_stock";
+  const canPurchase = product.status === "active" && pricing.sellingPrice !== null && inventory.status !== "out_of_stock";
   const productHref = `/products/${product.slug}`;
 
   const discountPercentage =

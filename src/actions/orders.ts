@@ -60,8 +60,7 @@ export async function createOrder(rawInput: unknown): Promise<CreateOrderResult>
   }
 
   // The only place prices/availability are decided — productId/quantity are the only client input used.
-  // Runs before any DB call: no reason to touch the database for an order that's invalid anyway.
-  const recalculated = recalculateOrder(input.items, input.shippingAddress.district);
+  const recalculated = await recalculateOrder(input.items, input.shippingAddress.district);
   if (!recalculated.ok) {
     return { ok: false, error: recalculated.error };
   }

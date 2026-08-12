@@ -184,3 +184,74 @@ export function IconLogOut(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/* -------------------------------------------------------------------- */
+/* Admin dashboard icon set (Phase 10) — same 24x24/1.75-stroke idiom.  */
+/* -------------------------------------------------------------------- */
+
+export function IconHome(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4 11.5 12 4l8 7.5" />
+      <path d="M5.5 10v9.5a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V10" />
+    </svg>
+  );
+}
+
+export function IconLayers(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 3.5 20.5 8 12 12.5 3.5 8Z" />
+      <path d="M3.5 12 12 16.5 20.5 12" />
+      <path d="M3.5 16 12 20.5 20.5 16" />
+    </svg>
+  );
+}
+
+export function IconBox(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="4" width="7" height="7" rx="1" />
+      <rect x="4" y="13" width="7" height="7" rx="1" />
+      <rect x="13" y="13" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+export function IconBarChart(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4 20.5V13" />
+      <path d="M12 20.5V6" />
+      <path d="M20 20.5v-9" />
+      <path d="M3 20.5h18" />
+    </svg>
+  );
+}
+
+export function IconSettings(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1h-.2a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.6v-.2a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.6 1h.2a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z" />
+    </svg>
+  );
+}
+
+export function IconCheck(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M4.5 12.5 9.5 17.5 19.5 6.5" />
+    </svg>
+  );
+}
+
+export function IconX(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M5 5 19 19" />
+      <path d="M19 5 5 19" />
+    </svg>
+  );
+}

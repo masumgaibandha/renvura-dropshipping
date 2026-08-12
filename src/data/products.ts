@@ -13,8 +13,17 @@ import type { VerifiedProductRecord } from "@/types/product";
  * 21 records now carry approved `regularPrice` / `sellingPrice` values;
  * `skin1004-centella-ampoule-100ml` is held back (both left `null`) pending
  * resolution of the 30ml/100ml source mismatch flagged in its
- * `source.dataQualityNotes`. `status` stays "draft" for every record for
- * now — pricing approval and go-live/publish are separate decisions.
+ * `source.dataQualityNotes`.
+ *
+ * As of Phase 10, this file is the original verified record, migrated into
+ * MongoDB by `scripts/seed-catalog.ts` — the storefront and admin dashboard
+ * both read from `ProductModel` (`src/services/products.ts`), never from
+ * this array directly, at runtime. Editing a product going forward happens
+ * through `/admin/products`, not by hand-editing this file. Re-running the
+ * seed script does not overwrite existing DB documents (see its doc
+ * comment), so this file staying "draft"-labeled in spirit here has no
+ * runtime effect — the migration maps `status` to `"active"` for every
+ * product with an approved `sellingPrice` and leaves the rest `"draft"`.
  */
 
 const SOURCE_MARKETPLACE = "SelfShop (B2B wholesale/dropshipping marketplace)";

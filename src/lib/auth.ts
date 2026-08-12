@@ -38,6 +38,19 @@ const client = getMongoClient();
 const db = client.db(process.env.MONGODB_DB_NAME);
 
 /**
+ * Read-only escape hatch to Better Auth's native `user` collection for
+ * server code that needs to query across many users at once (Phase 10:
+ * `src/services/customers.ts`'s admin customer list/detail) — Better
+ * Auth's own API only fetches one session/user at a time, and there's no
+ * Mongoose model for `user` since Better Auth owns that collection.
+ * Reuses this same cached client/db rather than opening a second
+ * connection. Never used to write — all writes to `user` go through
+ * Better Auth's API, except the one deliberate exception in
+ * `scripts/promote-admin.ts`.
+ */
+export const authDb = db;
+
+/**
  * Server-side counterpart to `ProfileForm.tsx`'s client-side phone check —
  * closes the gap where a direct API call (bypassing the UI) could
  * previously store an unnormalized/invalid phone value. Reuses the exact
@@ -93,6 +106,23 @@ export const auth = betterAuth({
       phone: {
         type: "string",
         required: false,
+      },
+      /**
+       * `input: false` removes this field from every client-reachable
+       * schema (sign-up, `authClient.updateUser()`) entirely — Better Auth
+       * generates its request validators from `additionalFields`, so a
+       * forged `{ role: "admin" }` in a signup/profile-update payload is
+       * rejected before it ever reaches a handler, not just ignored.
+       * There is deliberately no Server Action or route that can set this
+       * field either — the only way to promote a user is the direct-DB
+       * `scripts/promote-admin.ts` (see docs/ARCHITECTURE.md). Defaults to
+       * `"customer"` for every sign-up.
+       */
+      role: {
+        type: "string",
+        required: false,
+        defaultValue: "customer",
+        input: false,
       },
     },
   },

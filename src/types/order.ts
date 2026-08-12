@@ -46,6 +46,37 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   refunded: "Refunded",
 };
 
+/**
+ * Phase 10 admin order-status workflow. Deliberately not a free-for-all
+ * graph: `cancelled` is reachable from any non-terminal status (orders get
+ * cancelled at any stage before delivery), `returned` only from
+ * `delivered`, and `cancelled`/`returned` are terminal (no further
+ * transitions). `adminUpdateOrderStatus` (`src/actions/admin/orders.ts`) is
+ * the only place this is enforced — never trust a client-submitted status
+ * string without checking it against this table first.
+ */
+export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["processing", "cancelled"],
+  processing: ["supplier_submitted", "cancelled"],
+  supplier_submitted: ["shipped", "cancelled"],
+  shipped: ["delivered", "cancelled"],
+  delivered: ["returned"],
+  cancelled: [],
+  returned: [],
+};
+
+export function canTransitionOrderStatus(from: OrderStatus, to: OrderStatus): boolean {
+  return ORDER_STATUS_TRANSITIONS[from].includes(to);
+}
+
+export interface OrderStatusHistoryEntry {
+  status: OrderStatus;
+  changedAt: string;
+  /** Better Auth admin user id, or `null` for the initial `"pending"` entry `createOrder` sets. */
+  changedBy: string | null;
+}
+
 export interface OrderCustomer {
   name: string;
   /** Normalized to local `01XXXXXXXXX` form — see `src/utils/phone.ts`. */
@@ -103,12 +134,29 @@ export interface Order {
   pricing: OrderPricing;
   payment: OrderPayment;
   orderStatus: OrderStatus;
+  statusHistory: OrderStatusHistoryEntry[];
   createdAt: string;
   updatedAt: string;
 }
 
-/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner). */
-export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId">;
+/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing). */
+export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory">;
+
+/** Full admin projection — the only place `statusHistory`/`customerUserId`/`idempotencyKey` are ever returned. See `src/services/orders.ts`'s `toAdminOrderDetail`. */
+export type AdminOrderDetail = Order;
+
+/** Row projection for `/admin/orders` — see `src/services/orders.ts`'s `toAdminOrderListItem`. */
+export interface AdminOrderListItem {
+  orderNumber: string;
+  createdAt: string;
+  customerName: string;
+  customerPhone: string;
+  itemCount: number;
+  total: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  orderStatus: OrderStatus;
+}
 
 /** Lightweight projection for `/account/orders` — one row per order, newest first. */
 export interface OrderListItem {

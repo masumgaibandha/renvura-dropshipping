@@ -9,6 +9,8 @@ import type { PublicProduct } from "@/types/product";
 interface WishlistGridProps {
   /** The full catalog, pre-sanitized server-side by the wishlist page (see `toPublicProduct`) — this component only filters it by the client-only wishlist slugs. */
   products: PublicProduct[];
+  /** slug -> display name, built server-side — see `ProductCard`'s `categoryLabel` doc comment. */
+  categoryLabels?: Record<string, string>;
 }
 
 /**
@@ -18,7 +20,7 @@ interface WishlistGridProps {
  * directly in client code, since that would ship `wholesalePrice` for
  * every product to the browser (see `PublicProduct`'s doc comment).
  */
-export function WishlistGrid({ products }: WishlistGridProps) {
+export function WishlistGrid({ products, categoryLabels }: WishlistGridProps) {
   const { slugs, isHydrated } = useWishlist();
   const wishlisted = products.filter((product) => slugs.includes(product.slug));
 
@@ -43,7 +45,7 @@ export function WishlistGrid({ products }: WishlistGridProps) {
       <p className="mb-6 text-small text-foreground/70">
         {wishlisted.length} {wishlisted.length === 1 ? "product" : "products"}
       </p>
-      <ProductGrid products={wishlisted} />
+      <ProductGrid products={wishlisted} categoryLabels={categoryLabels} />
     </div>
   );
 }

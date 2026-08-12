@@ -8,6 +8,7 @@ import { createOrder } from "@/actions/orders";
 import { useCart } from "@/contexts/CartContext";
 import type { Address } from "@/types/address";
 import type { PaymentMethod } from "@/types/order";
+import type { DeliveryFeeTable } from "@/utils/delivery";
 import { CustomerInfoSection, type CustomerInfoValue } from "./CustomerInfoSection";
 import { DeliveryAddressSection, type DeliveryAddressValue } from "./DeliveryAddressSection";
 import { OrderSummary } from "./OrderSummary";
@@ -33,6 +34,8 @@ interface CheckoutFormProps {
   initialCustomer?: CustomerInfoValue;
   /** The signed-in customer's saved addresses, if any — never required, never forces saving a new one. */
   savedAddresses?: Address[];
+  /** Current admin-editable delivery fees (`/admin/settings/delivery`), fetched server-side — passed down so `OrderSummary`'s live estimate always matches what `createOrder` will actually charge. */
+  deliveryFees: DeliveryFeeTable;
 }
 
 /**
@@ -45,7 +48,7 @@ interface CheckoutFormProps {
  * with both props absent (the default), this renders identically to
  * before — no login is ever required to place an order.
  */
-export function CheckoutForm({ initialCustomer, savedAddresses = [] }: CheckoutFormProps) {
+export function CheckoutForm({ initialCustomer, savedAddresses = [], deliveryFees }: CheckoutFormProps) {
   const { items, subtotal, isHydrated, clearCart } = useCart();
   const router = useRouter();
 
@@ -180,7 +183,7 @@ export function CheckoutForm({ initialCustomer, savedAddresses = [] }: CheckoutF
         </div>
 
         <div className="flex flex-col gap-4">
-          <OrderSummary items={items} subtotal={subtotal} district={address.district} />
+          <OrderSummary items={items} subtotal={subtotal} district={address.district} deliveryFees={deliveryFees} />
 
           {formError && (
             <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-small text-red-700">

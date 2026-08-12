@@ -10,6 +10,10 @@ import type { Category } from "@/types/category";
  * it's the only subcategory clearly and consistently shown across the
  * source screenshots — Health & Beauty products never show a
  * subcategory, so none is invented.
+ *
+ * As of Phase 10, this is the original seed record only — `CategoryModel`
+ * (migrated by `scripts/seed-catalog.ts`) is what the storefront and
+ * `/admin/categories` actually read/write at runtime.
  */
 export const categories: Category[] = [
   {
@@ -18,6 +22,8 @@ export const categories: Category[] = [
     name: "Electronics & Gadgets",
     description: null,
     parentSlug: null,
+    isActive: true,
+    displayOrder: 0,
   },
   {
     id: "electronic-accessories",
@@ -25,6 +31,8 @@ export const categories: Category[] = [
     name: "Electronic Accessories",
     description: null,
     parentSlug: "electronics-gadgets",
+    isActive: true,
+    displayOrder: 0,
   },
   {
     id: "health-beauty",
@@ -32,5 +40,7 @@ export const categories: Category[] = [
     name: "Health & Beauty",
     description: null,
     parentSlug: null,
+    isActive: true,
+    displayOrder: 1,
   },
 ];

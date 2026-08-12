@@ -5,6 +5,7 @@ import { Container } from "@/components/layout/Container";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getAddressesForUser } from "@/services/addresses";
+import { getDeliveryFees } from "@/services/settings";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -24,7 +25,10 @@ const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label
  */
 export default async function CheckoutPage() {
   const user = await getCurrentUser();
-  const savedAddresses = user ? await getAddressesForUser(user.id) : [];
+  const [savedAddresses, deliveryFees] = await Promise.all([
+    user ? getAddressesForUser(user.id) : Promise.resolve([]),
+    getDeliveryFees(),
+  ]);
 
   return (
     <Container>
@@ -33,6 +37,7 @@ export default async function CheckoutPage() {
       <CheckoutForm
         initialCustomer={user ? { name: user.name, email: user.email, phone: user.phone ?? "" } : undefined}
         savedAddresses={savedAddresses}
+        deliveryFees={deliveryFees}
       />
     </Container>
   );

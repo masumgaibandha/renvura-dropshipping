@@ -9,20 +9,24 @@ import { ProductDetails } from "@/components/product/ProductDetails";
 import { ProductGallery } from "@/components/product/ProductGallery";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
 import { brand, isConfigured } from "@/config/brand";
-import { getAllProducts, getCategoryBySlug, getProductBySlug, getRelatedProducts, toPublicProduct } from "@/services/products";
+import { getAllCategories, getAllProducts, getProductBySlug, getRelatedProducts, toPublicProduct } from "@/services/products";
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
-/** Static-generates every real product page at build time — the catalog is local/static, no DB. */
-export function generateStaticParams() {
-  return getAllProducts().map((product) => ({ slug: product.slug }));
+/** Static-generates every real product page at build time. */
+export async function generateStaticParams() {
+  const products = await getAllProducts();
+  return products.map((product) => ({ slug: product.slug }));
 }
+
+/** ISR fallback — see src/app/page.tsx's identical comment; admin product edits also call `revalidatePath` directly. */
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) {
     return {};
   }
@@ -51,14 +55,15 @@ function availabilitySchema(status: string): string | undefined {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();
   }
 
-  const category = getCategoryBySlug(product.subcategory ?? product.category);
-  const allProducts = getAllProducts();
+  const [allProducts, allCategories] = await Promise.all([getAllProducts(), getAllCategories()]);
+  const category = allCategories.find((item) => item.slug === (product.subcategory ?? product.category));
+  const categoryLabels = Object.fromEntries(allCategories.map((item) => [item.slug, item.name]));
   const related = getRelatedProducts(product, allProducts, 5);
 
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -79,7 +84,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     sku: product.sku ?? undefined,
     image: product.media.images.length > 0 ? product.media.images : undefined,
     ...(product.brand ? { brand: { "@type": "Brand", name: product.brand } } : {}),
-    ...(product.pricing.sellingPrice !== null
+    ...(product.status === "active" && product.pricing.sellingPrice !== null
       ? {
           offers: {
             "@type": "Offer",
@@ -111,7 +116,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {related.length > 0 && (
         <div className="mt-12">
           <h2 className="text-h2 mb-6">Related Products</h2>
-          <ProductGrid products={related} />
+          <ProductGrid products={related} categoryLabels={categoryLabels} />
         </div>
       )}
     </Container>

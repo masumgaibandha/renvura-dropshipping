@@ -20,9 +20,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function UiPreviewPage() {
-  const electronics = getProductsByCategory("electronics-gadgets").slice(0, 4);
-  const beauty = getProductsByCategory("health-beauty").slice(0, 4);
+export default async function UiPreviewPage() {
+  const [electronicsAll, beautyAll] = await Promise.all([
+    getProductsByCategory("electronics-gadgets"),
+    getProductsByCategory("health-beauty"),
+  ]);
+  const electronics = electronicsAll.slice(0, 4);
+  const beauty = beautyAll.slice(0, 4);
   const sampleProducts = [...electronics, ...beauty];
 
   return (

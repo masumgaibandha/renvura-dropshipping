@@ -663,3 +663,52 @@ original icon+"Login" link unchanged; logged-in renders a HeroUI `Dropdown` (sam
 `SecondaryNav.tsx` already uses) showing the first name, with My Account/Orders/Sign Out. The
 mobile drawer's account icon stays icon-only (unchanged visually) but its `href` now switches
 between `/login`/`/account` based on the same `useSession()` read.
+
+## 15. Admin dashboard (`/admin/*`, Phase 10)
+
+Deliberately visually distinct from the storefront, not a themed extension of it — an operator
+tool, not a customer-facing surface, per the Phase 10 brief's "keep clean, compact, operational"
+instruction. All `/admin/*` routes are `noindex,nofollow` (set once in `src/app/admin/layout.tsx`'s
+metadata export). See `docs/ARCHITECTURE.md`'s "Admin dashboard & authorization" for the security
+model — this section is UI/visual only.
+
+**Shell** (`AdminLayout.tsx`): desktop — fixed `bg-ink` (the same near-black token the footer/
+announcement bar already use, not `brand-navy`) left sidebar (`AdminSidebar.tsx`, `w-56`) + a
+`bg-surface` top bar (`AdminTopBar.tsx`) + `bg-background-secondary` content area. Mobile — the top
+bar owns a hamburger trigger and a `Drawer` holding the same nav (no separate persistent sidebar
+below `lg:`). One shared `adminNavItems` list (`adminNav.ts`: Dashboard/Orders/Payments/Products/
+Categories/Customers/Inventory/Homepage/Analytics/Settings) drives both, each entry pairing a label
+with one of the hand-authored `Icon*` components from `src/components/ui/icons.tsx`'s "Admin
+dashboard icon set" (`IconHome`, `IconLayers`, `IconBox`, `IconBarChart`, `IconSettings`, plus
+reused storefront icons `IconGrid`/`IconPackage`/`IconCash`/`IconTag`/`IconUser`) — no new icon
+library. Active-link state (`isAdminLinkActive`) matches `NavLinks.tsx`'s existing
+`usePathname()`-driven pattern.
+
+**Shared primitives, reused across every admin page rather than rebuilt per page**:
+- `StatCard.tsx` — one metric tile (label/value/optional hint), used by the dashboard and
+  analytics pages.
+- `AdminPagination.tsx` — the same plain `Link`-based Previous/Next pattern the storefront's
+  `ProductListingPage` already uses, not a new pagination component.
+- `StatusBadge.tsx` — `OrderStatusBadge`/`PaymentStatusBadge`, HeroUI `Chip` color-mapped off the
+  real `OrderStatus`/`PaymentStatus` enums (never an invented status).
+- `ConfirmActionButton.tsx` — the one confirmation dialog (HeroUI `AlertDialog`, never
+  `window.confirm()`) for every destructive/high-value action: order status changes, payment
+  mark-paid/mark-failed, category activate/deactivate.
+- `BarChart.tsx` — a plain-div horizontal bar chart (no charting dependency, per CLAUDE.md's
+  "avoid adding a heavy chart dependency if basic CSS/SVG/table visualization is enough"), backed
+  by a visually-hidden real `<table>` for screen readers, used by `/admin/analytics`'s two charts.
+  Order-status bars reuse `StatusBadge.tsx`'s color mapping (status color is reserved, never reused
+  for an unrelated series); the daily-sales bars use the single brand accent hue, since it's one
+  series (magnitude over time), not a multi-category identity encoding.
+- Filter bars (`/admin/orders`, `/admin/products`, `/admin/customers`) are plain server-rendered
+  `<form method="get">`s with native `<select>`/`<input>` controls — no client-side filter state,
+  consistent with the storefront's existing GET-query-param-driven filtering (`ProductListingPage`).
+
+**Forms** (`ProductForm.tsx`, `CategoryForm.tsx`, `StoreSettingsForm.tsx`): plain controlled forms,
+`h-9 rounded-lg border-border` inputs (a slightly more compact variant of the storefront's `h-11`
+checkout inputs, appropriate for a denser operator UI), inline `red-50`/`red-700` error banners and
+`green-50`/`green-700` success banners matching the existing auth-form error-banner convention. No
+form library — field count and validation are modest enough that one wasn't justified.
+
+**Tables**: plain `<table>` with `border-border` row dividers, `overflow-x-auto` wrappers for
+narrow viewports (never a horizontally-scrolling page body) — no data-grid library.

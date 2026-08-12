@@ -99,6 +99,9 @@ export interface Product {
   status: ProductStatus;
   tags?: string[];
 
+  /** Admin-controlled homepage placement (Phase 10) — never set by storefront/customer code. Absent/undefined is treated as `false`. */
+  featured?: boolean;
+
   createdAt?: string;
   updatedAt?: string;
 }

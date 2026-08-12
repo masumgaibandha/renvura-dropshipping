@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import { Container } from "@/components/layout/Container";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
-import { getAllCategories, getAllProducts, getCategoryBySlug, getProductListing } from "@/services/products";
+import { getAllCategories, getAllProducts, getProductListing } from "@/services/products";
 import { MobileFilterDrawer } from "./MobileFilterDrawer";
 import { SortSelect } from "./SortSelect";
 
@@ -39,10 +39,12 @@ export async function ProductListingPage({ categorySlug, title, description, sea
   const availability = firstParam(params.availability);
   const page = firstParam(params.page);
 
-  const allProducts = getAllProducts();
-  const listing = getProductListing(allProducts, { category, sort, q, availability, page });
-  const topCategories = getAllCategories().filter((item) => !item.parentSlug);
-  const activeCategory = categorySlug ? getCategoryBySlug(categorySlug) : undefined;
+  const [allProducts, allCategories] = await Promise.all([getAllProducts(), getAllCategories()]);
+  const categoryBySlug = new Map(allCategories.map((item) => [item.slug, item]));
+  const listing = getProductListing(allProducts, { category, sort, q, availability, page }, (slug) => categoryBySlug.get(slug));
+  const topCategories = allCategories.filter((item) => !item.parentSlug && item.isActive);
+  const activeCategory = categorySlug ? categoryBySlug.get(categorySlug) : undefined;
+  const categoryLabels = Object.fromEntries(allCategories.map((item) => [item.slug, item.name]));
 
   const breadcrumbItems: BreadcrumbItem[] = [
     { label: "Home", href: "/" },
@@ -110,7 +112,7 @@ export async function ProductListingPage({ categorySlug, title, description, sea
 
       <div className="mt-4 md:mt-8">
         {listing.products.length > 0 ? (
-          <ProductGrid products={listing.products} />
+          <ProductGrid products={listing.products} categoryLabels={categoryLabels} />
         ) : (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <p className="text-body text-foreground/70">No products found for the selected filters.</p>

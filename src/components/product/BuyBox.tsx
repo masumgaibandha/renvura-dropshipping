@@ -29,7 +29,7 @@ interface BuyBoxProps {
  */
 export function BuyBox({ product, categoryLabel, className }: BuyBoxProps) {
   const { pricing, inventory } = product;
-  const canPurchase = pricing.sellingPrice !== null && inventory.status !== "out_of_stock";
+  const canPurchase = product.status === "active" && pricing.sellingPrice !== null && inventory.status !== "out_of_stock";
   const metaParts = [product.model ? `Model: ${product.model}` : null, product.sku ? `SKU: ${product.sku}` : null].filter(
     (part): part is string => part !== null,
   );

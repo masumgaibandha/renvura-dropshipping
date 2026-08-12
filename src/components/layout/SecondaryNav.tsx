@@ -12,8 +12,9 @@ import { NavLinks } from "./NavLinks";
  * MobileNav drawer, unchanged. The dropdown lists Renvura's real top-level
  * categories (src/data/categories.ts) — a working menu, not decorative.
  */
-export function SecondaryNav() {
-  const categories = getAllCategories().filter((category) => !category.parentSlug);
+export async function SecondaryNav() {
+  const allCategories = await getAllCategories();
+  const categories = allCategories.filter((category) => !category.parentSlug && category.isActive);
 
   return (
     <div className="hidden border-b border-border bg-white lg:block">

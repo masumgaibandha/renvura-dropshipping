@@ -1,6 +1,6 @@
 # Architecture
 
-Status: **Phase 9 — Customer authentication + accounts**. This document describes the architecture
+Status: **Phase 10 — Admin dashboard + store management**. This document describes the architecture
 put in place so far, and the architecture the codebase is being kept ready for. See
 `docs/PRODUCT-ROADMAP.md` for phasing, `docs/PRODUCT-DATA.md` for the extracted catalog, and
 `docs/DESIGN-SYSTEM.md` for the visual/component system itself.
@@ -15,8 +15,8 @@ put in place so far, and the architecture the codebase is being kept ready for. 
 | Styling | Tailwind CSS v4 | CSS-first config in `src/app/globals.css`, no `tailwind.config.js` |
 | Component kit | HeroUI v3 (`@heroui/react`, `@heroui/styles`) | React Aria based; no context provider required |
 | Theme | `next-themes` | class-based light/dark, see `src/components/layout/providers.tsx` |
-| Data layer | MongoDB Atlas + Mongoose | `Order` is connected as of Phase 8 (`src/lib/db.ts`); `Product`/`Category` schemas still exist but aren't wired up — product data access still reads `src/data/products.ts` |
-| Mutation layer | Next.js Server Actions | `src/actions/orders.ts` (`createOrder`, `trackOrder`) — chosen over Route Handlers since no API surface existed yet and Server Actions are the idiomatic Next 16 fit for form mutations from Client Components; Route Handlers remain an option for a future non-mutation/external-consumer API |
+| Data layer | MongoDB Atlas + Mongoose | `Order` connected Phase 8, `Address` Phase 9, `Product`/`Category`/`AdminAuditLog`/`StoreSettings` Phase 10 (`src/lib/db.ts`) — every domain model is now MongoDB-backed |
+| Mutation layer | Next.js Server Actions | `src/actions/orders.ts` (`createOrder`, `trackOrder`), `src/actions/admin/*` (Phase 10) — chosen over Route Handlers since no API surface existed yet and Server Actions are the idiomatic Next 16 fit for form mutations from Client Components; Route Handlers remain an option for a future non-mutation/external-consumer API |
 | Validation | Zod | `src/actions/order-schema.ts` — the first genuinely untrusted-network-input case in this codebase (see `src/lib/validate-product.ts`'s doc comment, which deliberately skipped Zod for trusted seed data) |
 | Auth | Better Auth (`better-auth`) | `src/lib/auth.ts` — email + password (Phase 9), MongoDB adapter via a native `mongodb` driver client pointed at the same `renvura` database as Mongoose; see "Authentication & customer accounts" below |
 | Hosting | Vercel | |
@@ -56,6 +56,13 @@ renvura-dropshipping/
 │   │   │                                the whole subtree): page.tsx, orders/, orders/[orderNumber]/,
 │   │   │                                addresses/, profile/ — see docs/DESIGN-SYSTEM.md §14
 │   │   ├── api/auth/[...all]/         Better Auth's own route handler (Phase 9) — see below
+│   │   ├── admin/                     Admin dashboard (Phase 10, layout.tsx gates the whole
+│   │   │                                subtree): page.tsx (dashboard), orders/, orders/[orderNumber]/,
+│   │   │                                payments/, products/, products/[slug]/edit/, products/new/,
+│   │   │                                categories/, categories/[slug]/edit/, categories/new/,
+│   │   │                                customers/, customers/[userId]/, inventory/, homepage/,
+│   │   │                                analytics/, settings/delivery/ — see "Admin dashboard &
+│   │   │                                authorization" below
 │   │   └── ui-preview/           TEMPORARY design-system preview route — see docs/DESIGN-SYSTEM.md §7
 │   ├── components/
 │   │   ├── ui/                  icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx — small generic primitives
@@ -81,39 +88,66 @@ renvura-dropshipping/
 │   │   │                              PaymentMethodSection, OrderSummary, TrackOrderForm,
 │   │   │                              SavedAddressSelector (Phase 9) — see docs/DESIGN-SYSTEM.md §13
 │   │   ├── auth/                     Auth forms (Phase 9): LoginForm, SignupForm
-│   │   └── account/                  Account-area composition (Phase 9): AccountLayout,
-│   │                                  AccountSidebar, AccountMobileNav, SignOutButton,
-│   │                                  HeaderAccountLink, ProfileForm, AddressList, AddressForm —
-│   │                                  see docs/DESIGN-SYSTEM.md §14
+│   │   ├── account/                  Account-area composition (Phase 9): AccountLayout,
+│   │   │                              AccountSidebar, AccountMobileNav, SignOutButton,
+│   │   │                              HeaderAccountLink, ProfileForm, AddressList, AddressForm —
+│   │   │                              see docs/DESIGN-SYSTEM.md §14
+│   │   └── admin/                    Admin-shell composition (Phase 10): AdminLayout, AdminSidebar,
+│   │                                  AdminTopBar, adminNav.ts, ConfirmActionButton, StatusBadge,
+│   │                                  StatCard, AdminPagination, BarChart, ProductForm,
+│   │                                  CategoryForm, StoreSettingsForm, OrderStatusForm,
+│   │                                  StockAdjustForm, FeaturedToggle, CategoryOrderForm
 │   ├── actions/                    Server Actions ("use server"): orders.ts (createOrder,
 │   │                                 trackOrder, Phase 8), order-schema.ts (Zod), order-logic.ts
 │   │                                 (DB-free validate-and-recalculate), address-schema.ts (Zod),
 │   │                                 addresses.ts (createAddress/updateAddress/deleteAddress/
 │   │                                 setDefaultAddress, Phase 9)
-│   ├── config/                    brand.ts, navigation.ts, delivery.ts, payment.ts (Phase 8)
+│   ├── actions/admin/              Admin Server Actions (Phase 10): orders.ts
+│   │                                 (adminUpdateOrderStatus), payments.ts (markPaymentPaid/
+│   │                                 markPaymentFailed), products.ts (adminCreateProduct/
+│   │                                 adminUpdateProduct/adminSetFeatured/adminAdjustStock),
+│   │                                 categories.ts (adminCreateCategory/adminUpdateCategory/
+│   │                                 adminSetCategoryActive), settings.ts (adminUpdateStoreSettings)
+│   ├── config/                    brand.ts, navigation.ts, delivery.ts (Phase 10: fallback default
+│   │                                only, see below), payment.ts (Phase 8), store.ts (Phase 10)
 │   ├── contexts/                   CartContext.tsx, WishlistContext.tsx (Phase 7) — guest cart/
 │   │                                 wishlist state; see the untrusted-client-state note below
-│   ├── data/                       categories.ts, products.ts (Phase 2), bangladesh-locations.ts
-│   │                                 (Phase 8 — Division/District/Upazila hierarchy; single source
-│   │                                 of truth for both checkout and saved addresses)
+│   ├── data/                       categories.ts, products.ts (Phase 2 — Phase 10: original
+│   │                                 human-verified record only, no longer read at runtime),
+│   │                                 bangladesh-locations.ts (Phase 8 — Division/District/Upazila
+│   │                                 hierarchy; single source of truth for both checkout and saved
+│   │                                 addresses)
 │   ├── hooks/                      Client-side React hooks
 │   ├── lib/                         Framework-agnostic utilities (validate-product.ts,
 │   │                                  local-storage.ts, rate-limit.ts, bangladesh-address-validation.ts),
 │   │                                  db.ts (MongoDB connection, Phase 8), auth.ts/auth-client.ts/
-│   │                                  auth-session.ts (Better Auth server config, client instance,
-│   │                                  and the `getCurrentUser()` wrapper — Phase 9)
-│   ├── models/                       Mongoose schemas: Product.ts, Category.ts (not yet connected),
-│   │                                   Order.ts (connected, Phase 8), Address.ts (Phase 9). User/
-│   │                                   Session/Account/Verification are Better Auth-managed
-│   │                                   collections in the same database, not Mongoose models.
-│   ├── services/                      Data-access layer: products.ts (reads src/data/ for now),
-│   │                                    orders.ts (MongoDB-backed, Phase 8), addresses.ts
-│   │                                    (MongoDB-backed, Phase 9)
-│   ├── types/                          product.ts, category.ts, cart.ts, order.ts, address.ts
-│   │                                    (Phase 9) — shared TypeScript domain types
+│   │                                  auth-session.ts (Better Auth server config incl. `role` field
+│   │                                  and `authDb` native-driver export, client instance,
+│   │                                  `getCurrentUser()`/`getCurrentAdmin()`/`requireAdmin()` —
+│   │                                  Phase 9/10)
+│   ├── models/                       Mongoose schemas: Product.ts, Category.ts (connected, Phase
+│   │                                   10), Order.ts (connected, Phase 8; statusHistory added
+│   │                                   Phase 10), Address.ts (Phase 9), AdminAuditLog.ts,
+│   │                                   StoreSettings.ts (Phase 10). User/Session/Account/
+│   │                                   Verification are Better Auth-managed collections in the
+│   │                                   same database, not Mongoose models.
+│   ├── services/                      Data-access layer: products.ts (MongoDB-backed as of Phase
+│   │                                    10, plus admin product/category writes), orders.ts
+│   │                                    (MongoDB-backed, Phase 8; Phase 10 adds admin list/detail/
+│   │                                    status/payment/dashboard/analytics reads+writes),
+│   │                                    addresses.ts (MongoDB-backed, Phase 9), customers.ts
+│   │                                    (Phase 10), settings.ts (Phase 10), audit-log.ts (Phase 10)
+│   ├── types/                          product.ts, category.ts, cart.ts, order.ts (Phase 10:
+│   │                                    OrderStatusHistoryEntry, AdminOrderDetail/ListItem,
+│   │                                    ORDER_STATUS_TRANSITIONS), address.ts (Phase 9),
+│   │                                    customer.ts (Phase 10) — shared TypeScript domain types
 │   └── utils/                          currency.ts, slug.ts, pricing.ts, phone.ts, delivery.ts,
 │                                        safe-redirect.ts (Phase 9) — small pure helpers
-├── proxy.ts                  Next 16 route protection (Phase 9) — optimistic redirect for /account/*
+├── scripts/                   Standalone tsx scripts, never imported by the app: load-env.ts,
+│                                 promote-admin.ts (Phase 10 admin bootstrap, see below),
+│                                 seed-catalog.ts (Phase 10 one-time Mongo catalog migration)
+├── proxy.ts                  Next 16 route protection (Phase 9/10) — optimistic redirect for
+│                                /account/* and /admin/*
 ├── CLAUDE.md
 └── package.json
 ```
@@ -133,11 +167,11 @@ layers can use. `src/actions/orders.ts` (Server Actions) calls into `services/or
 
 ## Data model
 
-### Product & Category (Phase 2 — done)
+### Product & Category (Phase 2 — data model; Phase 10 — MongoDB-connected)
 
 `src/types/product.ts` and `src/types/category.ts` define the domain model; `src/models/Product.ts`
-and `src/models/Category.ts` define the matching Mongoose schemas (not yet connected to a
-database — see below). Key shape decisions:
+and `src/models/Category.ts` define the matching Mongoose schemas, connected as of Phase 10 (see
+"Data access" below). Key shape decisions:
 
 - `Product.pricing` separates `wholesalePrice` (what the supplier charges — the verified,
   extractable number) from `regularPrice`/`sellingPrice` (customer-facing prices the business
@@ -153,12 +187,19 @@ database — see below). Key shape decisions:
   response shape.
 - The Mongoose `Product` schema indexes `slug` (unique), `sku` (sparse — many source products
   don't have a confirmed SKU yet... actually all 21 currently do, but the schema doesn't assume
-  that will always be true), and `category`/`subcategory`/`status`/`tags`.
+  that will always be true), `category`/`subcategory`/`status`/`tags`, and (Phase 10) a compound
+  `{status, featured}` index for the homepage's featured-products query.
+- **Phase 10 additions**: `Product.featured` (boolean, admin-controlled homepage placement — never
+  set by any storefront/customer code path) and `Category.isActive`/`displayOrder` (admin
+  activate/deactivate and homepage highlight ordering). Admin-created products (via
+  `/admin/products/new`) have no `source` provenance and `pricing.wholesalePrice: null` — that
+  field stays reserved for the original supplier-screenshot-extracted catalog.
 
 **Not yet implemented**: `Review`, `Coupon`. These will follow the same "only model what's needed,
 don't invent fields ahead of need" approach in later phases. Customer identity itself is now
 handled by Better Auth (Phase 9 — see "Authentication & customer accounts" below), not a custom
-`Customer` model.
+`Customer` model — "customer" rows in the Phase 10 admin dashboard are Better Auth `user` documents
+read via `authDb`, not a separate model either (see "Admin dashboard & authorization" below).
 
 ### Order (Phase 8 — done, MongoDB-connected)
 
@@ -172,7 +213,21 @@ order time, so a historical order stays readable even if the product catalog cha
 `wholesalePrice` never appears anywhere in this schema — `unitPrice` is always the real
 `sellingPrice` at order time. See "Checkout & order creation" below for the full security model.
 As of Phase 9, `Order` also carries `customerUserId: string | null` (indexed) — see
-"Authentication & customer accounts" below.
+"Authentication & customer accounts" below. As of Phase 10, `Order` also carries `statusHistory`
+(an append-only array of `{status, changedAt, changedBy}`, `changedBy` being the admin's Better
+Auth user id or `null` for the initial system-set `"pending"` entry) — see "Admin dashboard &
+authorization" below.
+
+### AdminAuditLog & StoreSettings (Phase 10 — done, MongoDB-connected)
+
+`src/models/AdminAuditLog.ts` is an append-only log of high-value admin mutations
+(`{adminUserId, action, entityType, entityId, before, after, createdAt}`), written by
+`src/services/audit-log.ts`'s `recordAuditLog()`. `before`/`after` are narrow, hand-picked field
+snapshots, never a full document dump or a secret. `src/models/StoreSettings.ts` is a singleton
+document (`singletonKey: "store"`, upserted into existence on first read) holding
+`storeName`/`supportEmail`/`supportPhone`/`insideDhakaDeliveryFee`/`outsideDhakaDeliveryFee`/
+`lowStockThreshold` — see "Admin dashboard & authorization" below for why this supersedes
+`src/config/delivery.ts` as the runtime delivery-fee source.
 
 ### Address (Phase 9 — done, MongoDB-connected)
 
@@ -182,18 +237,20 @@ addressLine/landmark/notes), plus `label`/`recipientName`/`phone`/`isDefault` �
 a delivery destination with its own recipient, which may differ from the account holder. Always
 scoped to `userId`; see "Authentication & customer accounts" below for the ownership rules.
 
-### Data access — seed data for products, MongoDB for orders/addresses/auth
+### Data access — MongoDB for everything as of Phase 10
 
-Product data access still reads directly from `src/data/products.ts` (the verified catalog
-extracted in Phase 2 — see `docs/PRODUCT-DATA.md`); `src/models/Product.ts`/`Category.ts` exist but
-aren't connected. The service functions (`getProductBySlug`, `getProductsByCategory`, etc.) are
-written so that swapping the implementation to query `ProductModel` later doesn't require changing
-any caller. **Orders were the first real MongoDB-backed data** (Phase 8); addresses and auth
-followed in Phase 9. `src/services/orders.ts`/`addresses.ts` are the only places that query
-`OrderModel`/`AddressModel` directly, both via the cached connection helper in `src/lib/db.ts`
-(`connectToDatabase()` — reuses one connection across dev hot-reloads and serverless invocations,
-throws a clear error if `MONGODB_URI` is unset, never logs the URI). Better Auth uses a separate
-native-driver connection to the same database — see "Authentication & customer accounts" below.
+**Orders were the first real MongoDB-backed data** (Phase 8); addresses and auth followed in Phase
+9; products, categories, the admin audit log, and store settings followed in Phase 10, migrated
+one time from `src/data/products.ts`/`categories.ts` (the verified catalog extracted in Phase 2 —
+see `docs/PRODUCT-DATA.md`) by `scripts/seed-catalog.ts`. `src/services/products.ts`/`orders.ts`/
+`addresses.ts`/`customers.ts`/`settings.ts`/`audit-log.ts` are the only places that query their
+respective Mongoose models (or, for `customers.ts`, the native `user` collection via `authDb`)
+directly, all via the cached connection helper in `src/lib/db.ts` (`connectToDatabase()` — reuses
+one connection across dev hot-reloads and serverless invocations, throws a clear error if
+`MONGODB_URI` is unset, never logs the URI). Better Auth uses a separate native-driver connection
+to the same database — see "Authentication & customer accounts" below. `src/data/products.ts`/
+`categories.ts` remain in the repo as the original human-verified record (and `validate-product.ts`
+still validates against them), but the running app no longer reads them at request time.
 
 ## UI component layer (Phase 3 — done; homepage added in the Phase 3 redesign)
 
@@ -275,9 +332,12 @@ client-side, but **never** submits its own computed prices as authoritative. `cr
 same generic "no matching order" message whether the order number doesn't exist or the phone
 doesn't match, so it can't be used to enumerate either one.
 
-**Delivery fee — business-approved.** `src/config/delivery.ts` (`DELIVERY_FEE_CONFIG_IS_FINAL =
-true`): ৳80 inside Dhaka, ৳150 outside Dhaka, paid by the customer and added to the product
-subtotal to produce the order total — see CLAUDE.md.
+**Delivery fee — business-approved starting values, live-editable as of Phase 10.**
+`src/config/delivery.ts`'s `deliveryFees` (৳80 inside Dhaka, ৳150 outside Dhaka) now only supplies
+the fallback used the first time the `StoreSettings` singleton is created; the runtime source of
+truth checkout actually reads is `getDeliveryFees()` (`src/services/settings.ts`), editable at
+`/admin/settings/delivery` — see "Admin dashboard & authorization" below. Delivery fee is still
+paid by the customer and added to the product subtotal to produce the order total — see CLAUDE.md.
 
 ## Authentication & customer accounts (Phase 9)
 
@@ -342,6 +402,84 @@ guest orders; only new orders placed while signed in get linked. Confirmed live:
 guest order remains fully trackable via `/track-order` and unaffected by the schema change, and
 does not appear in any customer's `/account/orders`.
 
+## Admin dashboard & authorization (Phase 10)
+
+**Role model.** A `role` field (`"customer" | "admin"`, default `"customer"`) was added to Better
+Auth's `user` document via `additionalFields` in `src/lib/auth.ts`, declared `input: false` so
+Better Auth's own generated request validators reject `role` on sign-up and
+`authClient.updateUser()` — a forged `{role:"admin"}` payload never reaches a handler. No
+Server Action or route can set this field.
+
+**Bootstrap.** The only sanctioned way to grant/revoke admin is `scripts/promote-admin.ts` — a
+standalone `tsx` script (`npm run admin:promote -- <email>` / `npm run admin:demote -- <email>`)
+that writes directly to the native `user` collection with the MongoDB driver, deliberately
+bypassing Better Auth's HTTP API (the only path allowed to, since `role` is `input: false`
+everywhere else). Requires the target user to already have signed up as a normal customer. No
+email is ever auto-promoted from a hardcoded list — this is always a deliberate, manual, one-user-
+at-a-time operator action.
+
+**Authorization is layered**, extending the exact pattern already established for `/account/*`:
+- `proxy.ts` extends its existing cookie-presence-only matcher to `/admin/:path*` — fast, not
+  role-aware, not authoritative.
+- `src/app/admin/layout.tsx` does the real check: `getCurrentUser()`, then `role === "admin"`.
+  A signed-in non-admin gets `notFound()` — not a 403 — identical to what a genuinely nonexistent
+  route or another user's order would return, so a customer account can't even confirm `/admin`
+  exists.
+- `src/lib/auth-session.ts` adds `getCurrentAdmin()` (returns the profile or `null`) and
+  `requireAdmin()` (returns the profile or throws `AdminAuthorizationError`) alongside the existing
+  `getCurrentUser()`. **Every admin Server Action calls `requireAdmin()` again, independently, at
+  the top of its own body** — a Server Action is a real HTTP endpoint, reachable directly
+  regardless of whether the page that normally renders a button for it ran its own layout check
+  first. This is the same "never trust that an earlier layer already checked" posture `createOrder`
+  already applies to price recalculation.
+
+**Product/category catalog architecture decision.** The Phase 10 brief's central risk was building
+an admin CRUD UI on top of a catalog the storefront doesn't actually read from — this was resolved
+by migrating the catalog itself: `src/services/products.ts` now queries `ProductModel`/
+`CategoryModel` for every read (storefront *and* admin), and admin writes
+(`src/actions/admin/products.ts`/`categories.ts`) go through those same models. There is exactly
+one source of truth. `src/data/products.ts`/`categories.ts` stay as the original human-verified
+record (migrated once by `scripts/seed-catalog.ts`, safe to re-run — it never overwrites an
+existing document unless passed `--force`), not a second, drifting copy the app reads from.
+
+**Order status is a state machine.** `ORDER_STATUS_TRANSITIONS`/`canTransitionOrderStatus()`
+(`src/types/order.ts`) enumerate the only legal transitions (`cancelled` reachable from any
+non-terminal status, `returned` only from `delivered`, both terminal); `adminUpdateOrderStatus`
+checks a raw client string against the full enum and then this table before writing, and appends
+to `statusHistory` rather than replacing it.
+
+**Payment verification** (`src/actions/admin/payments.ts`) only ever moves
+`payment.status: "pending_verification"` → `"paid"`/`"failed"`. Cash on Delivery orders
+(`cod_pending`) structurally can't appear in this queue — `getPendingVerificationOrders` filters on
+a status COD orders never have.
+
+**Analytics/revenue definitions** are conservative by design — see the doc comments on
+`getOrderDashboardStats`/`getAverageOrderValue`/`getSalesByDay`/`getTopSellingProducts` in
+`src/services/orders.ts`, and `getOrderStatsForUserIds` in `src/services/customers.ts` for why a
+customer's "Total Delivered Order Value" uses a narrower definition (`orderStatus === "delivered"`
+only) than the dashboard's "Revenue" (`payment.status === "paid"` OR `orderStatus === "delivered"`)
+— the two are intentionally not meant to reconcile 1:1.
+
+**`StoreSettings`** (see "AdminAuditLog & StoreSettings" above) supersedes `src/config/delivery.ts`
+as the runtime delivery-fee source; `/admin/settings/delivery` is the only write path. Manual
+payment numbers and real secrets stay env-only, never migrated into this collection.
+
+**Customers are Better Auth `user` documents**, not a separate model — `src/services/customers.ts`
+queries the native `user` collection via `authDb` (`src/lib/auth.ts`'s exported native-driver `db`
+handle) with an explicit `{_id, name, email, phone, createdAt}` projection, never the full
+document. There is no "log in as customer" feature.
+
+**Audit trail** (`src/models/AdminAuditLog.ts`, `src/services/audit-log.ts`) — every order-status
+change, payment verification, and product/category/inventory/homepage/settings write calls
+`recordAuditLog()` right after the write succeeds, with narrow hand-picked `before`/`after`
+snapshots.
+
+**Known limitations**: no automated test suite exists in this repo (verification was `tsc`/
+`eslint`/`next build` plus manual/browser checks, not committed test files); no product image
+upload UI (thumbnail/image fields are plain text paths under `/products/`); no bulk-edit/bulk-
+import tooling; categories can be deactivated but not deleted (existing products may still
+reference a category's slug).
+
 ## Bangladesh-specific concerns baked into the architecture
 
 - Currency formatting centralized (via `src/config/brand.ts` currency config) rather than
@@ -394,17 +532,17 @@ The homepage was built ahead of schedule in the Phase 3 redesign, catalog/catego
 (`/shop`, `/electronics-gadgets`, `/health-beauty`) is done as of Phase 5, the product detail page
 (`/products/[slug]`) is done as of Phase 6, cart + wishlist (`/cart`, `/wishlist`) is done as of
 Phase 7, checkout + order creation (`/checkout`, `/order-success/[orderNumber]`, `/track-order`) is
-done as of Phase 8, and customer authentication + accounts (`/login`, `/signup`, `/account/*`) is
-done as of Phase 9 (see `docs/DESIGN-SYSTEM.md` §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still
-deferred: the admin dashboard, automated payment gateway integration (bKash/Nagad/Rocket APIs),
-courier API integration, marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order
-linking, email verification, in-app email change, and social/OTP login (Better Auth's
-`socialProviders` config keeps this addable without restructuring, but nothing is wired up). Phase
-3 built the **UI foundation** several later phases reuse (`ProductCard`, `ProductGrid`, `Price`,
-`SearchBar`, `Header`/`Footer` chrome, the homepage's `home/` components, the listing pages'
-`shop/` components, the product page's `product/` components, the `cart/`/`wishlist/` components,
-the `checkout/` components, and now the `account/`/`auth/` components) — the newsletter form still
-doesn't subscribe anyone, but every other "foundation only" caveat from earlier phases (Add to
-Cart, wishlist, checkout, and now accounts) has since been made real. The folder structure exists
-to receive what's left (admin, payment/courier APIs, tracking) without restructuring — it plugs
-into `src/services/`/`src/actions/` once there's something real to call.
+done as of Phase 8, customer authentication + accounts (`/login`, `/signup`, `/account/*`) is done
+as of Phase 9, and the admin dashboard (`/admin/*` — see "Admin dashboard & authorization" above)
+is done as of Phase 10 (see `docs/DESIGN-SYSTEM.md` §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still
+deferred: automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration,
+marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, email verification,
+in-app email change, social/OTP login (Better Auth's `socialProviders` config keeps this addable
+without restructuring, but nothing is wired up), "log in as customer" admin impersonation, product
+image upload UI, bulk product import/export, and an automated test suite. Phase 3 built the **UI
+foundation** several later phases reuse (`ProductCard`, `ProductGrid`, `Price`, `SearchBar`,
+`Header`/`Footer` chrome, the homepage's `home/` components, the listing pages' `shop/` components,
+the product page's `product/` components, the `cart/`/`wishlist/` components, the `checkout/`
+components, the `account/`/`auth/` components, and now the `admin/` components) — the newsletter
+form still doesn't subscribe anyone, but every other "foundation only" caveat from earlier phases
+(Add to Cart, wishlist, checkout, accounts, and now admin management) has since been made real.

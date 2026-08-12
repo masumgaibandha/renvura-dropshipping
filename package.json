@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "admin:promote": "tsx scripts/promote-admin.ts",
+    "admin:demote": "tsx scripts/promote-admin.ts",
+    "seed:catalog": "tsx scripts/seed-catalog.ts"
   },
   "dependencies": {
     "@heroui/react": "^3.2.4",
@@ -29,6 +32,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.12",
     "typescript": "^5"
   }
 }

@@ -12,6 +12,8 @@ interface FeaturedProductsRowProps {
   /** Must be `PublicProduct` (wholesalePrice stripped) — this is a Client Component, see `PublicProduct`'s doc comment. */
   products: PublicProduct[];
   promoCategory: Category;
+  /** slug -> display name, built server-side — see `ProductCard`'s `categoryLabel` doc comment. */
+  categoryLabels?: Record<string, string>;
 }
 
 /**
@@ -20,7 +22,7 @@ interface FeaturedProductsRowProps {
  * category tile. Named "Featured Picks" rather than "Best Sellers"/"Daily
  * Best Sells": no sales-ranking data exists to support a best-seller claim.
  */
-export function FeaturedProductsRow({ products, promoCategory }: FeaturedProductsRowProps) {
+export function FeaturedProductsRow({ products, promoCategory, categoryLabels }: FeaturedProductsRowProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   function scrollBy(direction: 1 | -1) {
@@ -62,7 +64,7 @@ export function FeaturedProductsRow({ products, promoCategory }: FeaturedProduct
 
         {products.map((product) => (
           <div key={product.id} className="w-44 shrink-0 sm:w-52">
-            <ProductCard product={product} />
+            <ProductCard product={product} categoryLabel={categoryLabels?.[product.subcategory ?? product.category]} />
           </div>
         ))}
       </div>
