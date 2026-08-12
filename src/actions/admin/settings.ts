@@ -78,5 +78,6 @@ export async function adminUpdateStoreSettings(raw: unknown): Promise<AdminActio
 
   revalidatePath("/checkout");
   revalidatePath("/admin/settings/delivery");
+  revalidatePath("/faq");
   return { ok: true };
 }
