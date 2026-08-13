@@ -2,15 +2,33 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 
 import { emailOtp } from "@/lib/auth-client";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-small text-foreground placeholder:text-foreground/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const labelClass = "text-small font-medium text-foreground";
+const RESEND_COOLDOWN_SECONDS = 45;
 
-/** `/reset-password` — email is prefilled from `/forgot-password`'s link but stays editable in case the customer navigated here directly. */
+/**
+ * `/reset-password` — email is prefilled from `/forgot-password`'s link but stays editable in
+ * case the customer navigated here directly.
+ *
+ * **Only the most-recently-requested code is ever valid.** Better Auth's `email-otp` plugin
+ * doesn't delete an older still-unexpired verification row when a new one is requested — its
+ * internal adapter always resolves *both* the expiry check and the consume step to whichever row
+ * has the latest `createdAt` for that identifier (confirmed by reading
+ * `node_modules/better-auth/dist/db/internal-adapter.mjs`'s `findVerificationValue`/
+ * `consumeVerificationValue`, both `sortBy: {field: "createdAt", direction: "desc"}, limit: 1`).
+ * So if a customer requests a reset more than once (impatience while waiting for a slow email,
+ * a second visit to `/forgot-password`, etc.) and then opens an *earlier* email instead of the
+ * latest one, that code is genuinely, correctly rejected as `INVALID_OTP` — reproduced and
+ * confirmed live against production. This isn't a bug to "fix" in the verification logic (the
+ * behavior is correct and secure — a customer must always use their latest code), so the fix
+ * here is UX: an inline Resend action (matching `VerifyEmailForm.tsx`'s pattern) so a customer
+ * never has to guess which of several emails is current, plus copy that says so directly.
+ */
 function ResetPasswordFormInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,6 +39,15 @@ function ResetPasswordFormInner() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendConfirmation, setResendConfirmation] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => setCooldown((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,6 +97,20 @@ function ResetPasswordFormInner() {
     router.push("/login?reset=success");
   }
 
+  async function handleResend() {
+    if (!email || cooldown > 0) return;
+    setIsResending(true);
+    setError(null);
+    setResendConfirmation(null);
+    await emailOtp.requestPasswordReset({ email });
+    setIsResending(false);
+    // Matches the generic, anti-enumeration response `ForgotPasswordForm.tsx` already relies on —
+    // always shown regardless of whether the email actually has an account.
+    setResendConfirmation("If an account exists for this email, a new code has been sent — use that one.");
+    setOtp("");
+    setCooldown(RESEND_COOLDOWN_SECONDS);
+  }
+
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6">
       <div className="flex flex-col gap-1.5">
@@ -102,6 +143,21 @@ function ResetPasswordFormInner() {
           onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
           className={inputClass}
         />
+        <p className="text-xs text-foreground/70">
+          Only your most recently requested code works. If you asked for more than one, use the code from the newest email.
+        </p>
+        {resendConfirmation ? (
+          <p className="text-xs text-foreground">{resendConfirmation}</p>
+        ) : (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={isResending || cooldown > 0}
+            className="self-start text-xs font-medium text-accent hover:underline disabled:cursor-not-allowed disabled:text-foreground/50 disabled:no-underline"
+          >
+            {cooldown > 0 ? `Resend code in ${cooldown}s` : isResending ? "Sending…" : "Resend code"}
+          </button>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
