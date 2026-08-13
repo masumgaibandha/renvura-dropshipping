@@ -40,14 +40,29 @@ function ResetPasswordFormInner() {
     setIsSubmitting(false);
 
     if (resetError) {
-      if (resetError.code === "OTP_EXPIRED") {
-        setError("This code has expired. Request a new one.");
+      if (resetError.status === 429) {
+        // Better Auth's own per-path request throttle (`email-otp` plugin's `rateLimit`, default
+        // 3 requests/60s) — a *transport*-level rejection, not an OTP/password judgment, so it has
+        // no `code` field at all. Falling through to the generic branch below would misreport this
+        // as "incorrect code," which is exactly the bug this fixes: the code is still perfectly
+        // valid and unconsumed (see CLAUDE.md's "Password reset rejects reusing the current
+        // password" section) — the customer just needs to wait for the window to reset before
+        // retrying with the same code.
+        setError("Too many attempts in a short time. Please wait a minute and try again with the same code.");
+      } else if (resetError.code === "OTP_EXPIRED") {
+        setError("This verification code has expired. Request a new code.");
       } else if (resetError.code === "TOO_MANY_ATTEMPTS") {
-        setError("Too many attempts. Request a new code.");
+        setError("Too many incorrect attempts. Request a new code.");
       } else if (resetError.code === "SAME_AS_CURRENT_PASSWORD") {
         setError("Your new password cannot be the same as your current password.");
+      } else if (resetError.code === "INVALID_OTP") {
+        // Better Auth's `atomicVerifyOTP` throws this identical code both for a genuinely wrong
+        // digit and for a code that no longer exists (already used, or never existed) — the two
+        // cases aren't distinguishable from the error alone, so the copy below covers both honestly
+        // rather than guessing.
+        setError("That code is incorrect or has already been used. Please check it or request a new one.");
       } else {
-        setError("Incorrect code or something went wrong. Please try again.");
+        setError("Something went wrong resetting your password. Please try again.");
       }
       return;
     }

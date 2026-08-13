@@ -56,7 +56,12 @@ function VerifyEmailFormInner() {
     setIsSubmitting(false);
 
     if (verifyError) {
-      if (verifyError.code === "OTP_EXPIRED") {
+      if (verifyError.status === 429) {
+        // Better Auth's own per-path request throttle — a transport-level rejection, not a
+        // judgment on the code itself. See `ResetPasswordForm.tsx` for the full explanation of why
+        // this needs its own branch rather than falling into the generic "incorrect code" message.
+        setError("Too many attempts in a short time. Please wait a minute and try again.");
+      } else if (verifyError.code === "OTP_EXPIRED") {
         setError("This code has expired. Request a new one.");
       } else if (verifyError.code === "TOO_MANY_ATTEMPTS") {
         setError("Too many attempts. Request a new code.");
