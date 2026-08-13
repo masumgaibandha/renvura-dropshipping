@@ -15,19 +15,17 @@ const RESEND_COOLDOWN_SECONDS = 45;
  * `/reset-password` — email is prefilled from `/forgot-password`'s link but stays editable in
  * case the customer navigated here directly.
  *
- * **Only the most-recently-requested code is ever valid.** Better Auth's `email-otp` plugin
- * doesn't delete an older still-unexpired verification row when a new one is requested — its
- * internal adapter always resolves *both* the expiry check and the consume step to whichever row
- * has the latest `createdAt` for that identifier (confirmed by reading
- * `node_modules/better-auth/dist/db/internal-adapter.mjs`'s `findVerificationValue`/
- * `consumeVerificationValue`, both `sortBy: {field: "createdAt", direction: "desc"}, limit: 1`).
- * So if a customer requests a reset more than once (impatience while waiting for a slow email,
- * a second visit to `/forgot-password`, etc.) and then opens an *earlier* email instead of the
- * latest one, that code is genuinely, correctly rejected as `INVALID_OTP` — reproduced and
- * confirmed live against production. This isn't a bug to "fix" in the verification logic (the
- * behavior is correct and secure — a customer must always use their latest code), so the fix
- * here is UX: an inline Resend action (matching `VerifyEmailForm.tsx`'s pattern) so a customer
- * never has to guess which of several emails is current, plus copy that says so directly.
+ * **A repeat request reuses the same code instead of minting a new one.** `src/lib/auth.ts`
+ * configures the `email-otp` plugin with `resendStrategy: "reuse"` (backed by
+ * `storeOTP: "encrypted"`, the only storage mode besides plaintext that lets Better Auth recover
+ * the original code to reuse it — confirmed by reading the installed
+ * `better-auth@1.6.26` source, `dist/plugins/email-otp/otp-token.mjs`'s `tryReuseOTP`/
+ * `retrieveOTP`). So if a customer requests a reset more than once (impatience while waiting for
+ * a slow email, a second visit to `/forgot-password`, the Resend button below, etc.), every email
+ * they receive for that attempt carries the *identical* code with an extended expiry — any of
+ * them works, not just the newest. This only falls back to generating a genuinely new code once
+ * the previous one has actually expired or exhausted its `allowedAttempts`, matching the inline
+ * Resend action below (mirrors `VerifyEmailForm.tsx`'s pattern).
  */
 function ResetPasswordFormInner() {
   const router = useRouter();
@@ -105,8 +103,10 @@ function ResetPasswordFormInner() {
     await emailOtp.requestPasswordReset({ email });
     setIsResending(false);
     // Matches the generic, anti-enumeration response `ForgotPasswordForm.tsx` already relies on —
-    // always shown regardless of whether the email actually has an account.
-    setResendConfirmation("If an account exists for this email, a new code has been sent — use that one.");
+    // always shown regardless of whether the email actually has an account. Deliberately doesn't
+    // say "new code" — with `resendStrategy: "reuse"` (src/lib/auth.ts) it's usually the same code
+    // with extended expiry, not a new one.
+    setResendConfirmation("If an account exists for this email, we've sent the code again — check your inbox.");
     setOtp("");
     setCooldown(RESEND_COOLDOWN_SECONDS);
   }
@@ -143,9 +143,7 @@ function ResetPasswordFormInner() {
           onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
           className={inputClass}
         />
-        <p className="text-xs text-foreground/70">
-          Only your most recently requested code works. If you asked for more than one, use the code from the newest email.
-        </p>
+        <p className="text-xs text-foreground/70">Didn&apos;t get the code, or it expired? You can request it again below.</p>
         {resendConfirmation ? (
           <p className="text-xs text-foreground">{resendConfirmation}</p>
         ) : (

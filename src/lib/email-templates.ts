@@ -41,10 +41,10 @@ export function resetPasswordTemplate({ otp }: { otp: string }): EmailContent {
   return {
     subject: "Reset your Renvura password",
     html: wrap(
-      `<p>Enter this code to reset your password:</p><div style="${CODE_STYLE}">${otp}</div><p>This code expires in 5 minutes. If you requested more than one code, only the one in this — the most recent — email will work.</p>`,
+      `<p>Enter this code to reset your password:</p><div style="${CODE_STYLE}">${otp}</div><p>This code expires in 5 minutes. If you requested it more than once, this same code was in every email — any of them will work.</p>`,
       "If you didn't request a password reset, you can safely ignore this email — your password will not be changed.",
     ),
-    text: `Reset your Renvura password\n\nYour password reset code is: ${otp}\n\nThis code expires in 5 minutes. If you requested more than one code, only the one in this — the most recent — email will work.\n\nIf you didn't request a password reset, you can safely ignore this email — your password will not be changed.\n\nRenvura · https://renvura.com · hello@renvura.com`,
+    text: `Reset your Renvura password\n\nYour password reset code is: ${otp}\n\nThis code expires in 5 minutes. If you requested it more than once, this same code was in every email — any of them will work.\n\nIf you didn't request a password reset, you can safely ignore this email — your password will not be changed.\n\nRenvura · https://renvura.com · hello@renvura.com`,
   };
 }
 

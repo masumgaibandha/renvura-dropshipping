@@ -261,7 +261,22 @@ export const auth = betterAuth({
       otpLength: 6,
       expiresIn: 5 * 60,
       allowedAttempts: 3,
-      storeOTP: "hashed",
+      // "encrypted" (XChaCha20-Poly1305, keyed by BETTER_AUTH_SECRET — never stored in Mongo) is
+      // deliberately used instead of "hashed" here. Two reasons: (1) it's the only storage mode
+      // besides "plain" that lets `resendStrategy: "reuse"` below recover the original code, and
+      // (2) for a 6-digit numeric OTP, an unsalted/unkeyed hash (Better Auth's own
+      // `defaultKeyHasher`) is brute-forceable in well under a second by anyone with Mongo read
+      // access — it protects against a casual document glance, not a real DB compromise. Keyed
+      // AEAD encryption is strictly stronger against that same threat model, so this is a security
+      // improvement, not a tradeoff, alongside fixing the resend behavior.
+      storeOTP: "encrypted",
+      // A repeat request (resend button, or a second visit to /forgot-password) extends the
+      // expiry of the *same* still-valid code instead of minting a new one, as long as it hasn't
+      // expired and hasn't hit `allowedAttempts`. This eliminates the old "only the newest of
+      // several emails works" confusion: every email sent for one verification attempt now shows
+      // the identical, currently-valid code. Falls back to generating a fresh code (today's
+      // behavior) once the existing one expires or its attempts are exhausted.
+      resendStrategy: "reuse",
       sendVerificationOTP: async ({ email, otp, type }) => {
         await sendAccountEmail({ to: email, otp, type });
       },

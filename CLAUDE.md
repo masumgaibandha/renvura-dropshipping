@@ -497,8 +497,21 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   `hooks.after[0].matcher` in `node_modules/better-auth/dist/plugins/email-otp/index.mjs`).
   `authClient.emailOtp.{sendVerificationOtp, verifyEmail, requestPasswordReset, resetPassword}`
   (`src/lib/auth-client.ts`'s `emailOTPClient()`) back `/verify-email`, `/forgot-password`, and
-  `/reset-password`. All OTP state (expiry, attempts, hashing) lives in Better Auth's own
+  `/reset-password`. All OTP state (expiry, attempts, storage) lives in Better Auth's own
   Mongo-backed `verification` collection — no new Mongoose model was needed for this half.
+  `storeOTP: "encrypted"` (XChaCha20-Poly1305, keyed by `BETTER_AUTH_SECRET`, never stored in
+  Mongo) plus `resendStrategy: "reuse"` means a repeat request for the same purpose (resend
+  button, a second `/forgot-password` visit) extends the same still-valid code's expiry instead
+  of minting a competing one — every email sent for one attempt carries the identical code, so
+  there's no more "only the newest email's code works" confusion. This was deliberately chosen
+  over `storeOTP: "hashed"` (Better Auth's `defaultKeyHasher` is an unsalted/unkeyed SHA-256 of a
+  6-digit OTP — trivially brute-forceable by anyone with Mongo read access, so for this specific
+  keyspace `"encrypted"` is a strictly stronger guard against a DB-only compromise, not a
+  tradeoff) — confirmed by reading the installed `better-auth@1.6.26` source directly
+  (`dist/plugins/email-otp/otp-token.mjs`'s `retrieveOTP`/`tryReuseOTP`, `dist/crypto/index.mjs`'s
+  `symmetricEncrypt`/`symmetricDecrypt`), not assumed from docs. Falls back to generating a
+  genuinely new code once the existing one expires or exhausts `allowedAttempts` — reuse never
+  extends a code indefinitely past either of those limits.
 - **`/email-otp/request-password-reset` always returns the same generic response regardless of
   whether the email has an account** (confirmed in `email-otp/routes.mjs`) — `ForgotPasswordForm.tsx`
   relies on this and never adds its own branching that could leak account existence.
