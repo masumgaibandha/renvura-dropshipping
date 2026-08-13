@@ -1,29 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
 
-import { signUp } from "@/lib/auth-client";
+import { emailOtp } from "@/lib/auth-client";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-small text-foreground placeholder:text-foreground/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
 const labelClass = "text-small font-medium text-foreground";
 
-/**
- * `requireEmailVerification: true` (`src/lib/auth.ts`, Phase 10.5) means a
- * successful signup no longer establishes a session — the account exists
- * but is unverified until the customer completes the OTP sent to their
- * inbox, so this redirects to `/verify-email` rather than `/account`.
- * Password confirmation and minimum-length are checked client-side before
- * ever calling `signUp.email()`; Better Auth itself re-validates length
- * server-side regardless (8–128 chars by default).
- */
-export function SignupForm() {
+/** `/reset-password` — email is prefilled from `/forgot-password`'s link but stays editable in case the customer navigated here directly. */
+function ResetPasswordFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
+  const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,40 +36,33 @@ export function SignupForm() {
     }
 
     setIsSubmitting(true);
-    const { error: signUpError } = await signUp.email({ name, email, password });
+    const { error: resetError } = await emailOtp.resetPassword({ email, otp, password });
     setIsSubmitting(false);
 
-    if (signUpError) {
-      setError(signUpError.message ?? "Something went wrong creating your account. Please try again.");
+    if (resetError) {
+      if (resetError.code === "OTP_EXPIRED") {
+        setError("This code has expired. Request a new one.");
+      } else if (resetError.code === "TOO_MANY_ATTEMPTS") {
+        setError("Too many attempts. Request a new code.");
+      } else if (resetError.code === "SAME_AS_CURRENT_PASSWORD") {
+        setError("Your new password cannot be the same as your current password.");
+      } else {
+        setError("Incorrect code or something went wrong. Please try again.");
+      }
       return;
     }
 
-    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+    router.push("/login?reset=success");
   }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6">
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="signup-name" className={labelClass}>
-          Full Name
-        </label>
-        <input
-          id="signup-name"
-          type="text"
-          required
-          autoComplete="name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          className={inputClass}
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="signup-email" className={labelClass}>
+        <label htmlFor="reset-password-email" className={labelClass}>
           Email
         </label>
         <input
-          id="signup-email"
+          id="reset-password-email"
           type="email"
           required
           autoComplete="email"
@@ -87,11 +73,28 @@ export function SignupForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="signup-password" className={labelClass}>
-          Password
+        <label htmlFor="reset-password-otp" className={labelClass}>
+          Verification Code
         </label>
         <input
-          id="signup-password"
+          id="reset-password-otp"
+          type="text"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          required
+          value={otp}
+          onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          className={inputClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="reset-password-new" className={labelClass}>
+          New Password
+        </label>
+        <input
+          id="reset-password-new"
           type="password"
           required
           autoComplete="new-password"
@@ -102,11 +105,11 @@ export function SignupForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="signup-confirm-password" className={labelClass}>
+        <label htmlFor="reset-password-confirm" className={labelClass}>
           Confirm Password
         </label>
         <input
-          id="signup-confirm-password"
+          id="reset-password-confirm"
           type="password"
           required
           autoComplete="new-password"
@@ -127,15 +130,23 @@ export function SignupForm() {
         disabled={isSubmitting}
         className="flex h-11 w-full items-center justify-center rounded-full bg-accent text-small font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {isSubmitting ? "Creating account…" : "Create Account"}
+        {isSubmitting ? "Resetting…" : "Reset Password"}
       </button>
 
       <p className="text-center text-small text-foreground/70">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium text-accent hover:underline">
-          Sign in
+        Need a new code?{" "}
+        <Link href="/forgot-password" className="font-medium text-accent hover:underline">
+          Start over
         </Link>
       </p>
     </form>
+  );
+}
+
+export function ResetPasswordForm() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordFormInner />
+    </Suspense>
   );
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
-import { signIn } from "@/lib/auth-client";
+import { emailOtp, signIn } from "@/lib/auth-client";
 import { getSafeRedirectPath } from "@/utils/safe-redirect";
 
 const inputClass =
@@ -25,10 +25,16 @@ function LoginFormInner() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Set only when Better Auth's own `EMAIL_NOT_VERIFIED` error is returned — this branch is only
+  // reachable after the password already matched (see `sign-in.mjs`), so surfacing it here reveals
+  // nothing beyond what Better Auth's own design already does.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setUnverifiedEmail(null);
     setIsSubmitting(true);
 
     const { error: signInError } = await signIn.email({ email, password });
@@ -36,6 +42,11 @@ function LoginFormInner() {
     setIsSubmitting(false);
 
     if (signInError) {
+      if (signInError.code === "EMAIL_NOT_VERIFIED") {
+        setUnverifiedEmail(email);
+        setError("Please verify your email to continue.");
+        return;
+      }
       // Deliberately generic — never confirm/deny whether this email has an account.
       setError("Invalid email or password.");
       return;
@@ -46,8 +57,23 @@ function LoginFormInner() {
     router.refresh();
   }
 
+  async function handleResend() {
+    if (!unverifiedEmail) return;
+    setIsResending(true);
+    await emailOtp.sendVerificationOtp({ email: unverifiedEmail, type: "email-verification" });
+    router.push(`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`);
+  }
+
+  const resetSuccess = searchParams.get("reset") === "success";
+
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-6">
+      {resetSuccess && (
+        <p className="rounded-lg border border-border bg-surface-soft p-3 text-small text-foreground">
+          Your password has been reset. Sign in with your new password.
+        </p>
+      )}
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="login-email" className={labelClass}>
           Email
@@ -64,9 +90,14 @@ function LoginFormInner() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="login-password" className={labelClass}>
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="login-password" className={labelClass}>
+            Password
+          </label>
+          <Link href="/forgot-password" className="text-small font-medium text-accent hover:underline">
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="login-password"
           type="password"
@@ -79,9 +110,19 @@ function LoginFormInner() {
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-small text-red-700">
-          {error}
-        </p>
+        <div role="alert" className="flex flex-col gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-small text-red-700">
+          <p>{error}</p>
+          {unverifiedEmail && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="self-start font-medium underline disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isResending ? "Sending…" : "Resend verification code"}
+            </button>
+          )}
+        </div>
       )}
 
       <button

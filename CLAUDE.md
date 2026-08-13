@@ -80,8 +80,9 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              orders/[orderNumber], payments, products, products/[slug]/edit,
                              products/new, categories, categories/[slug]/edit, categories/new,
                              customers, customers/[userId], inventory, homepage, analytics,
-                             settings/delivery) is the Phase 10 admin dashboard; ui-preview/ is
-                             TEMPORARY — see below
+                             settings/delivery) is the Phase 10 admin dashboard; verify-email/,
+                             forgot-password/, reset-password/ are the Phase 10.5 routes;
+                             ui-preview/ is TEMPORARY — see below
   src/components/ui/       icons.tsx, IconLinkButton.tsx, Breadcrumbs.tsx, BangladeshAddressFields.tsx
                              (Phase 9 — shared by checkout and saved addresses) — small generic primitives
   src/components/layout/   Container, Section, AnnouncementBar, Header, SecondaryNav, Footer,
@@ -101,8 +102,10 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              WishlistGrid
   src/components/checkout/  Checkout composition (Phase 8): CheckoutForm, CustomerInfoSection,
                              DeliveryAddressSection, PaymentMethodSection, OrderSummary,
-                             TrackOrderForm, SavedAddressSelector (Phase 9)
-  src/components/auth/      Auth forms (Phase 9): LoginForm, SignupForm
+                             TrackOrderForm, SavedAddressSelector (Phase 9) — no phone-verification
+                             component (deferred, see "Customer verification & account recovery")
+  src/components/auth/      Auth forms (Phase 9): LoginForm, SignupForm; Phase 10.5:
+                             VerifyEmailForm, ForgotPasswordForm, ResetPasswordForm
   src/components/account/   Account-area composition (Phase 9): AccountLayout, AccountSidebar,
                              AccountMobileNav, SignOutButton, HeaderAccountLink, ProfileForm,
                              AddressList, AddressForm
@@ -112,7 +115,8 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                              StoreSettingsForm, OrderStatusForm, StockAdjustForm, FeaturedToggle,
                              CategoryOrderForm — not meant for reuse outside /admin/*
   src/actions/               Server Actions ("use server"): orders.ts (createOrder, trackOrder,
-                              Phase 8), order-schema.ts (Zod), order-logic.ts (DB-free
+                              Phase 8; Phase 10.5 adds the order-confirmation-email `after()` call),
+                              order-schema.ts (Zod), order-logic.ts (DB-free
                               validate-and-recalculate), address-schema.ts (Zod), addresses.ts
                               (createAddress/updateAddress/deleteAddress/setDefaultAddress, Phase 9)
   src/actions/admin/         Admin Server Actions (Phase 10): orders.ts (adminUpdateOrderStatus),
@@ -136,20 +140,26 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
                               rate-limit.ts, bangladesh-address-validation.ts), db.ts (MongoDB
                               connection helper, Phase 8), auth.ts/auth-client.ts/auth-session.ts
                               (Better Auth server config incl. `role` field and `authDb` native-driver
-                              export, client instance, getCurrentUser()/requireAdmin() — Phase 9/10)
+                              export, client instance, getCurrentUser()/requireAdmin() — Phase 9/10;
+                              Phase 10.5 adds the `email-otp` plugin), email-provider.ts/
+                              email-templates.ts (Phase 10.5 — central Resend module + templates,
+                              see "Customer verification & account recovery" below)
   src/models/                 Mongoose schemas: Product.ts, Category.ts (connected, Phase 10),
-                              Order.ts (connected, Phase 8; statusHistory added Phase 10),
+                              Order.ts (connected, Phase 8; statusHistory added Phase 10;
+                              notifications.orderConfirmationEmail added Phase 10.5),
                               Address.ts (Phase 9), AdminAuditLog.ts, StoreSettings.ts (Phase 10).
                               User/Session/Account/Verification are Better Auth-managed, not
-                              Mongoose models — `role` lives on Better Auth's `user` document.
+                              Mongoose models — `role` and `emailVerified` live on Better Auth's
+                              `user` document.
   src/services/               data-access layer: products.ts (MongoDB-backed as of Phase 10, plus
                               admin list/create/update functions and category admin functions),
                               orders.ts (MongoDB-backed, Phase 8; Phase 10 adds admin list/detail/
-                              status/payment/dashboard/analytics functions), addresses.ts
-                              (MongoDB-backed, Phase 9), customers.ts (Phase 10 — reads Better
-                              Auth's native `user` collection via `authDb`, joined with Order
-                              aggregates), settings.ts (Phase 10 — StoreSettings singleton),
-                              audit-log.ts (Phase 10 — recordAuditLog, append-only)
+                              status/payment/dashboard/analytics functions; Phase 10.5 adds
+                              recordOrderConfirmationEmailResult), addresses.ts (MongoDB-backed,
+                              Phase 9), customers.ts (Phase 10 — reads Better Auth's native `user`
+                              collection via `authDb`, joined with Order aggregates), settings.ts
+                              (Phase 10 — StoreSettings singleton), audit-log.ts (Phase 10 —
+                              recordAuditLog, append-only)
   src/types/                  shared TypeScript types: product.ts, category.ts, cart.ts, order.ts
                               (Phase 10: OrderStatusHistoryEntry, AdminOrderDetail/ListItem,
                               ORDER_STATUS_TRANSITIONS), address.ts (Phase 9), customer.ts (Phase 10)
@@ -453,6 +463,110 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   admin dashboard has no bulk-edit/bulk-import tooling; category deletion doesn't exist (only
   activate/deactivate, since existing products may reference a category's slug).
 
+## Customer verification & account recovery (Phase 10.5)
+
+- **Checkout phone OTP is deferred, not built.** An earlier pass of this phase built a full
+  session-independent phone-OTP system (`CheckoutPhoneVerification` model, `phone-verification`
+  service/actions, `PhoneVerificationSection` UI, an `sms-provider.ts` abstraction) but the
+  business decision changed before shipping: **no SMS provider was ever selected, and Renvura
+  launches with manual phone/WhatsApp order confirmation instead** (see "Manual order confirmation
+  workflow" below). That entire implementation was removed — there is no `CheckoutPhoneVerification`
+  collection, no phone-verification Server Actions, no SMS provider code, and no
+  `phoneVerificationToken` field anywhere in `order-schema.ts`/`createOrder`. Checkout only
+  requires a normalized Bangladesh phone number (`normalizeBdPhone`, unchanged since Phase 8) — no
+  proof of control. If phone OTP is revisited later, design it fresh against the actual chosen SMS
+  provider rather than resurrecting this removed code.
+- **Manual order confirmation workflow (the actual launch process).** Every new order is created
+  with `orderStatus: "pending"` exactly as it always has been (see "Checkout & order rules"). Staff
+  call or WhatsApp the customer using the phone number on the order to confirm it's genuine before
+  fulfillment; `/admin/orders/[orderNumber]`'s existing status-transition UI
+  (`ORDER_STATUS_TRANSITIONS`, unchanged) is how an admin then moves it to `confirmed` (verified
+  genuine) or `cancelled` (unreachable/fake) — there is no automatic transition out of `pending`.
+  This is a process change, not a code change: no new admin feature was needed since the existing
+  Phase 10 order-status workflow already supports exactly this.
+- **Email verification and password reset use Better Auth's `email-otp` plugin end to end — no
+  custom token storage — and this half shipped unchanged from the earlier pass.**
+  `src/lib/auth.ts` sets `emailAndPassword.requireEmailVerification: true` (blocks sign-in for
+  unverified accounts with a distinct `EMAIL_NOT_VERIFIED` error and skips `autoSignIn` at signup —
+  both confirmed directly from Better Auth 1.6.26's `sign-in.mjs`/`sign-up.mjs`),
+  `emailAndPassword.revokeSessionsOnPasswordReset: true`, and
+  `emailVerification.autoSignInAfterVerification: true`. The `emailOTP()` plugin is configured with
+  `overrideDefaultEmailVerification: true`, which routes signup's built-in verification email
+  through the OTP sender instead of a link — `sendVerificationOnSignUp` is deliberately left unset
+  since that option's own send hook is unreachable once the override is on (see the plugin's
+  `hooks.after[0].matcher` in `node_modules/better-auth/dist/plugins/email-otp/index.mjs`).
+  `authClient.emailOtp.{sendVerificationOtp, verifyEmail, requestPasswordReset, resetPassword}`
+  (`src/lib/auth-client.ts`'s `emailOTPClient()`) back `/verify-email`, `/forgot-password`, and
+  `/reset-password`. All OTP state (expiry, attempts, hashing) lives in Better Auth's own
+  Mongo-backed `verification` collection — no new Mongoose model was needed for this half.
+- **`/email-otp/request-password-reset` always returns the same generic response regardless of
+  whether the email has an account** (confirmed in `email-otp/routes.mjs`) — `ForgotPasswordForm.tsx`
+  relies on this and never adds its own branching that could leak account existence.
+  `sendAccountEmail` (`src/lib/email-provider.ts`) is deliberately written to never throw for a
+  delivery-failure case for the same reason: throwing would surface a different HTTP response only
+  when a real account was found, which is itself a leak.
+- **No existing user is ever retroactively marked `emailVerified: true`.** Turning on
+  `requireEmailVerification` doesn't touch existing accounts' data — it only changes what's
+  enforced at sign-in from now on. Per this codebase's existing "never fabricate data" principle
+  (prices, reviews, stock — see "Architecture rules" above), pre-Phase-10.5 accounts are **not**
+  mass-migrated to verified; they see the same "Please verify your email to continue" + Resend flow
+  as any unverified account on their next sign-in attempt. This is a one-time, fully self-service
+  inconvenience, never a hard lockout.
+- **Password reset rejects reusing the current password.** Better Auth 1.6.26 has no native option
+  for this (confirmed by reading both `resetPasswordEmailOTP` and the session-based `changePassword`
+  in `node_modules/better-auth` — neither compares old vs. new). `rejectSamePasswordOnReset`
+  (`src/lib/auth.ts`) is a top-level `hooks.before` middleware matched on
+  `/email-otp/reset-password` that calls `ctx.context.password.verify()` — Better Auth's own
+  verification primitive, the same one `changePassword` uses — against the account's existing
+  credential hash. No second hashing scheme, no plaintext DB comparison. It runs *before* Better
+  Auth's route handler, so a rejected same-password attempt never consumes the OTP (`atomicVerifyOTP`
+  hasn't run yet) — the customer can retry with a different password on the same code. Surfaces as
+  `SAME_AS_CURRENT_PASSWORD`, mapped in `ResetPasswordForm.tsx` to "Your new password cannot be the
+  same as your current password."
+- **Resend is the one transactional email provider, called from exactly one module.**
+  `src/lib/email-provider.ts` is the only file that ever imports `resend` — `sendAccountEmail`
+  (email verification / password reset OTPs, called by the Better Auth plugin above) and
+  `sendOrderConfirmationEmail` (below) both funnel through its private `sendEmail()` primitive,
+  which is the sole call site of `resend.emails.send()`. Configured via `RESEND_API_KEY` (secret,
+  server-only, never `NEXT_PUBLIC_*`), `EMAIL_FROM_ADDRESS` (defaults to
+  `"Renvura <no-reply@renvura.com>"` if unset), `EMAIL_REPLY_TO` (defaults to `hello@renvura.com`
+  if unset). **Unconfigured today** — no Resend account/API key has been provided, and the
+  `renvura.com` sending domain has not yet been verified in Resend; see "Known Phase 10.5
+  limitations" below. In production with no key set, sending fails closed (logged server-side, no
+  fake "sent" response); in development, the full email content (subject + text body) is logged to
+  the server console instead of actually sending, gated strictly behind `NODE_ENV !== "production"`.
+- **Order confirmation email (new): `sendOrderConfirmationEmail`, fired from `createOrder` via
+  Next's `after()`, never blocking or affecting the order response.** Only when
+  `input.customer.email` is present — checkout email stays fully optional, guest and logged-in
+  alike, and a missing email is not an error. `after()` (`next/server`, stable since Next 15.1,
+  used here inside the `createOrder` Server Function) schedules the send to run *after* the
+  order-creation response has already gone back to the browser, so a slow or failed Resend call can
+  never delay placing the order or make a real, persisted order look like it failed — order
+  persistence in `insertOrder` is authoritative and is never rolled back for an email failure.
+  Content comes from the sanitized `OrderSummary` projection only (never the raw DB record), so
+  `wholesalePrice`, the Mongo `_id`, `idempotencyKey`, `customerUserId`, and `statusHistory` are
+  structurally impossible to leak into the email, not just manually avoided. The subject is always
+  `"Renvura Order Received — {orderNumber}"` — orders stay `pending` until a human confirms by
+  phone/WhatsApp (see above), so the email never claims the order is "confirmed."
+- **Order-confirmation-email idempotency is structural, not a status check.** `scheduleOrderConfirmationEmail`
+  (`src/actions/orders.ts`) is called from exactly one place: immediately after a *genuinely new*
+  `insertOrder()` call succeeds. `createOrder`'s existing idempotency-key early return (a retried
+  submit with the same key) and its race-loser early return (two near-simultaneous submits) both
+  return *before* that call site, so neither path can ever schedule a second email for the same
+  order — no separate "was this already sent" check was needed. `Order.notifications.orderConfirmationEmail`
+  (`src/models/Order.ts`) still records the one attempt's outcome (`"not_applicable"` |
+  `"pending"` | `"sent"` | `"failed"`, plus `sentAt`/`providerMessageId`/a truncated `lastError`)
+  purely for admin visibility/future troubleshooting — it is not itself the dedupe mechanism.
+  `providerMessageId` (Resend's own email id) is admin-only: present on `AdminOrderDetail`, absent
+  from `OrderSummary`/`OrderTrackingSummary`.
+- **Known Phase 10.5 limitations (deferred, not forgotten)**: phone OTP verification (see above —
+  revisit once an SMS provider is actually chosen); the `renvura.com` domain is not yet verified in
+  Resend and no `RESEND_API_KEY` has been issued, so real email delivery does not work yet in any
+  environment; there is no automated retry/queue for a failed order-confirmation email — a
+  permanently-`"failed"` (or stuck-`"pending"` from a mid-flight crash) row is visible to an admin
+  reading the DB directly today, but there is no `/admin` UI surfacing it and no retry button; this
+  is intentionally out of scope until real delivery is verified and worth building a queue for.
+
 ## Design system contrast rule
 
 Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
@@ -506,20 +620,31 @@ Category Highlights, Why Shop With Renvura, homepage SEO metadata), 5 (Shop/cate
 client-side state, `/cart`, `/wishlist`, header counts), 8 (Checkout + secure order creation —
 `/checkout`, `/order-success/[orderNumber]`, `/track-order`, MongoDB-backed `Order`), 9 (Customer
 authentication + accounts — Better Auth email/password, `/login`, `/signup`, `/account/*`, saved
-addresses, order history, `Order.customerUserId`), and 10 (Admin dashboard + store management —
+addresses, order history, `Order.customerUserId`), 10 (Admin dashboard + store management —
 `/admin/*` role-gated authorization, order/payment management, MongoDB-backed product/category
 CRUD, customer/inventory views, homepage curation, `StoreSettings`, analytics, audit log — see
-"Admin dashboard & authorization (Phase 10)" above) are done — see `docs/PRODUCT-ROADMAP.md`,
-`docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and `docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI
-shell, homepage, listing pages, product detail page, cart/wishlist, checkout/order
-creation/tracking, customer accounts, and the admin dashboard exist and are wired in, but do not
-build an automated payment gateway (bKash/Nagad/Rocket APIs), courier API integration,
-marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, email verification/
-change, social/OTP login, "log in as customer" impersonation, product image upload UI, bulk
-product import/export, an automated test suite, or advanced accounting/multi-vendor/warehouse
-features until asked. `Product`/`Category` MongoDB models are connected as of Phase 10 (see above)
-— `Order`, `Address`, `AdminAuditLog`, and `StoreSettings` are also connected, plus Better Auth's
-own `user`/`session`/`account`/`verification` collections. Do not wire up real newsletter logic, or
+"Admin dashboard & authorization (Phase 10)" above), and 10.5 (Customer verification + account
+recovery — Better Auth `email-otp`-backed email verification and forgot/reset password,
+`/verify-email`, `/forgot-password`, `/reset-password`, plus a Resend-backed order-confirmation
+email; checkout phone OTP was built then explicitly deferred in favor of manual phone/WhatsApp
+order confirmation — see "Customer verification & account recovery (Phase 10.5)" above) are done —
+see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and
+`docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI shell, homepage, listing pages, product detail
+page, cart/wishlist, checkout/order creation/tracking, customer accounts, and the admin dashboard
+exist and are wired in, but do not build an automated payment gateway (bKash/Nagad/Rocket APIs),
+courier API integration, marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking,
+a verified email-*change* flow (email *verification* itself is done, see Phase 10.5 — "email is
+read-only on `/account/profile`" from Phase 9 still holds), social login, checkout phone OTP
+verification (deferred — see Phase 10.5), account phone-update verification, "log in as customer"
+impersonation, product image upload UI, bulk product import/export, an automated test suite, an
+automated email-retry queue, or advanced accounting/multi-vendor/warehouse features until asked.
+`Product`/`Category` MongoDB models are connected as of Phase 10 (see above) — `Order` (now
+carrying `notifications.orderConfirmationEmail`, Phase 10.5), `Address`, `AdminAuditLog`, and
+`StoreSettings` are also connected, plus Better Auth's own `user`/`session`/`account`/`verification`
+collections. No Resend account/API key is configured yet — see Phase 10.5's "fail closed in
+production" note above; this blocks real email delivery (verification, password reset, and order
+confirmation alike) until `RESEND_API_KEY` is set and the `renvura.com` domain is verified in
+Resend. Do not wire up real newsletter logic, or
 create fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
 values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,
 unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable" and disabled Add to

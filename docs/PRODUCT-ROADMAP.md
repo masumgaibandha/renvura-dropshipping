@@ -299,6 +299,67 @@ management, multi-vendor support, advanced accounting, "log in as customer" impe
 image upload UI (image/thumbnail fields are text paths under `/products/`, no upload
 infrastructure), and bulk product import/export.
 
+## Phase 10.5 — Customer verification & account recovery ✅
+Final scope, after a mid-phase business-decision change: Better Auth `email-otp`-backed email
+verification, a self-serve forgot/reset password flow (`/verify-email`, `/forgot-password`,
+`/reset-password`), a production Resend integration, and a new order-confirmation email.
+**Checkout phone OTP was built and tested, then explicitly deferred** in favor of manual
+phone/WhatsApp order confirmation — see below. See `docs/ARCHITECTURE.md`'s "Customer verification
+& account recovery" section for the full architecture, and CLAUDE.md's matching rules section.
+
+**Phone OTP: built, then removed.** The first pass of this phase implemented a complete
+session-independent phone-OTP system — deliberately *not* Better Auth's `phone-number` plugin
+(tracing `node_modules/better-auth/dist/plugins/phone-number/routes.mjs` showed its
+`/phone-number/verify` endpoint requires or fabricates a `user` document, a non-starter for guest
+checkout) but a small dedicated `CheckoutPhoneVerification` collection plus two Server Actions
+instead, producing an opaque, single-use, exact-phone-matched proof token independently
+re-validated by `createOrder`. It passed lint/typecheck/build and was verified against the real
+database (replay rejection, wrong-phone rejection, expiry, unverified-challenge rejection). Before
+shipping, the business decided no SMS provider would be selected for launch — Renvura confirms
+orders manually by phone/WhatsApp instead, using the existing Phase 10 admin order-status workflow
+(`pending` → `confirmed`/`cancelled`, no new admin code needed). All phone-OTP code (`Checkout
+PhoneVerification` model, `phone-verification` service/actions, `PhoneVerificationSection` UI,
+`sms-provider.ts`) was removed from the working tree rather than left dormant, and `order-schema.ts`/
+`createOrder` reverted to their pre-phone-OTP shape (phone is normalized/validated, never proven).
+
+**Email verification and password reset** fit Better Auth's `email-otp` plugin cleanly (no
+guest-checkout conflict) and shipped unchanged from the first pass — zero custom token storage.
+
+**Resend added as the production transactional email provider**, replacing the earlier
+provider-agnostic placeholder. One central module (`src/lib/email-provider.ts`) is the only file
+that imports `resend`; `RESEND_API_KEY`/`EMAIL_FROM_ADDRESS`/`EMAIL_REPLY_TO` configure it — none
+set yet, so real delivery fails closed in production and logs to the console in development.
+
+**New: order-confirmation email.** After a successful, newly-created order (never on an idempotent
+replay), `createOrder` schedules `sendOrderConfirmationEmail` via Next's `after()` so a slow/failed
+send can never affect the order-placement response — order persistence is authoritative and never
+rolled back for an email outcome. Optional (only sent when the customer supplied an email; absence
+is not an error), guest and logged-in alike. Built entirely from the sanitized `OrderSummary`
+projection (no `wholesalePrice`/Mongo `_id`/`idempotencyKey`/internal fields reachable). Subject is
+always "Renvura Order Received — {orderNumber}" — never "confirmed," since every order starts and
+stays `pending` until a human confirms it. `Order.notifications.orderConfirmationEmail` records the
+one attempt's outcome (`not_applicable`/`pending`/`sent`/`failed` + `sentAt`/`providerMessageId`/
+`lastError`) for admin visibility; the actual once-only guarantee is structural (only the
+fresh-insert branch of `createOrder` ever schedules the send), not driven by checking that field.
+
+**No existing account was retroactively marked verified.** Turning on
+`requireEmailVerification` only changes what's enforced going forward — pre-Phase-10.5 accounts
+verify once on their next sign-in via the same Resend flow any unverified account gets, matching
+this project's standing "never fabricate data" rule.
+
+**Verification**: `tsc --noEmit`, `eslint`, and `next build` all pass clean. As with Phase 10, no
+automated test suite exists in this repo — verification was code review plus manual/HTTP-level
+checks against the real database (signup → `emailVerified:false`/no session, unverified login →
+`403 EMAIL_NOT_VERIFIED`, forgot-password → identical generic response for a real vs. nonexistent
+email), plus a regression pass over Phase 8–10 checkout/admin behavior and a client-bundle scan for
+leaked secrets.
+
+**Deferred**: checkout phone OTP (revisit once a real SMS provider is chosen — do not resurrect the
+removed code without designing against that provider's actual API), account phone-update
+verification (the existing unverified `ProfileForm.tsx` phone field is unchanged), in-app email
+*change* (only verification was in scope), social/OTP sign-in, full 2FA, and an automated
+email-retry/queue system for a failed order-confirmation send.
+
 ## Phase 11 — Tracking / retargeting
 Meta Pixel, Meta Conversions API, GA4, GTM, event wiring (PageView, ViewContent, Search,
 AddToCart, InitiateCheckout, Purchase) and internal order-lifecycle events.

@@ -237,6 +237,15 @@ addressLine/landmark/notes), plus `label`/`recipientName`/`phone`/`isDefault` �
 a delivery destination with its own recipient, which may differ from the account holder. Always
 scoped to `userId`; see "Authentication & customer accounts" below for the ownership rules.
 
+### Order notifications (Phase 10.5 addendum — done, MongoDB-connected)
+
+`Order.notifications.orderConfirmationEmail` (`src/models/Order.ts`) records the outcome of the
+one order-confirmation-email attempt for that order: `status` (`"not_applicable"` | `"pending"` |
+`"sent"` | `"failed"`), `sentAt`, `providerMessageId` (Resend's own email id — admin-only, see
+"Customer verification & account recovery" below), and a truncated `lastError`. No new collection —
+this is an addition to the existing `Order` schema, written by `src/services/orders.ts`'s
+`insertOrder`/`recordOrderConfirmationEmailResult`.
+
 ### Data access — MongoDB for everything as of Phase 10
 
 **Orders were the first real MongoDB-backed data** (Phase 8); addresses and auth followed in Phase
@@ -480,6 +489,88 @@ upload UI (thumbnail/image fields are plain text paths under `/products/`); no b
 import tooling; categories can be deactivated but not deleted (existing products may still
 reference a category's slug).
 
+## Customer verification & account recovery (Phase 10.5)
+
+**Checkout phone OTP was built, then deferred before shipping.** A full session-independent
+system (a `CheckoutPhoneVerification` collection, `phone-verification` Server Actions, a
+`PhoneVerificationSection` UI, an `sms-provider.ts` abstraction) was implemented and tested against
+the real database, but the business decision changed: no Bangladesh SMS gateway was selected, and
+Renvura launches instead with **manual phone/WhatsApp order confirmation** — staff call/message the
+customer using the phone number already on the order and move it from `pending` to `confirmed` (or
+`cancelled`) via the existing Phase 10 admin order-status workflow, no new code required for that
+part. All the phone-OTP code was removed; checkout only normalizes and validates the phone number
+(`normalizeBdPhone`, unchanged since Phase 8) with no proof-of-control step. If phone OTP is
+revisited later, the right reference point is a real SMS provider's actual API, not the removed
+code — Better Auth's `phone-number` plugin still wouldn't be the right tool for guest checkout for
+the same reason originally documented (its `/phone-number/verify` endpoint requires or fabricates
+a `user` document).
+
+**Email verification + password reset** reuse Better Auth's `email-otp` plugin end to end — no
+custom verification-token storage — and this half is unchanged from the earlier pass. `src/lib/auth.ts`
+sets `emailAndPassword.requireEmailVerification: true` (blocks sign-in for unverified accounts,
+confirmed via `sign-in.mjs`'s `EMAIL_NOT_VERIFIED` throw, and skips `autoSignIn` at signup per
+`sign-up.mjs`), `revokeSessionsOnPasswordReset: true`, and
+`emailVerification.autoSignInAfterVerification: true`. `emailOTP({overrideDefaultEmailVerification:
+true, ...})` swaps Better Auth's default link-based verification for the same 6-digit-code UX
+throughout — signup, resend-on-blocked-login, and password reset. `src/lib/auth-client.ts`'s
+`emailOTPClient()` exposes `authClient.emailOtp.{sendVerificationOtp, verifyEmail,
+requestPasswordReset, resetPassword}`, consumed by the `/verify-email`, `/forgot-password`, and
+`/reset-password` routes (`src/components/auth/{VerifyEmailForm,ForgotPasswordForm,ResetPasswordForm}.tsx`).
+`/email-otp/request-password-reset` always returns the same generic response whether or not the
+email has an account (confirmed in `email-otp/routes.mjs`) — `ForgotPasswordForm.tsx` relies on
+this directly rather than adding its own branching.
+
+**No existing account is retroactively marked verified.** `emailVerified` already existed on every
+Better Auth user (core field, unused/`false` until now); turning on `requireEmailVerification`
+changes what's enforced going forward, not any stored data — pre-Phase-10.5 accounts see the same
+"verify to continue" + Resend flow as anyone else on their next sign-in, matching this codebase's
+existing never-fabricate-data principle.
+
+**Password reset rejects current-password reuse**, via `rejectSamePasswordOnReset` — a top-level
+Better Auth `hooks.before` middleware (`src/lib/auth.ts`), not a fork or a `databaseHooks` entry
+(database hooks only ever see the already-hashed value; a request-level "before" hook is the only
+extension point that still has the raw candidate password to compare). Matches
+`/email-otp/reset-password`, reuses `ctx.context.password.verify()` (the same primitive Better
+Auth's own `changePassword` uses) against the account's current credential hash, and throws
+`SAME_AS_CURRENT_PASSWORD` before Better Auth's handler — and therefore before `atomicVerifyOTP`
+— ever runs, so a rejected attempt never burns the OTP.
+
+**Resend is the production transactional email provider — one central module, one call site.**
+`src/lib/email-provider.ts` is the only file that imports `resend`; every email (verification OTP,
+password-reset OTP, order confirmation) is built as an `EmailContent` (`src/lib/email-templates.ts`)
+and passed to that file's private `sendEmail()`, the single place `resend.emails.send()` is ever
+called. Configuration: `RESEND_API_KEY` (secret, required for any real send), `EMAIL_FROM_ADDRESS`
+(defaults to `"Renvura <no-reply@renvura.com>"`), `EMAIL_REPLY_TO` (defaults to `hello@renvura.com`).
+**Unconfigured as of this phase** — no Resend account/API key exists yet and the `renvura.com`
+sending domain is not yet verified with Resend, both required before any real email can send (see
+"Environment variables" below). In production with no key set, sending fails closed (logged
+server-side, response to the caller unaffected — see the anti-enumeration note above); in
+development, the full email is logged to the server console instead of sending, strictly gated
+behind `NODE_ENV !== "production"`.
+
+**Order confirmation email** (`sendOrderConfirmationEmail`) is new this phase. `createOrder`
+(`src/actions/orders.ts`) schedules it via Next's `after()` (`next/server`, stable since 15.1) only
+when `input.customer.email` is present — checkout email stays fully optional for both guest and
+logged-in checkout, and its absence is never an error. `after()` runs the send *after* the
+order-creation response has already reached the browser, so Resend being slow or failing can never
+delay or affect the customer-visible result of placing the order — `insertOrder`'s persistence is
+authoritative and is never rolled back for an email outcome. The email is built entirely from the
+sanitized `OrderSummary` projection, so `wholesalePrice`, the Mongo `_id`, `idempotencyKey`,
+`customerUserId`, and `statusHistory` are structurally excluded, not just manually avoided. Since
+every new order starts and stays `pending` until a human confirms it by phone/WhatsApp, the subject
+is always `"Renvura Order Received — {orderNumber}"` — never "confirmed."
+
+**Order-confirmation-email idempotency is structural.** `scheduleOrderConfirmationEmail` is called
+from exactly one branch of `createOrder`: immediately after a genuinely new `insertOrder()`
+succeeds. Both of `createOrder`'s existing early-return paths — the idempotency-key replay and the
+insert-race loser — return before that call site, so a double-submit or client retry can never
+schedule a second email for the same order; no additional "already sent" check was needed for
+correctness. `Order.notifications.orderConfirmationEmail` (see the "Data model" section above)
+still records the one attempt's outcome for admin visibility, not as the dedupe mechanism itself.
+
+**Account phone-update verification** (`/account/profile`) remains explicitly out of scope, as it
+was in the earlier pass — see CLAUDE.md.
+
 ## Bangladesh-specific concerns baked into the architecture
 
 - Currency formatting centralized (via `src/config/brand.ts` currency config) rather than
@@ -511,7 +602,7 @@ gated behind `isConfigured(brand.urls.site)` — wired, but inactive until a rea
 replaces that `TODO`. `sitemap.ts`, `robots.ts`, and any SEO work beyond individual-route metadata
 are still Phase 12 work, but nothing in the current structure blocks adding them later.
 
-## Environment variables (Phase 8–9)
+## Environment variables (Phase 8–10.5)
 
 Never committed — `.gitignore` blocks all `.env*`, so these are documented here and in CLAUDE.md
 instead of a checked-in `.env.example`.
@@ -521,10 +612,16 @@ instead of a checked-in `.env.example`.
 | `MONGODB_URI` | Yes, for any order/address/auth-touching code path | Server-only, never sent to the client, never logged. `connectToDatabase()` throws a clear error if unset; Better Auth's own `MongoClient` (`src/lib/auth.ts`) needs it too. |
 | `MONGODB_DB_NAME` | No | Passed to both `mongoose.connect()`'s `dbName` option and Better Auth's `client.db(...)` call if set. |
 | `BETTER_AUTH_SECRET` | Yes, for any auth code path | Server-only, never sent to the client, never logged — signs/encrypts sessions. Generate a strong random value (e.g. `openssl rand -base64 32`); never reuse a value across environments. |
-| `BETTER_AUTH_URL` | Yes | The app's own base URL (e.g. `http://localhost:3000` in dev) — Better Auth uses it to construct callback/redirect URLs. |
+| `BETTER_AUTH_URL` | Yes | The app's own base URL (e.g. `http://localhost:3000` in dev) — Better Auth uses it to construct callback/redirect URLs. Production must be `https://renvura.com` (no trailing slash). |
 | `NEXT_PUBLIC_BKASH_NUMBER` | No, but bKash is disabled in checkout until set | Public by design — the customer must see it to send a manual payment. |
 | `NEXT_PUBLIC_NAGAD_NUMBER` | No, same as above | |
 | `NEXT_PUBLIC_ROCKET_NUMBER` | No, same as above | |
+| `RESEND_API_KEY` | No — but all real email delivery (verification, password reset, order confirmation) fails closed in production until set | Server-only, never logged, never `NEXT_PUBLIC_*`. Currently unset — no Resend account exists yet. See `src/lib/email-provider.ts`. |
+| `EMAIL_FROM_ADDRESS` | No | Server-only. Defaults to `"Renvura <no-reply@renvura.com>"` if unset — set explicitly once the `renvura.com` domain is verified in Resend. |
+| `EMAIL_REPLY_TO` | No | Server-only. Defaults to `hello@renvura.com` if unset. |
+
+Phone OTP verification is deferred (see "Customer verification & account recovery" above) — no
+`SMS_PROVIDER*` variables exist in this codebase.
 
 ## Explicitly deferred (not built yet)
 
@@ -534,12 +631,19 @@ The homepage was built ahead of schedule in the Phase 3 redesign, catalog/catego
 Phase 7, checkout + order creation (`/checkout`, `/order-success/[orderNumber]`, `/track-order`) is
 done as of Phase 8, customer authentication + accounts (`/login`, `/signup`, `/account/*`) is done
 as of Phase 9, and the admin dashboard (`/admin/*` — see "Admin dashboard & authorization" above)
-is done as of Phase 10 (see `docs/DESIGN-SYSTEM.md` §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still
-deferred: automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration,
-marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, email verification,
-in-app email change, social/OTP login (Better Auth's `socialProviders` config keeps this addable
-without restructuring, but nothing is wired up), "log in as customer" admin impersonation, product
-image upload UI, bulk product import/export, and an automated test suite. Phase 3 built the **UI
+is done as of Phase 10, and email verification + forgot/reset password + a Resend-backed order-
+confirmation email (`/verify-email`, `/forgot-password`, `/reset-password` — see "Customer
+verification & account recovery" above) is done as of Phase 10.5 (see `docs/DESIGN-SYSTEM.md`
+§§9–14 and `docs/PRODUCT-ROADMAP.md`) — still deferred: checkout phone OTP verification (built,
+then explicitly deferred in favor of manual phone/WhatsApp order confirmation — see above),
+automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration,
+marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, in-app email *change*
+(email *verification* itself is done), account phone-update verification, social/OTP login (Better
+Auth's `socialProviders` config keeps this addable without restructuring, but nothing is wired up),
+"log in as customer" admin impersonation, product image upload UI, bulk product import/export, an
+automated email-retry/queue system for a failed order-confirmation send, and an automated test
+suite. A Resend account/API key is also not yet configured and the `renvura.com` domain is not yet
+verified with Resend — see "Environment variables" above. Phase 3 built the **UI
 foundation** several later phases reuse (`ProductCard`, `ProductGrid`, `Price`, `SearchBar`,
 `Header`/`Footer` chrome, the homepage's `home/` components, the listing pages' `shop/` components,
 the product page's `product/` components, the `cart/`/`wishlist/` components, the `checkout/`

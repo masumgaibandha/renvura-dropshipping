@@ -1,11 +1,21 @@
 "use server";
 
 import { headers } from "next/headers";
+import { after } from "next/server";
 
 import { isPaymentMethodConfigured } from "@/config/payment";
 import { getCurrentUser } from "@/lib/auth-session";
+import { sendOrderConfirmationEmail } from "@/lib/email-provider";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { findOrderByIdempotencyKey, findOrderByOrderNumber, generateOrderNumber, insertOrder, toOrderSummary, toTrackingSummary } from "@/services/orders";
+import {
+  findOrderByIdempotencyKey,
+  findOrderByOrderNumber,
+  generateOrderNumber,
+  insertOrder,
+  recordOrderConfirmationEmailResult,
+  toOrderSummary,
+  toTrackingSummary,
+} from "@/services/orders";
 import type { OrderSummary, OrderTrackingSummary, PaymentStatus } from "@/types/order";
 import { recalculateOrder } from "./order-logic";
 import { orderInputSchema, trackOrderInputSchema } from "./order-schema";
@@ -18,6 +28,38 @@ import { orderInputSchema, trackOrderInputSchema } from "./order-schema";
  * `order-logic.ts` for the price recalculation that never trusts a
  * client-submitted price.
  */
+
+const MAX_STORED_EMAIL_ERROR_LENGTH = 500;
+
+/**
+ * Fires the order-confirmation email (Phase 10.5) via Next's `after()` —
+ * scheduled to run once the response has already been sent, so a slow or
+ * failed Resend call can never delay/affect what the customer sees. Only
+ * ever called from the genuinely-new-order branch of `createOrder` (never
+ * the idempotent-replay or race-loser early returns), which is what makes
+ * this naturally idempotent — a retried submit with the same
+ * `idempotencyKey` returns before this is ever scheduled a second time.
+ */
+function scheduleOrderConfirmationEmail(order: OrderSummary): void {
+  const email = order.customer.email;
+  if (!email) {
+    return;
+  }
+
+  after(async () => {
+    const result = await sendOrderConfirmationEmail({ to: email, order });
+    if (result.status === "sent") {
+      await recordOrderConfirmationEmailResult(order.orderNumber, { status: "sent", providerMessageId: result.providerMessageId });
+      return;
+    }
+
+    console.error(`createOrder: order confirmation email failed for ${order.orderNumber}`, result.lastError);
+    await recordOrderConfirmationEmailResult(order.orderNumber, {
+      status: "failed",
+      lastError: result.lastError.slice(0, MAX_STORED_EMAIL_ERROR_LENGTH),
+    });
+  });
+}
 
 async function getClientIp(): Promise<string> {
   const headersList = await headers();
@@ -114,7 +156,9 @@ export async function createOrder(rawInput: unknown): Promise<CreateOrderResult>
         status: paymentStatus,
       },
     });
-    return { ok: true, order: toOrderSummary(record) };
+    const order = toOrderSummary(record);
+    scheduleOrderConfirmationEmail(order);
+    return { ok: true, order };
   } catch (error) {
     // Race: two near-simultaneous submits both passed the findOrderByIdempotencyKey check above.
     if (isDuplicateKeyError(error)) {

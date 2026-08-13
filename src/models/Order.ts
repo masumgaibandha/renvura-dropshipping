@@ -80,6 +80,31 @@ const orderStatusHistoryEntrySchema = new Schema(
   { _id: false },
 );
 
+/**
+ * Phase 10.5: tracks the one order-confirmation email attempt for this
+ * order — never a queue, never retried automatically (see
+ * `src/lib/email-provider.ts`/`src/actions/orders.ts`). `"not_applicable"`
+ * (the default) means the customer never supplied an email at checkout, so
+ * no send was ever attempted; `"pending"` is set synchronously right after
+ * order insert (before the actual send is attempted, via Next's `after()`)
+ * so a crash between insert and send still leaves a visible, honest trail
+ * for admin troubleshooting rather than silence. `providerMessageId` is
+ * Resend's own email id — logged for support/troubleshooting, never
+ * returned to the customer (see `toOrderSummary`, which omits this whole
+ * subdocument).
+ */
+const orderNotificationsSchema = new Schema(
+  {
+    orderConfirmationEmail: {
+      status: { type: String, enum: ["not_applicable", "pending", "sent", "failed"], default: "not_applicable" },
+      sentAt: { type: Date, default: null },
+      providerMessageId: { type: String, default: null },
+      lastError: { type: String, default: null },
+    },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, unique: true, trim: true },
@@ -102,6 +127,7 @@ const orderSchema = new Schema(
       index: true,
     },
     statusHistory: { type: [orderStatusHistoryEntrySchema], default: [] },
+    notifications: { type: orderNotificationsSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

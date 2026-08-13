@@ -4,6 +4,7 @@ import type {
   AdminOrderDetail,
   AdminOrderListItem,
   Order,
+  OrderConfirmationEmailStatus,
   OrderListItem,
   OrderStatus,
   OrderSummary,
@@ -19,11 +20,24 @@ import type {
  */
 
 /** What comes back from Mongo — same shape as `Order` minus `idempotencyKey`'s absence-in-summaries concern; dates are real `Date`s here, ISO strings only at the summary boundary. */
-interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory"> {
+interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory" | "notifications"> {
   statusHistory: { status: OrderStatus; changedAt: Date; changedBy: string | null }[];
+  // Optional: orders placed before Phase 10.5 never had this field written — see `toAdminOrderDetail`.
+  notifications?: {
+    orderConfirmationEmail: {
+      status: OrderConfirmationEmailStatus;
+      sentAt: Date | null;
+      providerMessageId: string | null;
+      lastError: string | null;
+    };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
+
+const DEFAULT_ORDER_NOTIFICATIONS: NonNullable<OrderRecord["notifications"]> = {
+  orderConfirmationEmail: { status: "not_applicable", sentAt: null, providerMessageId: null, lastError: null },
+};
 
 const ORDER_NUMBER_SUFFIX_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const ORDER_NUMBER_SUFFIX_LENGTH = 6;
@@ -102,8 +116,43 @@ export async function insertOrder(input: InsertOrderInput): Promise<OrderRecord>
   await connectToDatabase();
   const now = new Date();
   const statusHistory = [{ status: "pending" as OrderStatus, changedAt: now, changedBy: null }];
-  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory });
-  return { ...input, orderStatus: "pending", statusHistory, createdAt: now, updatedAt: now };
+  // "pending" (not "not_applicable") the moment an email address exists, written before the actual
+  // send is even attempted — see the doc comment on `orderNotificationsSchema` in `src/models/Order.ts`.
+  const notifications: NonNullable<OrderRecord["notifications"]> = {
+    orderConfirmationEmail: {
+      status: input.customer.email ? "pending" : "not_applicable",
+      sentAt: null,
+      providerMessageId: null,
+      lastError: null,
+    },
+  };
+  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory, notifications });
+  return { ...input, orderStatus: "pending", statusHistory, notifications, createdAt: now, updatedAt: now };
+}
+
+/**
+ * Records the outcome of the one order-confirmation-email attempt
+ * (`src/actions/orders.ts`'s `after()` callback calls this right after
+ * `sendOrderConfirmationEmail` resolves). Never throws — a failure to
+ * record the outcome must not surface as anything the customer sees, since
+ * this always runs after the order response has already been returned.
+ */
+export async function recordOrderConfirmationEmailResult(
+  orderNumber: string,
+  result: { status: "sent" | "failed"; providerMessageId?: string | null; lastError?: string | null },
+): Promise<void> {
+  await connectToDatabase();
+  await OrderModel.updateOne(
+    { orderNumber },
+    {
+      $set: {
+        "notifications.orderConfirmationEmail.status": result.status,
+        "notifications.orderConfirmationEmail.sentAt": result.status === "sent" ? new Date() : null,
+        "notifications.orderConfirmationEmail.providerMessageId": result.providerMessageId ?? null,
+        "notifications.orderConfirmationEmail.lastError": result.lastError ?? null,
+      },
+    },
+  );
 }
 
 /** Sanitized projection for the success page / post-creation response — no Mongo `_id`, no `idempotencyKey`, no `statusHistory`. */
@@ -159,6 +208,7 @@ export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
  * — so this defaults to `[]` rather than assuming every historical order already has it.
  */
 export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
+  const notifications = record.notifications ?? DEFAULT_ORDER_NOTIFICATIONS;
   return {
     orderNumber: record.orderNumber,
     idempotencyKey: record.idempotencyKey,
@@ -170,6 +220,12 @@ export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
     payment: record.payment,
     orderStatus: record.orderStatus,
     statusHistory: (record.statusHistory ?? []).map((entry) => ({ ...entry, changedAt: entry.changedAt.toISOString() })),
+    notifications: {
+      orderConfirmationEmail: {
+        ...notifications.orderConfirmationEmail,
+        sentAt: notifications.orderConfirmationEmail.sentAt ? notifications.orderConfirmationEmail.sentAt.toISOString() : null,
+      },
+    },
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

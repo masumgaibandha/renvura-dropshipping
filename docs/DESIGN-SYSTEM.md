@@ -600,20 +600,51 @@ see §13. `/login` and `/signup` are `noindex,nofollow` (customer PII entry poin
 so is the whole `/account/*` subtree (set once in `src/app/account/layout.tsx`'s metadata export,
 inherited by every nested page).
 
-**`/login`** (`LoginForm.tsx`, Client): Email/Password. A failed sign-in always shows "Invalid
-email or password" — deliberately generic, matching Better Auth's own `/sign-in/email` error,
-which already never distinguishes a wrong password from a nonexistent email (verified live: both
-cases return the identical message). A `callbackURL` query param (set by `proxy.ts` when
-redirecting an unauthenticated `/account/*` visit) is validated as a same-origin relative path
+**`/login`** (`LoginForm.tsx`, Client): Email/Password, plus (Phase 10.5) a "Forgot password?" link
+next to the Password label → `/forgot-password`. A failed sign-in shows "Invalid email or
+password" — deliberately generic, matching Better Auth's own `/sign-in/email` error, which already
+never distinguishes a wrong password from a nonexistent email (verified live: both cases return
+the identical message) — **except** when Better Auth's own distinct `EMAIL_NOT_VERIFIED` error
+comes back (only reachable after the password already matched), which instead shows "Please verify
+your email to continue." plus a "Resend verification code" action that sends a fresh OTP and routes
+to `/verify-email`. A `callbackURL` query param (set by `proxy.ts` when redirecting an
+unauthenticated `/account/*` visit) is validated as a same-origin relative path
 (`getSafeRedirectPath`, `src/utils/safe-redirect.ts`) before ever being used as a redirect target —
-open-redirect protection, since a query param is untrusted input like any other.
+open-redirect protection, since a query param is untrusted input like any other. A `?reset=success`
+query param (set by `/reset-password` after a successful reset) shows a small confirmation banner
+above the form.
 
 **`/signup`** (`SignupForm.tsx`, Client): Full Name/Email/Password/Confirm Password. Password
 match and an 8-character minimum are checked client-side before ever calling `signUp.email()`;
 Better Auth re-validates length server-side regardless. A duplicate email shows Better Auth's own
 specific message ("User already exists...") — unlike login, revealing this on the *signup* form is
-normal, expected UX, not an enumeration risk. `autoSignIn: true` means a successful signup already
-has a session, so this redirects straight to `/account` — no separate login step.
+normal, expected UX, not an enumeration risk. As of Phase 10.5, `requireEmailVerification: true`
+means a successful signup no longer creates a session — this redirects to `/verify-email` instead
+of `/account`, and the account can't be used to sign in until that OTP is entered.
+
+## 15. Customer verification & account recovery (`/verify-email`, `/forgot-password`, `/reset-password`, Phase 10.5)
+
+Three new `noindex,nofollow` routes, all reusing the exact input/button/error-banner styling
+established by `/login`/`/signup` — no new form-component conventions. See
+`docs/ARCHITECTURE.md`'s "Customer verification & account recovery" section for the security model;
+this section is UI/layout only.
+
+**`/verify-email`** (`VerifyEmailForm.tsx`, Client, `Suspense`-wrapped for `useSearchParams()` like
+`LoginForm.tsx`): reads `?email=` from the query, shows it masked (`j***n@example.com`), a 6-digit
+code input (`inputMode="numeric"`, `autoComplete="one-time-code"` for easy paste/autofill), Verify,
+and a Resend link with a live countdown during its cooldown. Success redirects straight to
+`/account` — `autoSignInAfterVerification` means no separate login step, mirroring the
+pre-Phase-10.5 `autoSignIn` signup experience.
+
+**`/forgot-password`** (`ForgotPasswordForm.tsx`, Client): a single Email field. Submitting always
+swaps to the same confirmation message ("If an account exists for this email, we've sent password
+reset instructions.") regardless of whether the account exists — there is no success/failure
+branching in this component at all, by design, since the underlying endpoint itself never
+distinguishes the two cases either.
+
+**`/reset-password`** (`ResetPasswordForm.tsx`, Client, `Suspense`-wrapped): Email (prefilled from
+`/forgot-password`'s link but editable), 6-digit code, New Password, Confirm Password — same
+client-side password rules as `/signup`. Success redirects to `/login?reset=success`.
 
 **`/account/*`** (`src/app/account/layout.tsx` gates the whole subtree — see
 `docs/ARCHITECTURE.md`'s "Authentication & customer accounts" section for the security model, this
@@ -664,7 +695,7 @@ original icon+"Login" link unchanged; logged-in renders a HeroUI `Dropdown` (sam
 mobile drawer's account icon stays icon-only (unchanged visually) but its `href` now switches
 between `/login`/`/account` based on the same `useSession()` read.
 
-## 15. Admin dashboard (`/admin/*`, Phase 10)
+## 16. Admin dashboard (`/admin/*`, Phase 10)
 
 Deliberately visually distinct from the storefront, not a themed extension of it — an operator
 tool, not a customer-facing surface, per the Phase 10 brief's "keep clean, compact, operational"

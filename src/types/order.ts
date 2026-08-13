@@ -117,6 +117,24 @@ export interface OrderPayment {
   status: PaymentStatus;
 }
 
+export type OrderConfirmationEmailStatus = "not_applicable" | "pending" | "sent" | "failed";
+
+/**
+ * Phase 10.5 — tracks the single order-confirmation-email attempt for this
+ * order (`src/lib/email-provider.ts`'s `sendOrderConfirmationEmail`, fired
+ * from `createOrder` via `after()`). Admin-only: `providerMessageId` is
+ * Resend's internal email id, never customer-facing — see
+ * `AdminOrderDetail` vs. `OrderSummary` below.
+ */
+export interface OrderNotifications {
+  orderConfirmationEmail: {
+    status: OrderConfirmationEmailStatus;
+    sentAt: string | null;
+    providerMessageId: string | null;
+    lastError: string | null;
+  };
+}
+
 export interface Order {
   orderNumber: string;
   /** Client-generated, server-enforced-unique — prevents duplicate orders from a double submit. */
@@ -135,12 +153,13 @@ export interface Order {
   payment: OrderPayment;
   orderStatus: OrderStatus;
   statusHistory: OrderStatusHistoryEntry[];
+  notifications: OrderNotifications;
   createdAt: string;
   updatedAt: string;
 }
 
-/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing). */
-export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory">;
+/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing), no `notifications` (Resend's internal message id is admin-only). */
+export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications">;
 
 /** Full admin projection — the only place `statusHistory`/`customerUserId`/`idempotencyKey` are ever returned. See `src/services/orders.ts`'s `toAdminOrderDetail`. */
 export type AdminOrderDetail = Order;
