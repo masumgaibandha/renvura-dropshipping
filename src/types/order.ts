@@ -135,6 +135,22 @@ export interface OrderNotifications {
   };
 }
 
+export type MetaPurchaseStatus = "not_applicable" | "pending" | "sent" | "failed";
+
+/**
+ * Phase 11 — tracks the single Meta CAPI Purchase send attempt for this order (see
+ * `src/lib/analytics/meta-server.ts`, fired from `createOrder` via `after()`, same structural
+ * pattern as `OrderNotifications.orderConfirmationEmail`). Admin-only, like that field — never
+ * part of `OrderSummary`.
+ */
+export interface OrderAnalytics {
+  metaPurchase: {
+    status: MetaPurchaseStatus;
+    eventId: string | null;
+    sentAt: string | null;
+  };
+}
+
 export interface Order {
   orderNumber: string;
   /** Client-generated, server-enforced-unique — prevents duplicate orders from a double submit. */
@@ -154,12 +170,13 @@ export interface Order {
   orderStatus: OrderStatus;
   statusHistory: OrderStatusHistoryEntry[];
   notifications: OrderNotifications;
+  analytics: OrderAnalytics;
   createdAt: string;
   updatedAt: string;
 }
 
-/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing), no `notifications` (Resend's internal message id is admin-only). */
-export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications">;
+/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing), no `notifications` (Resend's internal message id is admin-only), no `analytics` (Meta's internal send status is admin-only — the browser Purchase event itself is fired separately by `PurchaseTracker.tsx` using only `orderNumber`/items/value, not this field). */
+export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications" | "analytics">;
 
 /** Full admin projection — the only place `statusHistory`/`customerUserId`/`idempotencyKey` are ever returned. See `src/services/orders.ts`'s `toAdminOrderDetail`. */
 export type AdminOrderDetail = Order;

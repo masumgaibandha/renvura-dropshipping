@@ -580,6 +580,113 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   reading the DB directly today, but there is no `/admin` UI surfacing it and no retry button; this
   is intentionally out of scope until real delivery is verified and worth building a queue for.
 
+## Analytics & measurement (Phase 11)
+
+- **Scope**: Meta Pixel (browser) + Meta Conversions API (server) + Google Analytics 4 only.
+  Explicitly NOT built: Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email
+  marketing automation, CRM integrations, courier integration, an automated payment gateway, an
+  attribution platform, or server-side GTM — don't add any of these without a fresh scoping
+  conversation.
+- **Centralized architecture, never scattered raw calls.** Every `fbq()`/`gtag()`/Meta Graph API
+  call lives in `src/lib/analytics/` — `config.ts` (env/enablement, the one place that reads
+  `NEXT_PUBLIC_META_PIXEL_ID`/`NEXT_PUBLIC_GA_MEASUREMENT_ID`/`META_CAPI_ACCESS_TOKEN`/etc.),
+  `event-types.ts` (shared event payload shapes), `event-id.ts` (`purchaseEventId`/
+  `randomEventId`), `normalization.ts` (server-only — email/phone normalization + SHA-256 hashing
+  for Meta CAPI `user_data`, imports `node:crypto` specifically so a Client Component import fails
+  the build instead of silently shipping hashing logic to the browser), `mapping.ts` (the one
+  Product/CartItem/OrderItem → `AnalyticsItem` mapping, reused everywhere instead of duplicated per
+  component), `meta-client.ts` (browser Pixel wrapper), `ga4-client.ts` (browser gtag wrapper),
+  `meta-server.ts` (server CAPI sender). A component that wants to fire an event imports one of the
+  `track*` functions from `meta-client.ts`/`ga4-client.ts` — it never touches `window.fbq`/
+  `window.gtag` directly.
+- **Product identity is the catalog slug, everywhere** (`mapping.ts`) — never a Mongo `_id`, never
+  `wholesalePrice`. `AnalyticsItem.price` is always a real, non-null `sellingPrice`/`OrderItem.
+  unitPrice`; `productToAnalyticsItem` returns `null` (and the caller skips firing) for a product
+  with no selling price yet — this is what keeps the held-back `skin1004-centella-ampoule-100ml`
+  from ever producing a misleading value-bearing event, the same "gracefully omit, never fabricate"
+  rule already applied to `Price`/`Badges` (see "UI / storefront component rules" above).
+- **`event_id` deduplication is Purchase-only.** No other event in this phase has a server CAPI
+  counterpart, so only Purchase needs a deterministic id shared between browser and server:
+  `purchaseEventId(orderNumber) = "purchase:{orderNumber}"` (`event-id.ts`) — never the Mongo
+  `_id`, never a timestamp (a timestamp would differ between the server's CAPI send inside
+  `createOrder` and the browser's Pixel fire on `/order-success` moments later, defeating
+  deduplication entirely). Every other event gets a fresh `randomEventId()` purely for its own
+  identity, not relied on for cross-provider matching.
+- **Purchase is server-authoritative, structurally idempotent, and never blocks checkout.**
+  `createOrder` (`src/actions/orders.ts`) calls `scheduleMetaPurchaseCapi(order, requestContext)`
+  from the exact same genuinely-new-order call site as `scheduleOrderConfirmationEmail` — after
+  the idempotency-key early return and the race-loser early return, both of which return before
+  this line, so a retried/racing submit can never schedule a second CAPI send for one order. It
+  runs inside `after()` (Next's stable post-response hook, same as the confirmation email), so a
+  slow/failed Meta API call can never delay or fail order creation — same never-throw,
+  never-rollback principle as `sendOrderConfirmationEmail`. `Order.analytics.metaPurchase`
+  (`{status, eventId, sentAt}`, Phase 11's analogue to `notifications.orderConfirmationEmail`) is
+  set to `"pending"` at insert time when `isMetaCapiConfigured()`, else `"not_applicable"` —
+  `eventId` is always the deterministic value regardless, so an admin can always cross-reference
+  Meta Events Manager once CAPI is later configured. This is admin-only, never part of
+  `OrderSummary`.
+- **Purchase value = final order total, including delivery fee**, for both providers — never
+  `wholesalePrice`/profit. GA4 additionally reports `shipping: deliveryFee` as a breakout of that
+  same total (GA4's own ecommerce semantics support `value` including shipping while also
+  reporting it separately); Meta's Purchase schema has no separate shipping field, so `value` is
+  simply the total the customer actually paid. `ViewContent`/`AddToCart`/`InitiateCheckout` values
+  are `sellingPrice × quantity` (cart-derived, display-only — never authoritative, matching this
+  codebase's existing untrusted-client-cart-state rule).
+- **The browser Purchase event never trusts `localStorage`.** `/order-success/[orderNumber]`
+  (already a Server Component reading the order from MongoDB) passes only a small sanitized shape
+  (`eventId`, `orderNumber`, mapped items, `value`, `deliveryFee`) to `PurchaseTracker.tsx` (Client
+  Component) — never the raw `OrderSummary`, never anything read from the cart context (which may
+  already be cleared by the time this page renders anyway). A `sessionStorage` marker keyed by
+  `orderNumber` suppresses a same-tab refresh from re-firing, but this is a UX nicety only —
+  correctness against real double-counting comes from Meta's `event_id` dedup and GA4's
+  `transaction_id`, not this marker (see its absence in private browsing is explicitly a no-op,
+  not a bug).
+- **Meta CAPI `user_data` is hashed/omitted, never raw.** `normalization.ts`'s
+  `normalizeEmailForHashing` (lowercase + trim) and `normalizePhoneForMeta` (reuses
+  `normalizeBdPhone`, then converts local `01XXXXXXXXX` to Meta's required `8801XXXXXXXXX` form —
+  no `+`, no punctuation) run before `hashForMeta`'s SHA-256. `client_ip_address`/
+  `client_user_agent` come from the actual checkout request's own headers (same trust level as
+  `getClientIp()`'s existing `x-forwarded-for` handling for rate limiting); `_fbp`/`_fbc` are read
+  from the request's own cookies (set automatically by the Meta Pixel base snippet — never
+  fabricated) and simply omitted when absent. None of this is ever logged.
+- **PageView/page_view URLs are pathname-only, never the full URL with query string.**
+  `RouteTracker.tsx` reads only `usePathname()`, deliberately never `useSearchParams()` — this is
+  what keeps `/verify-email?email=...`, `/reset-password?email=...`, and any other PII-bearing
+  query string from ever reaching Meta/GA4. `usePathname()` alone needs no Suspense boundary
+  (unlike `useSearchParams()`, see `SearchBar.tsx`), so this stays simple. `AnalyticsScripts.tsx`
+  fires the very first PageView itself (its own init snippet); `RouteTracker.tsx` explicitly skips
+  its own first render (a ref guard) so the initial load is never double-counted, then fires on
+  every subsequent client-side navigation.
+- **`/track-order` never sends order number + phone to Meta/GA** — that page only gets the generic
+  pathname-only PageView like any other route; the lookup form's own submission never triggers a
+  separate analytics event.
+- **Analytics-disabled is the default until configured**, and is never commerce-critical.
+  `isMetaPixelEnabled()`/`isGa4Enabled()`/`isMetaCapiConfigured()` (`config.ts`) each require the
+  relevant ID/token to be set — with nothing configured, `AnalyticsScripts.tsx` renders nothing,
+  every `track*` call silently no-ops, and `scheduleMetaPurchaseCapi` never even schedules the
+  `after()` callback. Locally, analytics additionally requires
+  `NEXT_PUBLIC_ANALYTICS_ENABLED=true` even if an ID happens to be present in `.env.local` —
+  `NODE_ENV=production` (Vercel Production/Preview) is the only environment where a configured ID
+  alone is enough, so `npm run dev` never pollutes real Meta/GA4 data by accident.
+- **Meta Test Events**: set `META_TEST_EVENT_CODE` (from Meta Events Manager → Test Events) to have
+  `sendMetaCapiPurchase` include `test_event_code` in the CAPI payload — never hardcoded, purely an
+  optional env var read at send time.
+- **Meta Graph API version is configurable, not memorized.** `meta-server.ts`'s
+  `META_GRAPH_API_VERSION_DEFAULT` is a snapshot, not a guarantee — verify against
+  https://developers.facebook.com/docs/graph-api/changelog before relying on it in production, and
+  override with `META_GRAPH_API_VERSION` if Meta has since deprecated it.
+- **Consent gate is a single function today, not a platform.** `isAnalyticsConsentGranted()`
+  (`config.ts`) always returns `true` — Bangladesh audience, no GDPR-style consent-banner
+  requirement assumed without legal analysis, per the original Phase 11 brief. It's factored out on
+  its own specifically so a real consent-management flow can replace just this one function later
+  without touching any `track*` call site.
+- **`Order.analytics`/`notifications` are the only two places anything Meta/Resend-related is
+  persisted** — no request/response bodies, no access tokens, no hashed customer data are ever
+  stored; both are thin status records for admin visibility, not event logs.
+- **Cancellation/refund attribution is explicitly out of scope for this phase** — no Meta
+  refund/cancellation adjustment event is sent when an order transitions to `cancelled`/`returned`.
+  Revisit only if asked.
+
 ## Design system contrast rule
 
 Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
@@ -607,13 +714,16 @@ the location data or its dependent-select validation logic. Courier API integrat
 automated payment gateway (e.g. SSLCommerz) still come later — don't hardcode a specific provider
 prematurely.
 
-## Marketing / tracking / SEO (future-ready, not yet implemented)
+## Marketing / tracking / SEO
 
-Architecture should stay compatible with: Meta Pixel + Conversions API, GA4, GTM, and an internal
-order lifecycle (`order_created` → `order_confirmed` → `supplier_submitted` → `shipped` →
-`delivered` / `cancelled` / `returned`). SEO: Next.js Metadata API, canonical URLs, sitemap,
-robots.txt, Open Graph, JSON-LD Product schema. Don't wire any of this up until the relevant
-phase — just don't design yourself into a corner that makes it hard later.
+Meta Pixel + Conversions API and GA4 are implemented as of Phase 11 — see "Analytics &
+measurement (Phase 11)" above. Still future-ready but NOT implemented: GTM (direct gtag/fbq is
+used instead, deliberately — see Phase 11 section), Google Ads conversion tracking, TikTok Pixel,
+Microsoft Ads, an internal order-lifecycle event bus, email marketing automation, and CRM
+integrations — don't wire any of this up until asked. SEO: Next.js Metadata API, canonical URLs,
+sitemap, robots.txt, Open Graph, JSON-LD Product schema are already implemented (Phases 3–6); a
+sitemap.xml/robots.txt route has not been added — don't design yourself into a corner that makes
+it hard later.
 
 ## Coding standards
 
@@ -640,24 +750,31 @@ CRUD, customer/inventory views, homepage curation, `StoreSettings`, analytics, a
 recovery — Better Auth `email-otp`-backed email verification and forgot/reset password,
 `/verify-email`, `/forgot-password`, `/reset-password`, plus a Resend-backed order-confirmation
 email; checkout phone OTP was built then explicitly deferred in favor of manual phone/WhatsApp
-order confirmation — see "Customer verification & account recovery (Phase 10.5)" above) are done —
+order confirmation — see "Customer verification & account recovery (Phase 10.5)" above), and 11
+(Analytics & measurement — Meta Pixel, Meta Conversions API, GA4, `event_id` Purchase
+deduplication — see "Analytics & measurement (Phase 11)" above) are done —
 see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and
 `docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI shell, homepage, listing pages, product detail
-page, cart/wishlist, checkout/order creation/tracking, customer accounts, and the admin dashboard
-exist and are wired in, but do not build an automated payment gateway (bKash/Nagad/Rocket APIs),
-courier API integration, marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking,
+page, cart/wishlist, checkout/order creation/tracking, customer accounts, the admin dashboard, and
+analytics measurement exist and are wired in, but do not build an automated payment gateway
+(bKash/Nagad/Rocket APIs), courier API integration, Google Ads conversion tracking, TikTok Pixel,
+Microsoft Ads, email marketing automation, CRM integrations, server-side GTM, Meta refund/
+cancellation attribution, historical guest-order linking,
 a verified email-*change* flow (email *verification* itself is done, see Phase 10.5 — "email is
 read-only on `/account/profile`" from Phase 9 still holds), social login, checkout phone OTP
 verification (deferred — see Phase 10.5), account phone-update verification, "log in as customer"
 impersonation, product image upload UI, bulk product import/export, an automated test suite, an
 automated email-retry queue, or advanced accounting/multi-vendor/warehouse features until asked.
 `Product`/`Category` MongoDB models are connected as of Phase 10 (see above) — `Order` (now
-carrying `notifications.orderConfirmationEmail`, Phase 10.5), `Address`, `AdminAuditLog`, and
+carrying `notifications.orderConfirmationEmail` from Phase 10.5 and `analytics.metaPurchase` from
+Phase 11), `Address`, `AdminAuditLog`, and
 `StoreSettings` are also connected, plus Better Auth's own `user`/`session`/`account`/`verification`
 collections. No Resend account/API key is configured yet — see Phase 10.5's "fail closed in
 production" note above; this blocks real email delivery (verification, password reset, and order
 confirmation alike) until `RESEND_API_KEY` is set and the `renvura.com` domain is verified in
-Resend. Do not wire up real newsletter logic, or
+Resend. No Meta Pixel ID, Meta CAPI access token, or GA4 Measurement ID is configured yet either —
+see "Analytics & measurement (Phase 11)" above for what's needed before real Meta/GA4 delivery can
+be verified. Do not wire up real newsletter logic, or
 create fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
 values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,
 unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable" and disabled Add to

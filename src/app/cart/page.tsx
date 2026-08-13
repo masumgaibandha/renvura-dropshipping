@@ -2,11 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 
 import { QuantitySelector } from "@/components/product/QuantitySelector";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
 import { Container } from "@/components/layout/Container";
 import { useCart } from "@/contexts/CartContext";
+import { cartItemToAnalyticsItem } from "@/lib/analytics/mapping";
+import { trackGaViewCart } from "@/lib/analytics/ga4-client";
 import { formatBDT } from "@/utils/currency";
 
 const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label: "Cart" }];
@@ -22,6 +25,13 @@ const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label
  */
 export default function CartPage() {
   const { items, itemCount, subtotal, isHydrated, removeItem, updateQuantity } = useCart();
+  const hasFiredViewCart = useRef(false);
+
+  useEffect(() => {
+    if (!isHydrated || items.length === 0 || hasFiredViewCart.current) return;
+    hasFiredViewCart.current = true;
+    trackGaViewCart({ items: items.map(cartItemToAnalyticsItem), value: subtotal });
+  }, [isHydrated, items, subtotal]);
 
   return (
     <Container>

@@ -743,3 +743,13 @@ form library — field count and validation are modest enough that one wasn't ju
 
 **Tables**: plain `<table>` with `border-border` row dividers, `overflow-x-auto` wrappers for
 narrow viewports (never a horizontally-scrolling page body) — no data-grid library.
+
+## 17. Analytics measurement (Phase 11) — no visual surface
+
+Meta Pixel/Conversions API and GA4 (`src/lib/analytics/`, `src/components/analytics/`) have no UI
+of their own — `AnalyticsScripts.tsx`/`RouteTracker.tsx`/`PurchaseTracker.tsx` all render nothing
+(`null` or invisible `<Script>` tags), so there is no design-token/layout guidance to add here. See
+CLAUDE.md's "Analytics & measurement (Phase 11)" section and `docs/ARCHITECTURE.md`'s "Marketing /
+tracking (Phase 11)" section for the architecture. The one storefront-visible change this phase
+makes is the rewritten "Third-Party Analytics & Advertising" section on `/privacy-policy` — plain
+prose within that page's existing section styling, no new component.

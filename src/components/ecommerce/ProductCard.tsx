@@ -66,7 +66,13 @@ export function ProductCard({ product, categoryLabel, className }: ProductCardPr
           {inventory.status === "out_of_stock" && <StockBadge status="out_of_stock" />}
         </div>
 
-        <WishlistToggleButton slug={product.slug} title={product.title} className="absolute top-2 right-2 bg-surface/85 backdrop-blur" />
+        <WishlistToggleButton
+          slug={product.slug}
+          title={product.title}
+          price={pricing.sellingPrice}
+          category={product.subcategory ?? product.category}
+          className="absolute top-2 right-2 bg-surface/85 backdrop-blur"
+        />
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-2 md:gap-1.5 md:p-3">

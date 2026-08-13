@@ -1,17 +1,22 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { after } from "next/server";
 
 import { isPaymentMethodConfigured } from "@/config/payment";
 import { getCurrentUser } from "@/lib/auth-session";
 import { sendOrderConfirmationEmail } from "@/lib/email-provider";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isMetaCapiConfigured } from "@/lib/analytics/config";
+import { purchaseEventId } from "@/lib/analytics/event-id";
+import { orderItemToAnalyticsItem } from "@/lib/analytics/mapping";
+import { sendMetaCapiPurchase } from "@/lib/analytics/meta-server";
 import {
   findOrderByIdempotencyKey,
   findOrderByOrderNumber,
   generateOrderNumber,
   insertOrder,
+  recordMetaPurchaseResult,
   recordOrderConfirmationEmailResult,
   toOrderSummary,
   toTrackingSummary,
@@ -66,6 +71,77 @@ async function getClientIp(): Promise<string> {
   const forwarded = headersList.get("x-forwarded-for");
   if (forwarded) return forwarded.split(",")[0].trim();
   return headersList.get("x-real-ip") ?? "unknown";
+}
+
+/**
+ * Fires the Meta CAPI Purchase event (Phase 11) via `after()`, same deferred/non-blocking pattern
+ * as `scheduleOrderConfirmationEmail` above, and called from the exact same genuinely-new-order
+ * call site — `createOrder`'s idempotency-key early return and race-loser early return both
+ * return before this call site, so a retried/racing submit can never schedule a second CAPI send
+ * for the same order (see `docs/ARCHITECTURE.md`'s Phase 11 "Purchase CAPI idempotency" note).
+ *
+ * IP/user-agent/`_fbp`/`_fbc` are read from the *current* request (the checkout submission
+ * itself) — never fabricated, and simply omitted from the CAPI payload when a header/cookie is
+ * genuinely absent (`sendMetaCapiPurchase`'s `buildUserData` already handles that). The forwarded
+ * IP is trusted the same way `getClientIp()` above already does for rate limiting — Vercel's own
+ * edge network sets `x-forwarded-for`, this is never client-suppliable.
+ */
+function scheduleMetaPurchaseCapi(order: OrderSummary, requestContext: { ip: string; userAgent: string | null; fbp: string | null; fbc: string | null; eventSourceUrl: string }): void {
+  if (!isMetaCapiConfigured()) {
+    return;
+  }
+
+  after(async () => {
+    const analyticsItems = order.items.map(orderItemToAnalyticsItem);
+    const result = await sendMetaCapiPurchase({
+      purchase: {
+        eventId: purchaseEventId(order.orderNumber),
+        orderNumber: order.orderNumber,
+        items: analyticsItems,
+        value: order.pricing.total,
+        deliveryFee: order.pricing.deliveryFee,
+      },
+      eventSourceUrl: requestContext.eventSourceUrl,
+      userData: {
+        email: order.customer.email ?? null,
+        phone: order.customer.phone,
+        clientIpAddress: requestContext.ip === "unknown" ? null : requestContext.ip,
+        clientUserAgent: requestContext.userAgent,
+        fbp: requestContext.fbp,
+        fbc: requestContext.fbc,
+      },
+    });
+
+    if (result.status === "sent") {
+      await recordMetaPurchaseResult(order.orderNumber, { status: "sent" });
+      return;
+    }
+    if (result.status === "failed") {
+      console.error(`createOrder: Meta CAPI Purchase failed for ${order.orderNumber}`, result.error);
+      await recordMetaPurchaseResult(order.orderNumber, { status: "failed" });
+    }
+    // "not_configured" — nothing to record; insertOrder already set analytics.metaPurchase.status
+    // to "not_applicable" for this case.
+  });
+}
+
+/** Best-effort, never-throwing collection of the analytics request context — a failure here must never affect order creation. */
+async function getAnalyticsRequestContext(orderNumber: string): Promise<{ ip: string; userAgent: string | null; fbp: string | null; fbc: string | null; eventSourceUrl: string }> {
+  try {
+    const headersList = await headers();
+    const cookieStore = await cookies();
+    const proto = headersList.get("x-forwarded-proto") ?? "https";
+    const host = headersList.get("host") ?? "";
+    return {
+      ip: await getClientIp(),
+      userAgent: headersList.get("user-agent"),
+      fbp: cookieStore.get("_fbp")?.value ?? null,
+      fbc: cookieStore.get("_fbc")?.value ?? null,
+      eventSourceUrl: host ? `${proto}://${host}/order-success/${orderNumber}` : `/order-success/${orderNumber}`,
+    };
+  } catch {
+    return { ip: "unknown", userAgent: null, fbp: null, fbc: null, eventSourceUrl: `/order-success/${orderNumber}` };
+  }
 }
 
 function zodFieldErrors(issues: { path: PropertyKey[]; message: string }[]): Record<string, string> {
@@ -158,6 +234,7 @@ export async function createOrder(rawInput: unknown): Promise<CreateOrderResult>
     });
     const order = toOrderSummary(record);
     scheduleOrderConfirmationEmail(order);
+    scheduleMetaPurchaseCapi(order, await getAnalyticsRequestContext(order.orderNumber));
     return { ok: true, order };
   } catch (error) {
     // Race: two near-simultaneous submits both passed the findOrderByIdempotencyKey check above.

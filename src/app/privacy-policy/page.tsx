@@ -17,10 +17,9 @@ const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label
  * Describes only what this codebase actually does today — every claim here
  * should be traceable to a real feature (Better Auth accounts, `Order`/
  * `Address` MongoDB collections, manual bKash/Nagad/Rocket verification,
- * cart/wishlist localStorage). Deliberately does NOT claim Meta Pixel/GA4/
- * any third-party analytics is active — that's Phase 11, not built yet —
- * and does not invent a registered legal entity name, retention periods, or
- * a formal compliance framework this project hasn't verified.
+ * cart/wishlist localStorage, Phase 11's Meta Pixel/Conversions API/GA4
+ * measurement). Does not invent a registered legal entity name, retention
+ * periods, or a formal compliance framework this project hasn't verified.
  */
 export default function PrivacyPolicyPage() {
   return (
@@ -98,11 +97,36 @@ export default function PrivacyPolicyPage() {
 
         <section>
           <h2 className="text-h3 text-foreground">Third-Party Analytics &amp; Advertising</h2>
-          <p className="mt-3 text-body text-foreground/70">
-            As of today, this site does not use third-party analytics or advertising trackers (such as Meta Pixel or Google
-            Analytics). If that changes in the future, this page will be updated to reflect it before any such tracking
-            goes live.
-          </p>
+          <div className="mt-3 space-y-3 text-body text-foreground/70">
+            <p>
+              This site uses Meta (Facebook/Instagram) Pixel and Conversions API, and Google Analytics 4, to measure how
+              people use the store — for example, which product pages are viewed, what&apos;s searched for, what&apos;s
+              added to a cart or wishlist, and when an order is successfully placed. This helps us understand what&apos;s
+              working and, where relevant, measure the results of advertising.
+            </p>
+            <p>
+              <strong className="text-foreground">Meta Pixel</strong> runs in your browser and sets cookies (such as{" "}
+              <code className="rounded bg-surface-soft px-1 py-0.5 text-xs">_fbp</code> and, if you arrived from a Meta ad,{" "}
+              <code className="rounded bg-surface-soft px-1 py-0.5 text-xs">_fbc</code>) to help Meta measure ad
+              performance. <strong className="text-foreground">Meta Conversions API</strong> sends a matching copy of the
+              same order-completion event directly from our server for orders that are successfully placed, so the event
+              still reaches Meta even if a browser blocks the Pixel — Meta then treats the two as a single event rather
+              than counting it twice. When we send this server-side event, we include your email address and/or phone
+              number only in cryptographically hashed (SHA-256) form — never in plain text — plus your browser&apos;s IP
+              address and user agent. We never send your delivery address, payment details (including bKash/Nagad/Rocket
+              Transaction IDs), or Renvura&apos;s own product costs to Meta or Google.
+            </p>
+            <p>
+              <strong className="text-foreground">Google Analytics 4</strong> similarly runs in your browser to measure page
+              views and store activity. We do not send your name, email, phone number, or delivery address to Google
+              Analytics.
+            </p>
+            <p>
+              This measurement currently runs for every visitor — this site does not yet show a cookie-consent banner. If
+              that changes, this page and the site&apos;s behavior will be updated accordingly. If analytics isn&apos;t
+              configured (for example, while a feature is still being built or tested), none of this runs.
+            </p>
+          </div>
         </section>
 
         <section>

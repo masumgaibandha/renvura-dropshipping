@@ -360,9 +360,63 @@ verification (the existing unverified `ProfileForm.tsx` phone field is unchanged
 *change* (only verification was in scope), social/OTP sign-in, full 2FA, and an automated
 email-retry/queue system for a failed order-confirmation send.
 
-## Phase 11 — Tracking / retargeting
-Meta Pixel, Meta Conversions API, GA4, GTM, event wiring (PageView, ViewContent, Search,
-AddToCart, InitiateCheckout, Purchase) and internal order-lifecycle events.
+## Phase 11 — Analytics & measurement ✅
+Meta Pixel (browser), Meta Conversions API (server), and GA4 — event wiring for PageView/page_view,
+ViewContent/view_item, Search/search, AddToCart/add_to_cart, AddToWishlist/add_to_wishlist,
+view_cart (GA4 only — Meta has no standard "ViewCart" event), InitiateCheckout/begin_checkout, and
+Purchase/purchase. See `docs/ARCHITECTURE.md`'s "Marketing / tracking (Phase 11)" section and
+CLAUDE.md's "Analytics & measurement (Phase 11)" section for the full architecture.
+
+**Centralized, not scattered.** Every `fbq()`/`gtag()`/Meta Graph API call lives in
+`src/lib/analytics/` (`config.ts`, `event-types.ts`, `event-id.ts`, `normalization.ts`,
+`mapping.ts`, `meta-client.ts`, `ga4-client.ts`, `meta-server.ts`) — components import `track*`
+helper functions, never touch `window.fbq`/`window.gtag` directly. `AnalyticsScripts.tsx` (Server
+Component, loads the Pixel/gtag.js base snippets) and `RouteTracker.tsx` (Client Component, fires
+PageView/page_view on client-side route changes) mount once in the root layout without making it
+dynamic — `/` and `/products/[slug]` remain statically prerendered, confirmed via `next build`'s
+route output.
+
+**`event_id` deduplication is Purchase-only** — no other event has a server CAPI counterpart in
+this phase. `purchaseEventId(orderNumber) = "purchase:{orderNumber}"` (deterministic, never a
+timestamp, never the Mongo `_id`) is computed identically by the server (`scheduleMetaPurchaseCapi`
+in `src/actions/orders.ts`, scheduled via `after()` from the exact same genuinely-new-order call
+site as the Phase 10.5 order-confirmation email — same idempotency guarantee, same never-block/
+never-rollback principle) and the browser (`PurchaseTracker.tsx` on `/order-success/[orderNumber]`,
+fed only a small sanitized prop shape from the server-rendered order, never `localStorage`).
+`Order.analytics.metaPurchase` (`{status, eventId, sentAt}`) mirrors `notifications.
+orderConfirmationEmail`'s existing pattern exactly, for admin visibility only.
+
+**Purchase value = final order total including delivery fee**, for both providers — GA4 separately
+reports `shipping: deliveryFee` as a breakout of that same total; Meta's schema has no distinct
+shipping field. Never `wholesalePrice`/profit.
+
+**PII protection**: PageView/page_view URLs are pathname-only (`RouteTracker.tsx` never reads
+`useSearchParams()`), so `/verify-email?email=...`/`/reset-password?email=...` and any other
+query-string PII never reaches Meta or GA4. Meta CAPI's `user_data` sends only SHA-256-hashed
+email/phone (`normalization.ts`, lowercase+trim / `normalizeBdPhone` → `8801XXXXXXXXX` before
+hashing) — never raw. GA4 never receives email, phone, name, or address. Neither provider ever
+receives `wholesalePrice`, a payment Transaction ID, or admin notes.
+
+**Analytics-disabled by default until configured, never commerce-critical.** With no Meta Pixel
+ID/GA4 Measurement ID/CAPI token set, `AnalyticsScripts.tsx` renders nothing and every `track*`
+call silently no-ops — checkout, auth, and the rest of the site are completely unaffected. Locally,
+analytics additionally requires `NEXT_PUBLIC_ANALYTICS_ENABLED=true` even with an ID present, so
+`npm run dev` never pollutes real Meta/GA4 data.
+
+**Privacy Policy updated** to accurately describe Meta Pixel/CAPI and GA4, `_fbp`/`_fbc` cookies,
+and the hashed-contact-data CAPI matching — no Bangladesh-specific consent banner was built (none
+identified as legally required), but `isAnalyticsConsentGranted()` is factored out as a single gate
+function specifically so a real consent flow can replace it later without touching any event
+call site.
+
+**Verification**: `tsc --noEmit`, `eslint`, and `next build` all pass clean; `next build`'s route
+output confirms the homepage and product pages stayed statically prerendered. No Meta Pixel ID,
+Meta CAPI access token, or GA4 Measurement ID is configured yet, so real Meta/GA4 delivery is
+unverified in this pass — see the environment variables table in `docs/ARCHITECTURE.md`.
+
+**Explicitly not built**: Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email
+marketing automation, CRM integrations, courier integration, an automated payment gateway, an
+attribution platform, server-side GTM, and Meta refund/cancellation attribution.
 
 ## Phase 12 — SEO / performance / testing
 Dynamic metadata, canonical URLs, sitemap, robots.txt, Open Graph, JSON-LD Product schema, Core

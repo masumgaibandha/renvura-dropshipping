@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import clsx from "clsx";
 import "./globals.css";
 
+import { AnalyticsScripts } from "@/components/analytics/AnalyticsScripts";
+import { RouteTracker } from "@/components/analytics/RouteTracker";
 import { Providers } from "@/components/layout/providers";
 import { StoreShell } from "@/components/layout/StoreShell";
 import { brand, isConfigured } from "@/config/brand";
@@ -40,6 +42,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={clsx(geistSans.variable, geistMono.variable, "h-full antialiased")}
     >
       <body className="min-h-full">
+        <AnalyticsScripts />
+        <RouteTracker />
         <Providers themeProps={{ attribute: "class", defaultTheme: "light", forcedTheme: "light", enableSystem: false }}>
           <StoreShell>{children}</StoreShell>
         </Providers>

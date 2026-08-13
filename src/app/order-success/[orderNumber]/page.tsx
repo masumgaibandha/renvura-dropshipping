@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 
 import { paymentMethodLabels } from "@/config/payment";
 import { Container } from "@/components/layout/Container";
+import { PurchaseTracker } from "@/components/analytics/PurchaseTracker";
+import { purchaseEventId } from "@/lib/analytics/event-id";
+import { orderItemToAnalyticsItem } from "@/lib/analytics/mapping";
 import { findOrderByOrderNumber, toOrderSummary } from "@/services/orders";
 import { PAYMENT_STATUS_LABELS } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
@@ -39,6 +42,14 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
 
   return (
     <Container>
+      <PurchaseTracker
+        eventId={purchaseEventId(order.orderNumber)}
+        orderNumber={order.orderNumber}
+        items={order.items.map(orderItemToAnalyticsItem)}
+        value={order.pricing.total}
+        deliveryFee={order.pricing.deliveryFee}
+      />
+
       <div className="mx-auto max-w-xl py-10 text-center">
         <h1 className="text-h1 text-foreground">Order placed successfully</h1>
         <p className="mt-2 text-body text-foreground/70">

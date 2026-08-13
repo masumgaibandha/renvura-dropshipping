@@ -4,6 +4,9 @@ import { SearchField } from "@heroui/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 
+import { trackGaSearch } from "@/lib/analytics/ga4-client";
+import { trackMetaSearch } from "@/lib/analytics/meta-client";
+
 interface SearchBarProps {
   className?: string;
   placeholder?: string;
@@ -33,6 +36,11 @@ function SearchBarField({ className, placeholder = "Search products…", "aria-l
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = value.trim();
+    if (trimmed) {
+      // Fired once per real search submission, never per keystroke.
+      trackMetaSearch({ searchString: trimmed });
+      trackGaSearch({ searchString: trimmed });
+    }
     router.push(trimmed ? `/shop?q=${encodeURIComponent(trimmed)}` : "/shop");
   }
 

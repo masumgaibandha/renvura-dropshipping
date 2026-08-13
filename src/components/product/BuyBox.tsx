@@ -2,11 +2,14 @@
 
 import { Button } from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { StockBadge } from "@/components/ecommerce/Badges";
 import { Price } from "@/components/ecommerce/Price";
 import { useCart } from "@/contexts/CartContext";
+import { trackGaAddToCart, trackGaViewItem } from "@/lib/analytics/ga4-client";
+import { trackMetaAddToCart, trackMetaViewContent } from "@/lib/analytics/meta-client";
+import { productToAnalyticsItem } from "@/lib/analytics/mapping";
 import type { PublicProduct } from "@/types/product";
 import { QuantitySelector } from "./QuantitySelector";
 
@@ -37,6 +40,19 @@ export function BuyBox({ product, categoryLabel, className }: BuyBoxProps) {
   const [quantity, setQuantity] = useState(1);
   const { addItem } = useCart();
   const router = useRouter();
+  const hasFiredViewContent = useRef(false);
+
+  // Fires once per product-detail-page visit — never if there's no real selling price yet (see
+  // `productToAnalyticsItem`'s "gracefully omit, never fabricate" contract), so e.g. the held-back
+  // Skin1004 100ml never produces a misleading value-bearing event.
+  useEffect(() => {
+    if (hasFiredViewContent.current) return;
+    const analyticsItem = productToAnalyticsItem(product);
+    if (!analyticsItem) return;
+    hasFiredViewContent.current = true;
+    trackMetaViewContent({ item: analyticsItem });
+    trackGaViewItem({ item: analyticsItem });
+  }, [product]);
 
   function cartItem() {
     return {
@@ -49,14 +65,23 @@ export function BuyBox({ product, categoryLabel, className }: BuyBoxProps) {
     };
   }
 
+  function trackAddToCart() {
+    const analyticsItem = productToAnalyticsItem(product, quantity);
+    if (!analyticsItem) return;
+    trackMetaAddToCart({ item: analyticsItem });
+    trackGaAddToCart({ item: analyticsItem });
+  }
+
   function handleAddToCart() {
     if (pricing.sellingPrice === null) return;
     addItem({ ...cartItem(), sellingPrice: pricing.sellingPrice }, quantity);
+    trackAddToCart();
   }
 
   function handleBuyNow() {
     if (pricing.sellingPrice === null) return;
     addItem({ ...cartItem(), sellingPrice: pricing.sellingPrice }, quantity);
+    trackAddToCart();
     router.push("/cart");
   }
 

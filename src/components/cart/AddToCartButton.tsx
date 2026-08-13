@@ -3,6 +3,9 @@
 import { Button } from "@heroui/react";
 
 import { useCart } from "@/contexts/CartContext";
+import { trackGaAddToCart } from "@/lib/analytics/ga4-client";
+import { trackMetaAddToCart } from "@/lib/analytics/meta-client";
+import type { AnalyticsItem } from "@/lib/analytics/event-types";
 import type { CartItemInput } from "@/types/cart";
 
 interface AddToCartButtonProps {
@@ -29,6 +32,10 @@ export function AddToCartButton({ item, disabled, quantity = 1, label, ariaLabel
   function handleAdd() {
     if (item.sellingPrice === null) return;
     addItem({ ...item, sellingPrice: item.sellingPrice }, quantity);
+
+    const analyticsItem: AnalyticsItem = { id: item.slug, name: item.title, price: item.sellingPrice, quantity };
+    trackMetaAddToCart({ item: analyticsItem });
+    trackGaAddToCart({ item: analyticsItem });
   }
 
   return (

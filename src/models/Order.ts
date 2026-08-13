@@ -105,6 +105,26 @@ const orderNotificationsSchema = new Schema(
   { _id: false },
 );
 
+/**
+ * Phase 11: tracks the one Meta Conversions API Purchase send attempt for this order — mirrors
+ * `orderNotificationsSchema` exactly (`"not_applicable"` means Meta CAPI wasn't configured at
+ * order-creation time, so no send was ever attempted; distinct from `"failed"`, a real attempt
+ * that didn't reach Meta). `eventId` is always the deterministic `purchase:{orderNumber}` value
+ * (see `src/lib/analytics/event-id.ts`) — stored so an admin can cross-reference this order against
+ * Meta Events Manager, not because it's ever unpredictable. Never stores request/response bodies,
+ * access tokens, or hashed customer data — this is a status record, not an event log.
+ */
+const orderAnalyticsSchema = new Schema(
+  {
+    metaPurchase: {
+      status: { type: String, enum: ["not_applicable", "pending", "sent", "failed"], default: "not_applicable" },
+      eventId: { type: String, default: null },
+      sentAt: { type: Date, default: null },
+    },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, unique: true, trim: true },
@@ -128,6 +148,7 @@ const orderSchema = new Schema(
     },
     statusHistory: { type: [orderStatusHistoryEntrySchema], default: [] },
     notifications: { type: orderNotificationsSchema, default: () => ({}) },
+    analytics: { type: orderAnalyticsSchema, default: () => ({}) },
   },
   { timestamps: true },
 );

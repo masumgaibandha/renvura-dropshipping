@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 
 import { createOrder } from "@/actions/orders";
 import { useCart } from "@/contexts/CartContext";
+import { cartItemToAnalyticsItem, itemsValue } from "@/lib/analytics/mapping";
+import { trackGaBeginCheckout } from "@/lib/analytics/ga4-client";
+import { trackMetaInitiateCheckout } from "@/lib/analytics/meta-client";
 import type { Address } from "@/types/address";
 import type { PaymentMethod } from "@/types/order";
 import type { DeliveryFeeTable } from "@/utils/delivery";
@@ -64,6 +67,17 @@ export function CheckoutForm({ initialCustomer, savedAddresses = [], deliveryFee
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [isPending, startTransition] = useTransition();
+  const hasFiredInitiateCheckout = useRef(false);
+
+  // Fires once, only once the customer has genuinely reached checkout with a real cart — never on
+  // a background/preload render, and never again on re-renders (form field edits, etc.).
+  useEffect(() => {
+    if (!isHydrated || items.length === 0 || hasFiredInitiateCheckout.current) return;
+    hasFiredInitiateCheckout.current = true;
+    const analyticsItems = items.map(cartItemToAnalyticsItem);
+    trackMetaInitiateCheckout({ items: analyticsItems, value: itemsValue(analyticsItems) });
+    trackGaBeginCheckout({ items: analyticsItems, value: itemsValue(analyticsItems) });
+  }, [isHydrated, items]);
 
   function handleMethodChange(next: PaymentMethod) {
     setMethod(next);

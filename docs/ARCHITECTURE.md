@@ -92,11 +92,15 @@ renvura-dropshipping/
 │   │   │                              AccountSidebar, AccountMobileNav, SignOutButton,
 │   │   │                              HeaderAccountLink, ProfileForm, AddressList, AddressForm —
 │   │   │                              see docs/DESIGN-SYSTEM.md §14
-│   │   └── admin/                    Admin-shell composition (Phase 10): AdminLayout, AdminSidebar,
-│   │                                  AdminTopBar, adminNav.ts, ConfirmActionButton, StatusBadge,
-│   │                                  StatCard, AdminPagination, BarChart, ProductForm,
-│   │                                  CategoryForm, StoreSettingsForm, OrderStatusForm,
-│   │                                  StockAdjustForm, FeaturedToggle, CategoryOrderForm
+│   │   ├── admin/                    Admin-shell composition (Phase 10): AdminLayout, AdminSidebar,
+│   │   │                              AdminTopBar, adminNav.ts, ConfirmActionButton, StatusBadge,
+│   │   │                              StatCard, AdminPagination, BarChart, ProductForm,
+│   │   │                              CategoryForm, StoreSettingsForm, OrderStatusForm,
+│   │   │                              StockAdjustForm, FeaturedToggle, CategoryOrderForm
+│   │   └── analytics/                 Tracking components (Phase 11): AnalyticsScripts (Meta
+│   │                                   Pixel/GA4 script loading), RouteTracker (client-side
+│   │                                   PageView/page_view on route change), PurchaseTracker
+│   │                                   (browser Purchase/purchase on /order-success)
 │   ├── actions/                    Server Actions ("use server"): orders.ts (createOrder,
 │   │                                 trackOrder, Phase 8), order-schema.ts (Zod), order-logic.ts
 │   │                                 (DB-free validate-and-recalculate), address-schema.ts (Zod),
@@ -125,6 +129,10 @@ renvura-dropshipping/
 │   │                                  and `authDb` native-driver export, client instance,
 │   │                                  `getCurrentUser()`/`getCurrentAdmin()`/`requireAdmin()` —
 │   │                                  Phase 9/10)
+│   ├── lib/analytics/                Meta Pixel/CAPI + GA4 (Phase 11): config.ts, event-types.ts,
+│   │                                   event-id.ts, normalization.ts (server-only hashing),
+│   │                                   mapping.ts, meta-client.ts, ga4-client.ts, meta-server.ts —
+│   │                                   see "Marketing / tracking (Phase 11)" below
 │   ├── models/                       Mongoose schemas: Product.ts, Category.ts (connected, Phase
 │   │                                   10), Order.ts (connected, Phase 8; statusHistory added
 │   │                                   Phase 10), Address.ts (Phase 9), AdminAuditLog.ts,
@@ -245,6 +253,14 @@ one order-confirmation-email attempt for that order: `status` (`"not_applicable"
 "Customer verification & account recovery" below), and a truncated `lastError`. No new collection —
 this is an addition to the existing `Order` schema, written by `src/services/orders.ts`'s
 `insertOrder`/`recordOrderConfirmationEmailResult`.
+
+### Order analytics (Phase 11 addendum — done, MongoDB-connected)
+
+`Order.analytics.metaPurchase` (`src/models/Order.ts`) mirrors the notifications field above:
+`status` (`"not_applicable"` | `"pending"` | `"sent"` | `"failed"`), `eventId` (always the
+deterministic `purchase:{orderNumber}` value, see CLAUDE.md's "Analytics & measurement (Phase 11)"
+section), and `sentAt`. Admin-only, never part of `OrderSummary`. Written by
+`insertOrder`/`recordMetaPurchaseResult`, following the exact same structural pattern.
 
 ### Data access — MongoDB for everything as of Phase 10
 
@@ -584,12 +600,19 @@ was in the earlier pass — see CLAUDE.md.
   bolted onto an online-payment-first flow; bKash/Nagad/Rocket are manual (no payment gateway yet)
   and land in `pending_verification` until a human confirms the Transaction ID.
 
-## Marketing / tracking readiness
+## Marketing / tracking (Phase 11)
 
-Pixel/GA4/GTM integration and the internal order-lifecycle events
-(`order_created` → `order_confirmed` → `supplier_submitted` → `shipped` → `delivered` /
-`cancelled` / `returned`) are not implemented yet, but the service-layer split above is what makes
-them addable later without rewiring UI: events fire from `services/`, not from components.
+Meta Pixel (browser) + Meta Conversions API (server) + GA4 are implemented — see CLAUDE.md's
+"Analytics & measurement (Phase 11)" section for the full architecture. In brief: `src/lib/
+analytics/` is the one place any `fbq()`/`gtag()`/Meta Graph API call happens; `event_id`
+deduplication is Purchase-only (`purchaseEventId(orderNumber)`, shared between the browser Pixel
+fire on `/order-success` and the server CAPI send scheduled from `createOrder`'s `after()` hook,
+mirroring `scheduleOrderConfirmationEmail`'s exact idempotency pattern); PageView/page_view URLs
+are pathname-only (`RouteTracker.tsx` never reads `useSearchParams()`) to keep PII-bearing query
+strings (`/verify-email?email=...`) out of both providers entirely. Not implemented: GTM (direct
+gtag/fbq instead), Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, an internal
+order-lifecycle event bus, email marketing automation, CRM integrations, or Meta refund/
+cancellation attribution.
 
 ## SEO readiness
 
@@ -602,7 +625,7 @@ gated behind `isConfigured(brand.urls.site)` — wired, but inactive until a rea
 replaces that `TODO`. `sitemap.ts`, `robots.ts`, and any SEO work beyond individual-route metadata
 are still Phase 12 work, but nothing in the current structure blocks adding them later.
 
-## Environment variables (Phase 8–10.5)
+## Environment variables (Phase 8–11)
 
 Never committed — `.gitignore` blocks all `.env*`, so these are documented here and in CLAUDE.md
 instead of a checked-in `.env.example`.
@@ -619,6 +642,13 @@ instead of a checked-in `.env.example`.
 | `RESEND_API_KEY` | No — but all real email delivery (verification, password reset, order confirmation) fails closed in production until set | Server-only, never logged, never `NEXT_PUBLIC_*`. Currently unset — no Resend account exists yet. See `src/lib/email-provider.ts`. |
 | `EMAIL_FROM_ADDRESS` | No | Server-only. Defaults to `"Renvura <no-reply@renvura.com>"` if unset — set explicitly once the `renvura.com` domain is verified in Resend. |
 | `EMAIL_REPLY_TO` | No | Server-only. Defaults to `hello@renvura.com` if unset. |
+| `NEXT_PUBLIC_META_PIXEL_ID` | No — browser Pixel simply doesn't load until set | Public by design (the Pixel base snippet needs it client-side). Currently unset — no Meta Pixel/Business account configured yet. |
+| `META_CAPI_ACCESS_TOKEN` | No — server CAPI simply doesn't send until set | Server-only, never logged, never `NEXT_PUBLIC_*`. A Meta CAPI access token from Events Manager → Conversions API settings. |
+| `META_CAPI_DATASET_ID` | No | Server-only. Defaults to `NEXT_PUBLIC_META_PIXEL_ID` if unset (Meta's standard single-dataset setup) — only set this separately if using a dedicated CAPI dataset/Conversions API Gateway. |
+| `META_TEST_EVENT_CODE` | No, dev/testing only | Server-only. From Meta Events Manager → Test Events — when set, every CAPI request includes `test_event_code` so sends show up in the Test Events tab instead of (or alongside) live event data. |
+| `META_GRAPH_API_VERSION` | No | Server-only. Defaults to the snapshot documented in `src/lib/analytics/meta-server.ts` — verify against Meta's current Graph API changelog before relying on the default in production. |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No — GA4 simply doesn't load until set | Public by design. Currently unset — no GA4 property configured yet. |
+| `NEXT_PUBLIC_ANALYTICS_ENABLED` | No | Public. Set to `"true"` to opt into loading Meta Pixel/GA4 locally during `npm run dev` for testing — otherwise analytics only loads automatically when `NODE_ENV=production` (Vercel Production/Preview), so local development never pollutes real Meta/GA4 data. |
 
 Phone OTP verification is deferred (see "Customer verification & account recovery" above) — no
 `SMS_PROVIDER*` variables exist in this codebase.
@@ -633,11 +663,14 @@ done as of Phase 8, customer authentication + accounts (`/login`, `/signup`, `/a
 as of Phase 9, and the admin dashboard (`/admin/*` — see "Admin dashboard & authorization" above)
 is done as of Phase 10, and email verification + forgot/reset password + a Resend-backed order-
 confirmation email (`/verify-email`, `/forgot-password`, `/reset-password` — see "Customer
-verification & account recovery" above) is done as of Phase 10.5 (see `docs/DESIGN-SYSTEM.md`
+verification & account recovery" above) is done as of Phase 10.5, and Meta Pixel/Conversions API +
+GA4 measurement (see "Marketing / tracking (Phase 11)" above) is done as of Phase 11 (see
+`docs/DESIGN-SYSTEM.md`
 §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still deferred: checkout phone OTP verification (built,
 then explicitly deferred in favor of manual phone/WhatsApp order confirmation — see above),
 automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration,
-marketing/tracking (Meta Pixel/CAPI, GA4), historical guest-order linking, in-app email *change*
+Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email marketing automation, CRM
+integrations, server-side GTM, Meta refund/cancellation attribution, historical guest-order linking, in-app email *change*
 (email *verification* itself is done), account phone-update verification, social/OTP login (Better
 Auth's `socialProviders` config keeps this addable without restructuring, but nothing is wired up),
 "log in as customer" admin impersonation, product image upload UI, bulk product import/export, an

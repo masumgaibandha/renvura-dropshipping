@@ -1,8 +1,11 @@
 import { connectToDatabase } from "@/lib/db";
 import { OrderModel } from "@/models/Order";
+import { isMetaCapiConfigured } from "@/lib/analytics/config";
+import { purchaseEventId } from "@/lib/analytics/event-id";
 import type {
   AdminOrderDetail,
   AdminOrderListItem,
+  MetaPurchaseStatus,
   Order,
   OrderConfirmationEmailStatus,
   OrderListItem,
@@ -20,7 +23,7 @@ import type {
  */
 
 /** What comes back from Mongo — same shape as `Order` minus `idempotencyKey`'s absence-in-summaries concern; dates are real `Date`s here, ISO strings only at the summary boundary. */
-interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory" | "notifications"> {
+interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory" | "notifications" | "analytics"> {
   statusHistory: { status: OrderStatus; changedAt: Date; changedBy: string | null }[];
   // Optional: orders placed before Phase 10.5 never had this field written — see `toAdminOrderDetail`.
   notifications?: {
@@ -31,12 +34,20 @@ interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHis
       lastError: string | null;
     };
   };
+  // Optional: orders placed before Phase 11 never had this field written — see `toAdminOrderDetail`.
+  analytics?: {
+    metaPurchase: { status: MetaPurchaseStatus; eventId: string | null; sentAt: Date | null };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
 const DEFAULT_ORDER_NOTIFICATIONS: NonNullable<OrderRecord["notifications"]> = {
   orderConfirmationEmail: { status: "not_applicable", sentAt: null, providerMessageId: null, lastError: null },
+};
+
+const DEFAULT_ORDER_ANALYTICS: NonNullable<OrderRecord["analytics"]> = {
+  metaPurchase: { status: "not_applicable", eventId: null, sentAt: null },
 };
 
 const ORDER_NUMBER_SUFFIX_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -126,8 +137,19 @@ export async function insertOrder(input: InsertOrderInput): Promise<OrderRecord>
       lastError: null,
     },
   };
-  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory, notifications });
-  return { ...input, orderStatus: "pending", statusHistory, notifications, createdAt: now, updatedAt: now };
+  // "pending" (not "not_applicable") the moment Meta CAPI is configured, mirroring
+  // `orderConfirmationEmail`'s pattern above — `eventId` is always the deterministic
+  // `purchase:{orderNumber}` value regardless of whether the send is even attempted, so an admin
+  // can always cross-reference Events Manager once CAPI is configured later.
+  const analytics: NonNullable<OrderRecord["analytics"]> = {
+    metaPurchase: {
+      status: isMetaCapiConfigured() ? "pending" : "not_applicable",
+      eventId: purchaseEventId(input.orderNumber),
+      sentAt: null,
+    },
+  };
+  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory, notifications, analytics });
+  return { ...input, orderStatus: "pending", statusHistory, notifications, analytics, createdAt: now, updatedAt: now };
 }
 
 /**
@@ -150,6 +172,25 @@ export async function recordOrderConfirmationEmailResult(
         "notifications.orderConfirmationEmail.sentAt": result.status === "sent" ? new Date() : null,
         "notifications.orderConfirmationEmail.providerMessageId": result.providerMessageId ?? null,
         "notifications.orderConfirmationEmail.lastError": result.lastError ?? null,
+      },
+    },
+  );
+}
+
+/**
+ * Records the outcome of the one Meta CAPI Purchase send attempt (`scheduleMetaPurchaseCapi` in
+ * `src/actions/orders.ts`'s `after()` callback calls this right after `sendMetaCapiPurchase`
+ * resolves). Never throws, for the same reason `recordOrderConfirmationEmailResult` doesn't — this
+ * always runs after the order response has already gone back to the browser.
+ */
+export async function recordMetaPurchaseResult(orderNumber: string, result: { status: "sent" | "failed" }): Promise<void> {
+  await connectToDatabase();
+  await OrderModel.updateOne(
+    { orderNumber },
+    {
+      $set: {
+        "analytics.metaPurchase.status": result.status,
+        "analytics.metaPurchase.sentAt": result.status === "sent" ? new Date() : null,
       },
     },
   );
@@ -209,6 +250,7 @@ export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
  */
 export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
   const notifications = record.notifications ?? DEFAULT_ORDER_NOTIFICATIONS;
+  const analytics = record.analytics ?? DEFAULT_ORDER_ANALYTICS;
   return {
     orderNumber: record.orderNumber,
     idempotencyKey: record.idempotencyKey,
@@ -224,6 +266,12 @@ export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
       orderConfirmationEmail: {
         ...notifications.orderConfirmationEmail,
         sentAt: notifications.orderConfirmationEmail.sentAt ? notifications.orderConfirmationEmail.sentAt.toISOString() : null,
+      },
+    },
+    analytics: {
+      metaPurchase: {
+        ...analytics.metaPurchase,
+        sentAt: analytics.metaPurchase.sentAt ? analytics.metaPurchase.sentAt.toISOString() : null,
       },
     },
     createdAt: record.createdAt.toISOString(),
