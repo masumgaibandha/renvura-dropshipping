@@ -8,7 +8,7 @@ import { ConfirmActionButton } from "./ConfirmActionButton";
  * Client Component — only an actual Server Action reference serializes across that boundary, not
  * an arbitrary function wrapping one (see https://nextjs.org/docs/messages/react-client-hook-in-server-component
  * / "Event handlers cannot be passed to Client Component props"). This tiny Client Component
- * builds the closure client-side instead, mirroring `OrderStatusForm.tsx`'s existing pattern.
+ * builds the closure client-side instead, mirroring `RefundPaymentButton.tsx`'s pattern.
  */
 export function PaymentVerificationActions({ orderNumber, transactionId }: { orderNumber: string; transactionId: string | null }) {
   return (

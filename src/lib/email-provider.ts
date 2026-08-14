@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 
-import type { OrderSummary } from "@/types/order";
-import { genericOtpTemplate, orderConfirmationTemplate, resetPasswordTemplate, verifyEmailTemplate, type EmailContent } from "./email-templates";
+import type { OrderSummary, StatusEmailStatus } from "@/types/order";
+import { genericOtpTemplate, orderConfirmationTemplate, resetPasswordTemplate, statusEmailTemplateFor, verifyEmailTemplate, type EmailContent } from "./email-templates";
 
 /**
  * Central, server-only transactional email module — Resend is the one and
@@ -129,6 +129,28 @@ export type SendOrderConfirmationEmailResult = { status: "sent"; providerMessage
  */
 export async function sendOrderConfirmationEmail({ to, order }: SendOrderConfirmationEmailInput): Promise<SendOrderConfirmationEmailResult> {
   const result = await sendEmail(to, orderConfirmationTemplate(order));
+  if (!result.ok) {
+    return { status: "failed", lastError: result.error };
+  }
+  return { status: "sent", providerMessageId: result.providerMessageId };
+}
+
+export interface SendOrderStatusEmailInput {
+  to: string;
+  order: OrderSummary;
+  status: StatusEmailStatus;
+}
+
+export type SendOrderStatusEmailResult = { status: "sent"; providerMessageId: string | null } | { status: "failed"; lastError: string };
+
+/**
+ * Phase 12 — called from `adminUpdateOrderStatus`'s `after()` callback (`src/actions/admin/orders.ts`)
+ * right after a `confirmed`/`shipped`/`delivered`/`cancelled`/`returned` transition succeeds. Same
+ * never-block, never-rollback principle as `sendOrderConfirmationEmail`: a slow/failed send here
+ * must never affect the admin's already-completed status change.
+ */
+export async function sendOrderStatusEmail({ to, order, status }: SendOrderStatusEmailInput): Promise<SendOrderStatusEmailResult> {
+  const result = await sendEmail(to, statusEmailTemplateFor(status, order));
   if (!result.ok) {
     return { status: "failed", lastError: result.error };
   }

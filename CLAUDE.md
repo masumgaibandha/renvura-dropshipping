@@ -687,6 +687,204 @@ root is auto-managed by `next dev` and repeats this reminder — don't hand-edit
   refund/cancellation adjustment event is sent when an order transitions to `cancelled`/`returned`.
   Revisit only if asked.
 
+## Order operations & customer lifecycle (Phase 12)
+
+- **Canonical status flow**: `pending → confirmed → processing → (supplier_submitted) → shipped →
+  delivered`, with `cancelled` reachable from any non-terminal status and `returned` reachable from
+  both `shipped` (a courier return-to-sender — the package never reached the customer) and
+  `delivered` (a genuine post-delivery return). `processing` can skip straight to `shipped`,
+  bypassing the internal-only `supplier_submitted` milestone. `cancelled`/`returned` are terminal.
+  The full table lives in `ORDER_STATUS_TRANSITIONS` (`src/types/order.ts`) — it is a **strict
+  DAG**: no status is ever revisited once left. This is load-bearing, not incidental — it's what
+  makes the Phase 12 inventory decrement/restore logic safe without its own separate idempotency
+  flag (see "Inventory reservation strategy" below).
+- **Transitions are server-validated with a compare-and-swap, never trusted from the client.**
+  `adminUpdateOrderStatus` (`src/actions/admin/orders.ts`) re-checks the raw status string against
+  the full enum *and* `canTransitionOrderStatus()` before writing — unchanged from Phase 10.
+  `updateOrderStatusForAdmin` (`src/services/orders.ts`) now takes an `expectedCurrentStatus` and
+  matches on it in the Mongo filter (`{orderNumber, orderStatus: expectedCurrentStatus}`) — a
+  genuine compare-and-swap. Two concurrent duplicate submits (admin double-click, a retried
+  request) can only ever have one winner; the loser gets `null` back and the action returns "This
+  order was already updated by someone else," never silently double-processing. This CAS is the
+  single source of truth for "did this exact transition really happen, exactly once" — every
+  inventory/payment/email side effect downstream is gated on it succeeding first.
+- **`OrderStatusHistoryEntry` now carries an optional internal `note`** — never customer-facing
+  (`OrderSummary`/`OrderTrackingSummary` omit `statusHistory` entirely, unchanged from Phase 10).
+- **Confirmation method** (`Order.confirmation: {method, confirmedAt, confirmedBy, note}`) is set
+  when an order transitions `pending → confirmed`. Phone OTP verification remains deferred (Phase
+  10.5) — this instead records *how* staff confirmed the order was genuine (`phone`/`whatsapp`),
+  matching the existing manual confirmation workflow described in "Customer verification & account
+  recovery" above. `confirmedBy`/`note` are admin-only; `method`/`confirmedAt` are customer-safe
+  (`CustomerOrderConfirmation`, surfaced on the tracking timeline).
+- **Cancellation** (`Order.cancellation: {reason, note}`) requires a fixed internal reason code
+  (`customer_request` | `unreachable` | `out_of_stock` | `invalid_order` | `payment_failed` |
+  `duplicate` | `other`) — entirely admin-only. The customer only ever sees the neutral "Cancelled"
+  status label; no reason or note is ever exposed (`OrderSummary` omits `cancellation` entirely).
+- **Return** (`Order.return: {reason, resellable, note}`) requires a reason code (`damaged` |
+  `wrong_item` | `customer_return` | `delivery_failure` | `other`) and an explicit `resellable`
+  boolean — entirely admin-only, same reasoning as cancellation. `resellable` is what decides
+  whether stock is restored (see below); a damaged/lost return must never silently re-enter
+  sellable inventory just because an order reached the `returned` status.
+- **Courier readiness, not integration** (`Order.courier: {provider, trackingId, trackingUrl,
+  consignmentId, shippedAt}`) — schema + admin UI fields only, no courier API call anywhere.
+  `provider` is free text, not an enum, so no single Bangladesh courier (Pathao/Steadfast/RedX/
+  Paperfly) is hardcoded as mandatory. Fully customer-safe — surfaced on the tracking timeline
+  whenever present, admin fills it in when marking an order `shipped`.
+- **Inventory reservation strategy: decrement at `confirmed`, not at order creation.** Before Phase
+  12, nothing anywhere ever adjusted `Product.inventory.stock` automatically — `pending` COD orders
+  are unconfirmed and some are never genuine, so reserving stock the moment a `pending` order is
+  created would tie up inventory for orders that may never be real. `src/services/inventory.ts`'s
+  `applyInventoryMovements()` is called from `adminUpdateOrderStatus` exactly three ways: decrement
+  on `pending → confirmed`; restore on a cancellation from any status in
+  `INVENTORY_DECREMENTED_STATUSES` (`confirmed`/`processing`/`supplier_submitted`/`shipped`/
+  `delivered` — deliberately excludes `pending → cancelled`, which never decremented anything);
+  restore on `→ returned` only when `resellable: true`. Every adjustment is an atomic Mongo `$inc`
+  (safe under concurrent order processing without a read-modify-write), with a defensive
+  floor-to-zero cleanup pass afterward (accepted low-stakes tradeoff — this is an internal count,
+  not a billing-critical balance). Products with `inventory.stock: null` (stock not tracked) are
+  skipped entirely, and — mirroring `adminAdjustStock`'s existing Phase 10 precedent —
+  `inventory.status` is never touched by this automatic logic; it stays independently
+  admin-controlled exactly as it already was everywhere else.
+- **Inventory idempotency is structural, not a separate flag.** Because the transition graph is a
+  strict DAG (see above), a given real transition (`pending → confirmed`, a cancellation from a
+  specific status, a resellable return) can happen at most once per order's lifetime. Combined with
+  the CAS on `updateOrderStatusForAdmin`, `adminUpdateOrderStatus` only ever calls
+  `applyInventoryMovements` after confirming *this* request was the one that actually performed the
+  transition — a concurrent duplicate can never trigger a second decrement/restore. No `Order`-level
+  "already adjusted" boolean was needed.
+- **`InventoryMovement`** (`src/models/InventoryMovement.ts`, `src/services/inventory.ts`) is a new,
+  append-only ledger distinct from `AdminAuditLog` — it captures the exact quantity delta per
+  product per movement (`order_confirmed` | `order_cancelled_restore` | `order_returned_restore` |
+  `admin_adjustment`), for a future stock-reconciliation report. `AdminAuditLog` still separately
+  records the admin *action* that triggered it (`order.status_changed`,
+  `inventory.order_confirmed_decrement`, etc.) — the two serve different questions ("what happened
+  to this product's count" vs. "what did this admin do").
+- **Payment + order status coordination is deliberately loose, with exactly one automatic
+  exception.** COD may be confirmed before payment (`cod_pending` is untouched by confirmation); a
+  manual-payment order stays whatever it is until staff explicitly verifies it
+  (`markPaymentPaid`/`markPaymentFailed`, unchanged from Phase 10) — nothing here auto-verifies a
+  manual payment. The one automatic coordination: **a COD order marked `delivered` is
+  automatically moved from `cod_pending` to `paid`** (cash was collected at the door — that's what
+  delivery means for COD), via `updatePaymentStatusForAdmin` called from inside
+  `adminUpdateOrderStatus`, with its own `AdminAuditLog` entry. A manual-payment order that was
+  `paid` and then gets cancelled/returned does **not** auto-refund — `markPaymentRefunded`
+  (`src/actions/admin/payments.ts`) is a separate, explicit admin action (only valid from `paid`,
+  moves to `refunded`) that records a refund happened outside this app (the real money movement is
+  in bKash/Nagad/Rocket's own app, same as the original payment) — it never moves money itself.
+- **Admin order detail UX** (`src/components/admin/OrderStatusActions.tsx`, replaces the old
+  dropdown-based `OrderStatusForm.tsx`): one prominent button per valid next transition, each
+  expanding into exactly the fields that transition needs — confirmation method for `confirmed`,
+  reason code for `cancelled`, reason + resellable flag for `returned`, optional courier fields for
+  `shipped`, an optional internal note for every transition. `/admin/orders/[orderNumber]` also
+  shows order age, confirmation/cancellation/return/courier detail, a `Mark Refunded` action when
+  applicable (`payment.status === "paid"` on a `cancelled`/`returned` order), and per-entry notes in
+  the status history.
+- **Admin orders list** (`/admin/orders`) gained quick status tabs (Pending/Confirmed/Processing/
+  Shipped/Delivered/Cancelled) above the existing filter form — the filter form itself
+  (status/payment status/payment method/date range/search by order number, name, or phone) already
+  covered everything Phase 12 needed; no district/division filter was added (not identified as
+  useful enough to add complexity for).
+- **Customer emails**: kept the existing order-received email unchanged, added one email each for
+  `confirmed`/`shipped`/`delivered`/`cancelled`/`returned` (`src/lib/email-templates.ts`'s
+  `statusEmailTemplateFor`) — deliberately **not** sent for `processing`/`supplier_submitted`
+  (internal-only milestones, not worth a customer email). Every template is built from the
+  sanitized `OrderSummary` projection only, so `wholesalePrice` and internal cancellation/return
+  reason codes are structurally impossible to leak, not just manually avoided — cancelled/returned
+  emails state the neutral fact only, never a reason. `scheduleStatusEmail`
+  (`src/actions/admin/orders.ts`) fires via Next's `after()`, same never-block/never-rollback
+  principle as the Phase 10.5 order-confirmation email; `Order.notifications.statusEmails` (keyed
+  by status, same `{status, sentAt, providerMessageId, lastError}` shape as
+  `orderConfirmationEmail`) records each attempt's outcome for admin visibility only — not the
+  dedupe mechanism itself (that's still the CAS + DAG structure above).
+- **Customer tracking timeline** (`src/components/checkout/OrderStatusTimeline.tsx`) is shared by
+  `/track-order` and `/account/orders/[orderNumber]` — both already receive the same customer-safe
+  `confirmation`/`courier` shapes, so one component covers both. Shows a 5-step progress bar
+  (Order Received → Confirmed → Processing → Shipped → Delivered); `cancelled`/`returned` render as
+  distinct terminal banners instead of a partially-filled progress bar (an order cancelled at
+  "processing" never actually reached "shipped," so showing it as a filled step would be
+  misleading). Never renders admin notes or reason codes — those fields don't exist on the
+  customer-safe types at all.
+- **Guest order tracking security is unchanged from Phase 8** — `/track-order` still requires an
+  exact order number + phone match, with the identical generic "no matching order" message whether
+  the order doesn't exist or the phone is wrong (see "Checkout & order rules" above). Nothing in
+  Phase 12 weakens this.
+- **COD quality metrics** (`getCodQualityMetrics()`, `src/services/orders.ts`, surfaced on
+  `/admin/analytics`): confirmation rate = confirmed / received, delivery rate = delivered /
+  confirmed, cancellation rate = cancelled / received. `pending` orders are deliberately excluded
+  from every numerator/denominator except the raw `receivedCount` — a still-pending order hasn't
+  failed anything, it just hasn't been acted on yet. `confirmedCount`/`deliveredCount` match on
+  `statusHistory.status` as well as current `orderStatus` (not current status alone) — an order
+  that was genuinely confirmed and later cancelled still counts toward the confirmation rate (the
+  confirmation itself succeeded; cancellation is a separate, later fact), and a `shipped →
+  returned` order (never actually delivered) correctly does **not** count as delivered, while a
+  `delivered → returned` order correctly does — this only works because it checks for a genuine
+  `delivered` history entry rather than assuming `returned` implies delivery.
+- **Revenue definitions are unchanged from Phase 10** — still only `payment.status: "paid"` or
+  `orderStatus: "delivered"`, never every submitted COD order. The new automatic
+  `cod_pending → paid` coordination on delivery doesn't change this definition, it just means a
+  delivered COD order now reaches `"paid"` status explicitly (previously it stayed `cod_pending`
+  forever, undercounted in the `payment.status === "paid"` half of that `$or` — this was already
+  covered by the `orderStatus === "delivered"` half, so revenue totals are unaffected either way).
+- **Security**: every mutation in this phase — status transitions, payment coordination, inventory
+  movements, refund marking — is gated by the same `requireAdmin()` call at the top of its own
+  Server Action body (never assuming `/admin/layout.tsx` already checked), matching every existing
+  admin action. No client-submitted status, stock delta, or payment verification is ever trusted
+  directly. No `wholesalePrice` is ever read or exposed anywhere in this phase's code.
+- **Audit log**: every status change, inventory movement, and payment coordination/refund records
+  an `AdminAuditLog` entry (`entityType: "order" | "inventory" | "payment"`), matching the existing
+  Phase 10 pattern exactly — small hand-picked before/after snapshots, never a full document dump.
+- **No bulk order actions** — every transition is single-order, going through the same
+  compare-and-swap + inventory/payment/email coordination described above. A bulk "confirm 20
+  orders at once" UI was explicitly out of scope for this phase (risk of a batched inventory/email
+  side effect bug is much higher than the operational convenience is worth right now) — revisit
+  only once the single-order flow has real production mileage.
+
+### Meta/GA4 retargeting readiness (Phase 12 — documentation, not new code)
+
+Phase 11's Meta Pixel/CAPI + GA4 events are unchanged — same names, same payloads, verified via
+regression during Phase 12 (`PageView`/`ViewContent`/`AddToCart`/`AddToWishlist`/`InitiateCheckout`/
+`Purchase` for Meta; `page_view`/`view_item`/`add_to_cart`/`add_to_wishlist`/`view_cart`/
+`begin_checkout`/`purchase` for GA4). This section is purely operational guidance for configuring
+audiences in Meta Ads Manager/GA4 — **no application code implements or applies any of this**; it's
+documented here so the actual audience setup (done in Meta's/Google's own UI) matches this
+project's event semantics.
+
+- **Purchase still means "a valid order was submitted," never "delivered revenue."** Confirming,
+  shipping, or delivering an order in `/admin` never fires a second Meta Purchase or any other
+  CAPI/Pixel event — Phase 11's Purchase `event_id` dedup (`purchase:{orderNumber}`) is unaffected.
+  If internal lifecycle analytics are ever wanted (`OrderConfirmed`/`OrderDelivered`-style custom
+  events), they must stay internal/GA-custom-event only, with clearly distinct names — never sent
+  to Meta as `Purchase`, and not built in this phase (no demand identified yet).
+- **Recommended Meta Custom Audiences — starting points** (configure in Meta Ads Manager, not in
+  this codebase; these are recommendations to tune against real performance once there's enough
+  volume, never hardcoded anywhere in application logic):
+  - **Checkout abandoners**: `InitiateCheckout`, last 7 days, excluding `Purchase` in the last 30
+    days.
+  - **Cart abandoners**: `AddToCart`, last 14 days, excluding `Purchase` in the last 30 days.
+  - **Product viewers**: `ViewContent`, last 30 days, excluding `Purchase` in the last 30 days.
+  - **Wishlist / high intent**: `AddToWishlist`, last 30 days, excluding `Purchase` in the last 30
+    days.
+  - **Past purchasers**: `Purchase`, last 30 / 60 / 180 days — for upsell, cross-sell,
+    repeat-purchase campaigns (no `Purchase` exclusion here — this audience *is* the purchasers).
+  - **Purchase exclusion is critical for every abandonment audience above** — without it, a
+    customer who already completed checkout keeps getting retargeted as if they hadn't. Each
+    exclusion window here (30 days) is deliberately at least as long as its trigger window, so a
+    purchase made just past the abandonment window still suppresses the ad.
+- **Product-specific retargeting/catalog ads stay viable** because `content_ids`/`contents` are
+  built from the catalog **slug** (`src/lib/analytics/mapping.ts`, unchanged since Phase 11) — never
+  a Mongo id, never renamed. This is what would let a future Meta Catalog/dynamic product ads setup
+  or category-level retargeting work without any event-shape changes.
+- **Recommended GA4 Audiences** (configure in GA4, not in this codebase): viewed a product but
+  never purchased (`view_item` without `purchase`); added to cart but never purchased
+  (`add_to_cart` without `purchase`); began checkout but never purchased (`begin_checkout` without
+  `purchase`); purchasers; repeat purchasers (`purchase` count ≥ 2). No Google Ads account linking
+  was built or requested this phase.
+- **Retargeting privacy is unchanged from Phase 11** — browser Meta/GA4 events never carry phone,
+  email, delivery address, or payment transaction IDs; Meta CAPI's hashed-email/phone matching is
+  untouched. Regression-tested this phase to confirm nothing introduced by the order-lifecycle work
+  (confirmation/cancellation/return/courier data) leaked into any analytics event — none of the new
+  Phase 12 fields are referenced anywhere in `src/lib/analytics/`.
+
 ## Design system contrast rule
 
 Muted/secondary text uses a minimum of 70% foreground opacity (`text-foreground/70` or higher on
@@ -750,31 +948,34 @@ CRUD, customer/inventory views, homepage curation, `StoreSettings`, analytics, a
 recovery — Better Auth `email-otp`-backed email verification and forgot/reset password,
 `/verify-email`, `/forgot-password`, `/reset-password`, plus a Resend-backed order-confirmation
 email; checkout phone OTP was built then explicitly deferred in favor of manual phone/WhatsApp
-order confirmation — see "Customer verification & account recovery (Phase 10.5)" above), and 11
+order confirmation — see "Customer verification & account recovery (Phase 10.5)" above), 11
 (Analytics & measurement — Meta Pixel, Meta Conversions API, GA4, `event_id` Purchase
-deduplication — see "Analytics & measurement (Phase 11)" above) are done —
+deduplication — see "Analytics & measurement (Phase 11)" above), and 12 (Production order
+operations & customer lifecycle — status transitions, inventory reservation, confirmation/
+cancellation/return handling, courier readiness, status-change emails, customer tracking
+timeline, COD quality metrics, Meta/GA4 retargeting audience documentation — see "Order operations
+& customer lifecycle (Phase 12)" above) are done —
 see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and
 `docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI shell, homepage, listing pages, product detail
-page, cart/wishlist, checkout/order creation/tracking, customer accounts, the admin dashboard, and
-analytics measurement exist and are wired in, but do not build an automated payment gateway
-(bKash/Nagad/Rocket APIs), courier API integration, Google Ads conversion tracking, TikTok Pixel,
-Microsoft Ads, email marketing automation, CRM integrations, server-side GTM, Meta refund/
-cancellation attribution, historical guest-order linking,
+page, cart/wishlist, checkout/order creation/tracking, customer accounts, the admin dashboard,
+analytics measurement, and production order operations exist and are wired in, but do not build an
+automated payment gateway (bKash/Nagad/Rocket APIs), courier API integration, Google Ads conversion
+tracking, TikTok Pixel, Microsoft Ads, email marketing automation, CRM integrations, server-side
+GTM, Meta refund/cancellation attribution, bulk admin order actions, historical guest-order linking,
 a verified email-*change* flow (email *verification* itself is done, see Phase 10.5 — "email is
 read-only on `/account/profile`" from Phase 9 still holds), social login, checkout phone OTP
 verification (deferred — see Phase 10.5), account phone-update verification, "log in as customer"
 impersonation, product image upload UI, bulk product import/export, an automated test suite, an
 automated email-retry queue, or advanced accounting/multi-vendor/warehouse features until asked.
 `Product`/`Category` MongoDB models are connected as of Phase 10 (see above) — `Order` (now
-carrying `notifications.orderConfirmationEmail` from Phase 10.5 and `analytics.metaPurchase` from
-Phase 11), `Address`, `AdminAuditLog`, and
+carrying `notifications.orderConfirmationEmail` from Phase 10.5, `analytics.metaPurchase` from
+Phase 11, and `confirmation`/`cancellation`/`return`/`courier`/`notifications.statusEmails` from
+Phase 12), `Address`, `AdminAuditLog`, `InventoryMovement` (new in Phase 12), and
 `StoreSettings` are also connected, plus Better Auth's own `user`/`session`/`account`/`verification`
-collections. No Resend account/API key is configured yet — see Phase 10.5's "fail closed in
-production" note above; this blocks real email delivery (verification, password reset, and order
-confirmation alike) until `RESEND_API_KEY` is set and the `renvura.com` domain is verified in
-Resend. No Meta Pixel ID, Meta CAPI access token, or GA4 Measurement ID is configured yet either —
-see "Analytics & measurement (Phase 11)" above for what's needed before real Meta/GA4 delivery can
-be verified. Do not wire up real newsletter logic, or
+collections. Resend, Meta Pixel/Conversions API, and GA4 are all configured and live in
+production as of this phase — see "Analytics & measurement (Phase 11)" above for the credential
+names, and note that `META_TEST_EVENT_CODE` must not stay enabled for normal production traffic
+once testing is done. Do not wire up real newsletter logic, or
 create fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
 values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,
 unpublished) pending a 30ml/100ml source-data mismatch — "Price unavailable" and disabled Add to

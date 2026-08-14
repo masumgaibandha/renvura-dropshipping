@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OrderStatusTimeline } from "@/components/checkout/OrderStatusTimeline";
 import { paymentMethodLabels } from "@/config/payment";
 import { getCurrentUser } from "@/lib/auth-session";
 import { getOrderForCustomerDetail, toOrderSummary } from "@/services/orders";
@@ -42,6 +43,8 @@ export default async function AccountOrderDetailPage({ params }: AccountOrderDet
       </div>
 
       <section className="rounded-2xl border border-border bg-surface p-5">
+        <OrderStatusTimeline order={order} className="mb-4 border-b border-border pb-4" />
+
         <dl className="grid grid-cols-2 gap-y-3 text-small">
           <dt className="text-foreground/70">Order Status</dt>
           <dd className="text-right font-medium text-foreground">{ORDER_STATUS_LABELS[order.orderStatus]}</dd>

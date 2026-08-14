@@ -5,6 +5,9 @@ import { purchaseEventId } from "@/lib/analytics/event-id";
 import type {
   AdminOrderDetail,
   AdminOrderListItem,
+  CancellationReason,
+  CodQualityMetrics,
+  ConfirmationMethod,
   MetaPurchaseStatus,
   Order,
   OrderConfirmationEmailStatus,
@@ -14,6 +17,8 @@ import type {
   OrderTrackingSummary,
   PaymentMethod,
   PaymentStatus,
+  ReturnReason,
+  StatusEmailStatus,
 } from "@/types/order";
 
 /**
@@ -22,29 +27,55 @@ import type {
  * can never accidentally skip it.
  */
 
+interface EmailAttemptRecord {
+  status: OrderConfirmationEmailStatus;
+  sentAt: Date | null;
+  providerMessageId: string | null;
+  lastError: string | null;
+}
+
 /** What comes back from Mongo — same shape as `Order` minus `idempotencyKey`'s absence-in-summaries concern; dates are real `Date`s here, ISO strings only at the summary boundary. */
-interface OrderRecord extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory" | "notifications" | "analytics"> {
-  statusHistory: { status: OrderStatus; changedAt: Date; changedBy: string | null }[];
+interface OrderRecord
+  extends Omit<Order, "createdAt" | "updatedAt" | "statusHistory" | "notifications" | "analytics" | "confirmation" | "cancellation" | "return" | "courier"> {
+  statusHistory: { status: OrderStatus; changedAt: Date; changedBy: string | null; note?: string | null }[];
   // Optional: orders placed before Phase 10.5 never had this field written — see `toAdminOrderDetail`.
   notifications?: {
-    orderConfirmationEmail: {
-      status: OrderConfirmationEmailStatus;
-      sentAt: Date | null;
-      providerMessageId: string | null;
-      lastError: string | null;
-    };
+    orderConfirmationEmail: EmailAttemptRecord;
+    // Optional too: orders placed before Phase 12 never had this sub-field written.
+    statusEmails?: Record<StatusEmailStatus, EmailAttemptRecord>;
   };
   // Optional: orders placed before Phase 11 never had this field written — see `toAdminOrderDetail`.
   analytics?: {
     metaPurchase: { status: MetaPurchaseStatus; eventId: string | null; sentAt: Date | null };
   };
+  // Optional: orders placed before Phase 12 never had these fields written — see `toAdminOrderDetail`.
+  confirmation?: { method: ConfirmationMethod; confirmedAt: Date | null; confirmedBy: string | null; note: string | null };
+  cancellation?: { reason: CancellationReason | null; note: string | null };
+  return?: { reason: ReturnReason | null; resellable: boolean | null; note: string | null };
+  courier?: { provider: string | null; trackingId: string | null; trackingUrl: string | null; consignmentId: string | null; shippedAt: Date | null };
   createdAt: Date;
   updatedAt: Date;
 }
 
+const DEFAULT_EMAIL_ATTEMPT: EmailAttemptRecord = { status: "not_applicable", sentAt: null, providerMessageId: null, lastError: null };
+
+const DEFAULT_STATUS_EMAILS: Record<StatusEmailStatus, EmailAttemptRecord> = {
+  confirmed: DEFAULT_EMAIL_ATTEMPT,
+  shipped: DEFAULT_EMAIL_ATTEMPT,
+  delivered: DEFAULT_EMAIL_ATTEMPT,
+  cancelled: DEFAULT_EMAIL_ATTEMPT,
+  returned: DEFAULT_EMAIL_ATTEMPT,
+};
+
 const DEFAULT_ORDER_NOTIFICATIONS: NonNullable<OrderRecord["notifications"]> = {
   orderConfirmationEmail: { status: "not_applicable", sentAt: null, providerMessageId: null, lastError: null },
+  statusEmails: DEFAULT_STATUS_EMAILS,
 };
+
+const DEFAULT_ORDER_CONFIRMATION: NonNullable<OrderRecord["confirmation"]> = { method: "none", confirmedAt: null, confirmedBy: null, note: null };
+const DEFAULT_ORDER_CANCELLATION: NonNullable<OrderRecord["cancellation"]> = { reason: null, note: null };
+const DEFAULT_ORDER_RETURN: NonNullable<OrderRecord["return"]> = { reason: null, resellable: null, note: null };
+const DEFAULT_ORDER_COURIER: NonNullable<OrderRecord["courier"]> = { provider: null, trackingId: null, trackingUrl: null, consignmentId: null, shippedAt: null };
 
 const DEFAULT_ORDER_ANALYTICS: NonNullable<OrderRecord["analytics"]> = {
   metaPurchase: { status: "not_applicable", eventId: null, sentAt: null },
@@ -126,7 +157,7 @@ export interface InsertOrderInput {
 export async function insertOrder(input: InsertOrderInput): Promise<OrderRecord> {
   await connectToDatabase();
   const now = new Date();
-  const statusHistory = [{ status: "pending" as OrderStatus, changedAt: now, changedBy: null }];
+  const statusHistory = [{ status: "pending" as OrderStatus, changedAt: now, changedBy: null, note: null }];
   // "pending" (not "not_applicable") the moment an email address exists, written before the actual
   // send is even attempted — see the doc comment on `orderNotificationsSchema` in `src/models/Order.ts`.
   const notifications: NonNullable<OrderRecord["notifications"]> = {
@@ -136,6 +167,7 @@ export async function insertOrder(input: InsertOrderInput): Promise<OrderRecord>
       providerMessageId: null,
       lastError: null,
     },
+    statusEmails: DEFAULT_STATUS_EMAILS,
   };
   // "pending" (not "not_applicable") the moment Meta CAPI is configured, mirroring
   // `orderConfirmationEmail`'s pattern above — `eventId` is always the deterministic
@@ -148,8 +180,12 @@ export async function insertOrder(input: InsertOrderInput): Promise<OrderRecord>
       sentAt: null,
     },
   };
-  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory, notifications, analytics });
-  return { ...input, orderStatus: "pending", statusHistory, notifications, analytics, createdAt: now, updatedAt: now };
+  const confirmation = DEFAULT_ORDER_CONFIRMATION;
+  const cancellation = DEFAULT_ORDER_CANCELLATION;
+  const orderReturn = DEFAULT_ORDER_RETURN;
+  const courier = DEFAULT_ORDER_COURIER;
+  await OrderModel.create({ ...input, orderStatus: "pending", statusHistory, notifications, analytics, confirmation, cancellation, return: orderReturn, courier });
+  return { ...input, orderStatus: "pending", statusHistory, notifications, analytics, confirmation, cancellation, return: orderReturn, courier, createdAt: now, updatedAt: now };
 }
 
 /**
@@ -196,8 +232,34 @@ export async function recordMetaPurchaseResult(orderNumber: string, result: { st
   );
 }
 
+/**
+ * Records the outcome of a single status-change email attempt (`confirmed`/`shipped`/`delivered`/
+ * `cancelled`/`returned`) — same never-throw, post-response-only pattern as
+ * `recordOrderConfirmationEmailResult`. Keyed by `status` so each transition's email has its own
+ * independent attempt record (`notifications.statusEmails.{status}`).
+ */
+export async function recordStatusEmailResult(
+  orderNumber: string,
+  status: StatusEmailStatus,
+  result: { status: "sent" | "failed"; providerMessageId?: string | null; lastError?: string | null },
+): Promise<void> {
+  await connectToDatabase();
+  await OrderModel.updateOne(
+    { orderNumber },
+    {
+      $set: {
+        [`notifications.statusEmails.${status}.status`]: result.status,
+        [`notifications.statusEmails.${status}.sentAt`]: result.status === "sent" ? new Date() : null,
+        [`notifications.statusEmails.${status}.providerMessageId`]: result.providerMessageId ?? null,
+        [`notifications.statusEmails.${status}.lastError`]: result.lastError ?? null,
+      },
+    },
+  );
+}
+
 /** Sanitized projection for the success page / post-creation response — no Mongo `_id`, no `idempotencyKey`, no `statusHistory`. */
 export function toOrderSummary(record: OrderRecord): OrderSummary {
+  const confirmation = record.confirmation ?? DEFAULT_ORDER_CONFIRMATION;
   return {
     orderNumber: record.orderNumber,
     customer: record.customer,
@@ -206,9 +268,16 @@ export function toOrderSummary(record: OrderRecord): OrderSummary {
     pricing: record.pricing,
     payment: record.payment,
     orderStatus: record.orderStatus,
+    confirmation: { method: confirmation.method, confirmedAt: confirmation.confirmedAt ? confirmation.confirmedAt.toISOString() : null },
+    courier: toCourierSummary(record.courier),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
+}
+
+function toCourierSummary(courier: OrderRecord["courier"]): Order["courier"] {
+  const value = courier ?? DEFAULT_ORDER_COURIER;
+  return { ...value, shippedAt: value.shippedAt ? value.shippedAt.toISOString() : null };
 }
 
 /** Row projection for `/account/orders` — just enough to list, never the full item/address detail. */
@@ -225,6 +294,7 @@ export function toOrderListItem(record: OrderRecord): OrderListItem {
 
 /** Even more restricted projection for `/track-order` — no transactionId, no full address, no Mongo `_id`. */
 export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
+  const confirmation = record.confirmation ?? DEFAULT_ORDER_CONFIRMATION;
   return {
     orderNumber: record.orderNumber,
     customerName: record.customer.name,
@@ -237,6 +307,8 @@ export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
       district: record.shippingAddress.district,
       upazila: record.shippingAddress.upazila,
     },
+    confirmation: { method: confirmation.method, confirmedAt: confirmation.confirmedAt ? confirmation.confirmedAt.toISOString() : null },
+    courier: toCourierSummary(record.courier),
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -250,7 +322,13 @@ export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
  */
 export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
   const notifications = record.notifications ?? DEFAULT_ORDER_NOTIFICATIONS;
+  const statusEmails = notifications.statusEmails ?? DEFAULT_STATUS_EMAILS;
   const analytics = record.analytics ?? DEFAULT_ORDER_ANALYTICS;
+  const confirmation = record.confirmation ?? DEFAULT_ORDER_CONFIRMATION;
+  const cancellation = record.cancellation ?? DEFAULT_ORDER_CANCELLATION;
+  const orderReturn = record.return ?? DEFAULT_ORDER_RETURN;
+  const toEmailSummary = (attempt: EmailAttemptRecord) => ({ ...attempt, sentAt: attempt.sentAt ? attempt.sentAt.toISOString() : null });
+
   return {
     orderNumber: record.orderNumber,
     idempotencyKey: record.idempotencyKey,
@@ -261,11 +339,15 @@ export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
     pricing: record.pricing,
     payment: record.payment,
     orderStatus: record.orderStatus,
-    statusHistory: (record.statusHistory ?? []).map((entry) => ({ ...entry, changedAt: entry.changedAt.toISOString() })),
+    statusHistory: (record.statusHistory ?? []).map((entry) => ({ ...entry, note: entry.note ?? null, changedAt: entry.changedAt.toISOString() })),
     notifications: {
-      orderConfirmationEmail: {
-        ...notifications.orderConfirmationEmail,
-        sentAt: notifications.orderConfirmationEmail.sentAt ? notifications.orderConfirmationEmail.sentAt.toISOString() : null,
+      orderConfirmationEmail: toEmailSummary(notifications.orderConfirmationEmail),
+      statusEmails: {
+        confirmed: toEmailSummary(statusEmails.confirmed),
+        shipped: toEmailSummary(statusEmails.shipped),
+        delivered: toEmailSummary(statusEmails.delivered),
+        cancelled: toEmailSummary(statusEmails.cancelled),
+        returned: toEmailSummary(statusEmails.returned),
       },
     },
     analytics: {
@@ -274,6 +356,10 @@ export function toAdminOrderDetail(record: OrderRecord): AdminOrderDetail {
         sentAt: analytics.metaPurchase.sentAt ? analytics.metaPurchase.sentAt.toISOString() : null,
       },
     },
+    confirmation: { ...confirmation, confirmedAt: confirmation.confirmedAt ? confirmation.confirmedAt.toISOString() : null },
+    cancellation,
+    return: orderReturn,
+    courier: toCourierSummary(record.courier),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
@@ -361,19 +447,65 @@ export async function listOrdersForAdmin(params: AdminOrderListParams): Promise<
   };
 }
 
+export interface UpdateOrderStatusInput {
+  orderNumber: string;
+  /** The order's current status as read by the caller — the update filter also matches on this, so a concurrent duplicate submit (double-click, retry) that raced past the caller's own read can only ever win the update once; see `src/services/inventory.ts`'s doc comment for why this compare-and-swap is what makes inventory adjustment safe without its own idempotency flag. */
+  expectedCurrentStatus: OrderStatus;
+  newStatus: OrderStatus;
+  adminUserId: string;
+  note?: string | null;
+  confirmation?: { method: ConfirmationMethod; note?: string | null };
+  cancellation?: { reason: CancellationReason; note?: string | null };
+  returnInfo?: { reason: ReturnReason; resellable: boolean; note?: string | null };
+  courier?: { provider?: string | null; trackingId?: string | null; trackingUrl?: string | null; consignmentId?: string | null };
+}
+
 /**
- * Appends a `statusHistory` entry and updates `orderStatus` atomically.
- * Caller (`adminUpdateOrderStatus`) is responsible for validating the
- * transition against `ORDER_STATUS_TRANSITIONS` first — this only persists
- * whatever it's given. Returns `null` if the order doesn't exist.
+ * Appends a `statusHistory` entry and updates `orderStatus` atomically, plus whichever transition
+ * detail (`confirmation`/`cancellation`/`returnInfo`/`courier`) applies. Caller
+ * (`adminUpdateOrderStatus`) is responsible for validating the transition against
+ * `ORDER_STATUS_TRANSITIONS` and building the right detail object first — this only persists
+ * whatever it's given. The Mongo filter matches on `orderStatus: expectedCurrentStatus` as well as
+ * `orderNumber` — a compare-and-swap that makes this the single source of truth for "did this
+ * exact transition really happen, exactly once" (see `UpdateOrderStatusInput`'s doc comment).
+ * Returns `null` if the order doesn't exist *or* its status had already moved on by the time this
+ * ran (the CAS lost) — callers must treat `null` as "someone else already handled this," never
+ * silently retry with a different expected status.
  */
-export async function updateOrderStatusForAdmin(orderNumber: string, newStatus: OrderStatus, adminUserId: string): Promise<OrderRecord | null> {
+export async function updateOrderStatusForAdmin(input: UpdateOrderStatusInput): Promise<OrderRecord | null> {
   await connectToDatabase();
+  const now = new Date();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setFields: Record<string, any> = { orderStatus: input.newStatus };
+
+  if (input.confirmation) {
+    setFields["confirmation.method"] = input.confirmation.method;
+    setFields["confirmation.confirmedAt"] = now;
+    setFields["confirmation.confirmedBy"] = input.adminUserId;
+    setFields["confirmation.note"] = input.confirmation.note ?? null;
+  }
+  if (input.cancellation) {
+    setFields["cancellation.reason"] = input.cancellation.reason;
+    setFields["cancellation.note"] = input.cancellation.note ?? null;
+  }
+  if (input.returnInfo) {
+    setFields["return.reason"] = input.returnInfo.reason;
+    setFields["return.resellable"] = input.returnInfo.resellable;
+    setFields["return.note"] = input.returnInfo.note ?? null;
+  }
+  if (input.courier) {
+    if (input.courier.provider !== undefined) setFields["courier.provider"] = input.courier.provider;
+    if (input.courier.trackingId !== undefined) setFields["courier.trackingId"] = input.courier.trackingId;
+    if (input.courier.trackingUrl !== undefined) setFields["courier.trackingUrl"] = input.courier.trackingUrl;
+    if (input.courier.consignmentId !== undefined) setFields["courier.consignmentId"] = input.courier.consignmentId;
+    setFields["courier.shippedAt"] = now;
+  }
+
   const doc = await OrderModel.findOneAndUpdate(
-    { orderNumber },
+    { orderNumber: input.orderNumber, orderStatus: input.expectedCurrentStatus },
     {
-      $set: { orderStatus: newStatus },
-      $push: { statusHistory: { status: newStatus, changedAt: new Date(), changedBy: adminUserId } },
+      $set: setFields,
+      $push: { statusHistory: { status: input.newStatus, changedAt: now, changedBy: input.adminUserId, note: input.note ?? null } },
     },
     { returnDocument: "after" },
   ).lean<OrderRecord>();
@@ -458,6 +590,41 @@ export async function getOrderDashboardStats(): Promise<OrderDashboardStats> {
     pendingVerification,
     revenueToday: revenueTodayAgg[0]?.total ?? 0,
     revenueThisMonth: revenueMonthAgg[0]?.total ?? 0,
+  };
+}
+
+/**
+ * Bangladesh COD quality metrics for `/admin/analytics` — see `CodQualityMetrics`'s doc comment
+ * (`src/types/order.ts`) for why `pending` orders are excluded from every rate's numerator/
+ * denominator except the raw `receivedCount`: a still-pending order hasn't failed anything yet.
+ *
+ * `confirmedCount`/`deliveredCount` count orders that have *ever reached* that status at least
+ * once — matched against `statusHistory.status` as well as the current `orderStatus`, not current
+ * status alone. This matters: an order that was genuinely confirmed and then later cancelled must
+ * still count toward the confirmation rate (the confirmation itself succeeded; the cancellation is
+ * a separate, later fact), and an order returned via `shipped -> returned` (a courier
+ * return-to-sender that never reached the customer) must NOT count as delivered just because
+ * `returned` is downstream of `delivered` in some other path — checking for a genuine `delivered`
+ * history entry is what correctly distinguishes the two `returned` origins.
+ */
+export async function getCodQualityMetrics(): Promise<CodQualityMetrics> {
+  await connectToDatabase();
+
+  const [receivedCount, confirmedCount, deliveredCount, cancelledCount] = await Promise.all([
+    OrderModel.countDocuments({}),
+    OrderModel.countDocuments({ $or: [{ orderStatus: "confirmed" }, { "statusHistory.status": "confirmed" }] }),
+    OrderModel.countDocuments({ $or: [{ orderStatus: "delivered" }, { "statusHistory.status": "delivered" }] }),
+    OrderModel.countDocuments({ orderStatus: "cancelled" }),
+  ]);
+
+  return {
+    receivedCount,
+    confirmedCount,
+    deliveredCount,
+    cancelledCount,
+    confirmationRate: receivedCount > 0 ? confirmedCount / receivedCount : 0,
+    deliveryRate: confirmedCount > 0 ? deliveredCount / confirmedCount : 0,
+    cancellationRate: receivedCount > 0 ? cancelledCount / receivedCount : 0,
   };
 }
 

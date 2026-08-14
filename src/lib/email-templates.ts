@@ -1,5 +1,5 @@
 import { paymentMethodLabels } from "@/config/payment";
-import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type OrderSummary } from "@/types/order";
+import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type OrderSummary, type StatusEmailStatus } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
 
 /**
@@ -149,4 +149,141 @@ export function orderConfirmationTemplate(order: OrderSummary): EmailContent {
   ].join("\n");
 
   return { subject: `Renvura Order Received — ${order.orderNumber}`, html, text };
+}
+
+/**
+ * Phase 12 status-change emails — one per `StatusEmailStatus`
+ * (`confirmed`/`shipped`/`delivered`/`cancelled`/`returned`). Deliberately NOT sent for
+ * `processing`/`supplier_submitted` (internal-only milestones, not worth a customer email) — see
+ * CLAUDE.md's "Customer emails" section. Every template is built from the sanitized `OrderSummary`
+ * projection only — never the raw DB record, so `wholesalePrice`, internal cancellation/return
+ * reason codes, and admin notes are structurally impossible to leak here (`OrderSummary` never
+ * carries them at all, see `src/types/order.ts`), not just manually avoided. Cancelled/returned
+ * emails never state an internal reason — only the neutral fact that the order was cancelled/
+ * returned, matching the admin UI's own "customer-facing message is always neutral" rule.
+ */
+
+function orderConfirmedTemplate(order: OrderSummary): EmailContent {
+  const html = wrap(`
+    <p>Hi ${order.customer.name}, your order has been confirmed.</p>
+    <p><strong>Order Number:</strong> ${order.orderNumber}<br />
+    <strong>Total:</strong> ${formatBDT(order.pricing.total)}</p>
+    <p>We're preparing it now — we'll email you again once it ships.</p>
+    <p>Track your order any time at <a href="https://renvura.com/track-order">renvura.com/track-order</a>.</p>
+    <p>Questions? Contact us at hello@renvura.com.</p>
+  `);
+  const text = [
+    `Hi ${order.customer.name}, your order has been confirmed.`,
+    ``,
+    `Order Number: ${order.orderNumber}`,
+    `Total: ${formatBDT(order.pricing.total)}`,
+    ``,
+    `We're preparing it now — we'll email you again once it ships.`,
+    `Track your order any time at https://renvura.com/track-order`,
+    `Questions? Contact us at hello@renvura.com`,
+    ``,
+    `Renvura · https://renvura.com`,
+  ].join("\n");
+  return { subject: `Your Renvura order is confirmed — ${order.orderNumber}`, html, text };
+}
+
+function orderShippedTemplate(order: OrderSummary): EmailContent {
+  const courier = order.courier;
+  const hasTracking = Boolean(courier.provider || courier.trackingId);
+  const trackingLine = hasTracking
+    ? `<p><strong>Courier:</strong> ${courier.provider ?? "—"}${courier.trackingId ? `<br /><strong>Tracking ID:</strong> ${courier.trackingId}` : ""}${courier.trackingUrl ? `<br /><a href="${courier.trackingUrl}">Track your shipment</a>` : ""}</p>`
+    : "";
+  const html = wrap(`
+    <p>Hi ${order.customer.name}, your order is on its way.</p>
+    <p><strong>Order Number:</strong> ${order.orderNumber}<br />
+    <strong>Total:</strong> ${formatBDT(order.pricing.total)}</p>
+    ${trackingLine}
+    <p>Track your order any time at <a href="https://renvura.com/track-order">renvura.com/track-order</a>.</p>
+    <p>Questions? Contact us at hello@renvura.com.</p>
+  `);
+  const text = [
+    `Hi ${order.customer.name}, your order is on its way.`,
+    ``,
+    `Order Number: ${order.orderNumber}`,
+    `Total: ${formatBDT(order.pricing.total)}`,
+    ...(hasTracking
+      ? [``, `Courier: ${courier.provider ?? "—"}`, ...(courier.trackingId ? [`Tracking ID: ${courier.trackingId}`] : []), ...(courier.trackingUrl ? [`Track: ${courier.trackingUrl}`] : [])]
+      : []),
+    ``,
+    `Track your order any time at https://renvura.com/track-order`,
+    `Questions? Contact us at hello@renvura.com`,
+    ``,
+    `Renvura · https://renvura.com`,
+  ].join("\n");
+  return { subject: `Your Renvura order has shipped — ${order.orderNumber}`, html, text };
+}
+
+function orderDeliveredTemplate(order: OrderSummary): EmailContent {
+  const html = wrap(`
+    <p>Hi ${order.customer.name}, thank you — your order has been delivered.</p>
+    <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+    <p>We hope you love it. If anything isn't right, just reply to this email or contact us at hello@renvura.com.</p>
+  `);
+  const text = [
+    `Hi ${order.customer.name}, thank you — your order has been delivered.`,
+    ``,
+    `Order Number: ${order.orderNumber}`,
+    ``,
+    `We hope you love it. If anything isn't right, contact us at hello@renvura.com.`,
+    ``,
+    `Renvura · https://renvura.com`,
+  ].join("\n");
+  return { subject: `Your Renvura order was delivered — ${order.orderNumber}`, html, text };
+}
+
+/** Never states an internal cancellation reason — only the neutral fact. `refundNote` is only ever passed when a manual payment had actually been marked paid before cancellation. */
+function orderCancelledTemplate(order: OrderSummary): EmailContent {
+  const refundNote =
+    order.payment.method !== "cash_on_delivery" && order.payment.status === "refunded"
+      ? "Any payment received for this order will be refunded."
+      : "";
+  const html = wrap(`
+    <p>Hi ${order.customer.name}, your order has been cancelled.</p>
+    <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+    ${refundNote ? `<p>${refundNote}</p>` : ""}
+    <p>If you believe this was a mistake, contact us at hello@renvura.com and we'll help sort it out.</p>
+  `);
+  const text = [
+    `Hi ${order.customer.name}, your order has been cancelled.`,
+    ``,
+    `Order Number: ${order.orderNumber}`,
+    ...(refundNote ? [``, refundNote] : []),
+    ``,
+    `If you believe this was a mistake, contact us at hello@renvura.com.`,
+    ``,
+    `Renvura · https://renvura.com`,
+  ].join("\n");
+  return { subject: `Your Renvura order was cancelled — ${order.orderNumber}`, html, text };
+}
+
+/** Never states an internal return reason — only the neutral fact. */
+function orderReturnedTemplate(order: OrderSummary): EmailContent {
+  const html = wrap(`
+    <p>Hi ${order.customer.name}, your order has been marked as returned.</p>
+    <p><strong>Order Number:</strong> ${order.orderNumber}</p>
+    <p>If you have any questions, contact us at hello@renvura.com.</p>
+  `);
+  const text = [
+    `Hi ${order.customer.name}, your order has been marked as returned.`,
+    ``,
+    `Order Number: ${order.orderNumber}`,
+    ``,
+    `If you have any questions, contact us at hello@renvura.com.`,
+    ``,
+    `Renvura · https://renvura.com`,
+  ].join("\n");
+  return { subject: `Your Renvura order was returned — ${order.orderNumber}`, html, text };
+}
+
+export function statusEmailTemplateFor(status: StatusEmailStatus, order: OrderSummary): EmailContent {
+  if (status === "confirmed") return orderConfirmedTemplate(order);
+  if (status === "shipped") return orderShippedTemplate(order);
+  if (status === "delivered") return orderDeliveredTemplate(order);
+  if (status === "cancelled") return orderCancelledTemplate(order);
+  return orderReturnedTemplate(order);
 }

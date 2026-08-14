@@ -224,7 +224,19 @@ As of Phase 9, `Order` also carries `customerUserId: string | null` (indexed) �
 "Authentication & customer accounts" below. As of Phase 10, `Order` also carries `statusHistory`
 (an append-only array of `{status, changedAt, changedBy}`, `changedBy` being the admin's Better
 Auth user id or `null` for the initial system-set `"pending"` entry) — see "Admin dashboard &
-authorization" below.
+authorization" below. As of Phase 12, `statusHistory` entries also carry an optional `note`, and
+`Order` gained four new subdocuments — `confirmation` (method/timestamp, customer-safe;
+confirmedBy/note, admin-only), `cancellation`/`return` (reason codes + notes, entirely
+admin-only), and `courier` (provider/trackingId/trackingUrl/consignmentId/shippedAt, fully
+customer-safe) — see "Order operations & customer lifecycle (Phase 12)" below.
+
+### InventoryMovement (Phase 12 — new, MongoDB-connected)
+
+`src/models/InventoryMovement.ts` — an append-only ledger of every order-driven stock adjustment
+(`{productId, quantityDelta, reason, orderNumber, actorUserId, createdAt}`), written by
+`src/services/inventory.ts`. Distinct from `AdminAuditLog`: this captures the exact quantity delta
+per product per movement for a future stock-reconciliation report, while `AdminAuditLog` separately
+records the admin action that triggered it.
 
 ### AdminAuditLog & StoreSettings (Phase 10 — done, MongoDB-connected)
 
@@ -614,6 +626,39 @@ gtag/fbq instead), Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, 
 order-lifecycle event bus, email marketing automation, CRM integrations, or Meta refund/
 cancellation attribution.
 
+## Order operations & customer lifecycle (Phase 12)
+
+Full production order-management workflow — see CLAUDE.md's "Order operations & customer
+lifecycle (Phase 12)" section for the complete architecture (canonical status flow, transition
+compare-and-swap, confirmation/cancellation/return/courier data model, inventory reservation
+strategy and its exactly-once guarantee, payment/status coordination, customer emails, the shared
+customer-safe tracking timeline, COD quality metrics, and the Meta/GA4 retargeting audience
+documentation). In brief:
+
+- `ORDER_STATUS_TRANSITIONS` (`src/types/order.ts`) is a strict DAG — no status is ever revisited.
+  `updateOrderStatusForAdmin` (`src/services/orders.ts`) now performs a real compare-and-swap
+  (matches on `orderNumber` *and* the caller's expected current status), which is what makes every
+  downstream side effect (inventory, payment coordination, email) safely exactly-once without its
+  own separate idempotency bookkeeping.
+- `src/services/inventory.ts` + `src/models/InventoryMovement.ts` (new) — decrements stock on
+  `pending → confirmed`, restores it on a cancellation from any already-decremented status or on a
+  `resellable: true` return. Atomic `$inc`, never touches `inventory.status` (mirrors the existing
+  `adminAdjustStock` precedent).
+- `Order.confirmation`/`cancellation`/`return`/`courier` are new subdocuments
+  (`src/models/Order.ts`) — confirmation method/timestamp and courier info are customer-safe;
+  cancellation/return reason codes and all internal notes are admin-only (`OrderSummary` omits
+  them structurally, not just by convention).
+- `src/components/checkout/OrderStatusTimeline.tsx` is a shared customer-safe progress timeline
+  used by both `/track-order` and `/account/orders/[orderNumber]`.
+- `src/components/admin/OrderStatusActions.tsx` replaces the old dropdown-based
+  `OrderStatusForm.tsx` — one button per valid transition, each expanding into exactly the fields
+  that transition needs.
+- No courier API integration — schema/UI readiness only, `provider` is free text so no single
+  Bangladesh courier is hardcoded as mandatory.
+- The Meta/GA4 retargeting audience recommendations (recommended windows, purchase-exclusion
+  logic, product-specific/catalog-ad readiness) are pure documentation — no application code
+  implements or applies any of it; see CLAUDE.md.
+
 ## SEO readiness
 
 Next.js Metadata API is already in use for base metadata (`src/app/layout.tsx`), per-route
@@ -623,7 +668,8 @@ Phase 6 — truthful titles/descriptions throughout, `alternates.canonical` poin
 query-free path. Canonical URLs, OG image resolution, and the root layout's `metadataBase` are all
 gated behind `isConfigured(brand.urls.site)` — wired, but inactive until a real production domain
 replaces that `TODO`. `sitemap.ts`, `robots.ts`, and any SEO work beyond individual-route metadata
-are still Phase 12 work, but nothing in the current structure blocks adding them later.
+remain unbuilt (not part of Phase 12's scope either — see "Order operations & customer lifecycle
+(Phase 12)" above), but nothing in the current structure blocks adding them later.
 
 ## Environment variables (Phase 8–11)
 
@@ -663,14 +709,20 @@ done as of Phase 8, customer authentication + accounts (`/login`, `/signup`, `/a
 as of Phase 9, and the admin dashboard (`/admin/*` — see "Admin dashboard & authorization" above)
 is done as of Phase 10, and email verification + forgot/reset password + a Resend-backed order-
 confirmation email (`/verify-email`, `/forgot-password`, `/reset-password` — see "Customer
-verification & account recovery" above) is done as of Phase 10.5, and Meta Pixel/Conversions API +
-GA4 measurement (see "Marketing / tracking (Phase 11)" above) is done as of Phase 11 (see
-`docs/DESIGN-SYSTEM.md`
+verification & account recovery" above) is done as of Phase 10.5, Meta Pixel/Conversions API +
+GA4 measurement (see "Marketing / tracking (Phase 11)" above) is done as of Phase 11, and the
+production order-operations workflow — status transitions, inventory reservation, confirmation/
+cancellation/return handling, courier readiness fields, status-change customer emails, the
+customer-safe tracking timeline, COD quality metrics, and Meta/GA4 retargeting audience
+documentation (see "Order operations & customer lifecycle (Phase 12)" above) — is done as of Phase
+12 (see `docs/DESIGN-SYSTEM.md`
 §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still deferred: checkout phone OTP verification (built,
 then explicitly deferred in favor of manual phone/WhatsApp order confirmation — see above),
-automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration,
+automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration (schema/
+UI *readiness* exists as of Phase 12 — `Order.courier` — but no courier is actually called),
 Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email marketing automation, CRM
-integrations, server-side GTM, Meta refund/cancellation attribution, historical guest-order linking, in-app email *change*
+integrations, server-side GTM, Meta refund/cancellation attribution, bulk admin order actions
+(deliberately deferred — see CLAUDE.md's Phase 12 section), historical guest-order linking, in-app email *change*
 (email *verification* itself is done), account phone-update verification, social/OTP login (Better
 Auth's `socialProviders` config keeps this addable without restructuring, but nothing is wired up),
 "log in as customer" admin impersonation, product image upload UI, bulk product import/export, an

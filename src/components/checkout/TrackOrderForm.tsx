@@ -6,6 +6,7 @@ import { trackOrder } from "@/actions/orders";
 import { paymentMethodLabels } from "@/config/payment";
 import { ORDER_STATUS_LABELS, PAYMENT_STATUS_LABELS, type OrderTrackingSummary } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
+import { OrderStatusTimeline } from "./OrderStatusTimeline";
 
 const inputClass =
   "h-11 w-full rounded-lg border border-border bg-surface px-3 text-small text-foreground placeholder:text-foreground/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus";
@@ -90,6 +91,9 @@ export function TrackOrderForm() {
       {result && (
         <div className="mt-6 rounded-2xl border border-border bg-surface p-5">
           <h2 className="text-h3 text-foreground">{result.orderNumber}</h2>
+
+          <OrderStatusTimeline order={result} className="mt-4 border-b border-border pb-4" />
+
           <dl className="mt-4 grid grid-cols-2 gap-y-3 text-small">
             <dt className="text-foreground/70">Status</dt>
             <dd className="text-right font-medium text-foreground">{ORDER_STATUS_LABELS[result.orderStatus]}</dd>

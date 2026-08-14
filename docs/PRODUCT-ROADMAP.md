@@ -418,9 +418,43 @@ unverified in this pass — see the environment variables table in `docs/ARCHITE
 marketing automation, CRM integrations, courier integration, an automated payment gateway, an
 attribution platform, server-side GTM, and Meta refund/cancellation attribution.
 
-## Phase 12 — SEO / performance / testing
+## Phase 12 — Production order operations & customer lifecycle ✅
+Full production order-management workflow: canonical status flow with server-enforced,
+compare-and-swap transitions; order confirmation method (phone/WhatsApp), cancellation, and return
+handling with fixed internal reason codes; inventory reservation (decrement at `confirmed`,
+restore on cancellation/resellable return) with a new append-only `InventoryMovement` audit
+ledger; courier readiness fields (no courier API integration); status-change customer emails
+(confirmed/shipped/delivered/cancelled/returned); a shared customer-safe order-status timeline for
+`/track-order` and `/account/orders/[orderNumber]`; a redesigned admin order-detail action UI
+(`OrderStatusActions`, replacing the old status dropdown); admin quick-status tabs; COD quality
+metrics (confirmation/delivery/cancellation rates) on `/admin/analytics`; and documentation of
+recommended Meta Custom Audiences / GA4 Audiences for retargeting (no application code — pure
+Ads-Manager/GA4-configuration guidance). See CLAUDE.md's "Order operations & customer lifecycle
+(Phase 12)" section and `docs/ARCHITECTURE.md`'s matching section for the full architecture.
+
+**Inventory strategy decision**: reserve/decrement at `confirmed`, not at order creation — most
+`pending` COD orders are unconfirmed and some are never genuine, so decrementing at creation would
+tie up stock for orders that may never ship. Exactly-once guarantee comes from the order-status
+transition graph being a strict DAG (no status is ever revisited) combined with a real
+compare-and-swap on `updateOrderStatusForAdmin` — no separate idempotency flag was needed.
+
+**Payment coordination**: the one automatic payment-status change in the whole system is
+`cod_pending → paid` when a COD order is marked `delivered` (cash was collected at the door).
+Every manual-payment (bKash/Nagad/Rocket) transition — verify, fail, refund — stays a deliberate,
+separate admin action; nothing here auto-verifies or auto-refunds a manual payment.
+
+**Retargeting is documentation, not new tracking code.** Phase 11's Meta Pixel/CAPI + GA4 events
+are completely unchanged (regression-verified — zero files in `src/lib/analytics/`/
+`src/components/analytics/` were touched this phase). Confirming/shipping/delivering an order
+never fires a second Purchase event or any other CAPI/Pixel/GA event.
+
+**Explicitly not built**: courier API integration (schema/UI readiness only), bulk admin order
+actions (single-order transitions only, for now), automatic manual-payment refunds, Google Ads/
+TikTok/Microsoft Ads audience sync, GA4-Google-Ads account linking.
+
+## Phase 13 — SEO / performance / testing
 Dynamic metadata, canonical URLs, sitemap, robots.txt, Open Graph, JSON-LD Product schema, Core
 Web Vitals pass, test coverage.
 
-## Phase 13 — Deployment
+## Phase 14 — Deployment
 Production Vercel deployment, environment configuration, domain setup, monitoring.

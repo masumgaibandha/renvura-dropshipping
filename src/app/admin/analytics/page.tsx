@@ -1,9 +1,13 @@
 import { BarChart, type BarChartRow } from "@/components/admin/BarChart";
 import { StatCard } from "@/components/admin/StatCard";
 import { countCustomers } from "@/services/customers";
-import { getAverageOrderValue, getOrderDashboardStats, getRepeatCustomerCount, getSalesByDay, getTopSellingProducts } from "@/services/orders";
+import { getAverageOrderValue, getCodQualityMetrics, getOrderDashboardStats, getRepeatCustomerCount, getSalesByDay, getTopSellingProducts } from "@/services/orders";
 import { ORDER_STATUS_LABELS, type OrderStatus } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
+
+function formatPercent(rate: number): string {
+  return `${(rate * 100).toFixed(1)}%`;
+}
 
 const STATUS_COLOR_CLASS: Record<OrderStatus, string> = {
   pending: "bg-foreground/30",
@@ -17,13 +21,14 @@ const STATUS_COLOR_CLASS: Record<OrderStatus, string> = {
 };
 
 export default async function AdminAnalyticsPage() {
-  const [stats, salesByDay, topProducts, aov, repeatCustomers, customerCount] = await Promise.all([
+  const [stats, salesByDay, topProducts, aov, repeatCustomers, customerCount, codQuality] = await Promise.all([
     getOrderDashboardStats(),
     getSalesByDay(14),
     getTopSellingProducts(8),
     getAverageOrderValue(),
     getRepeatCustomerCount(),
     countCustomers(),
+    getCodQualityMetrics(),
   ]);
 
   const statusRows: BarChartRow[] = (
@@ -56,6 +61,19 @@ export default async function AdminAnalyticsPage() {
         <StatCard label="Total Customers" value={String(customerCount)} />
         <StatCard label="Repeat Customers" value={String(repeatCustomers)} hint="2+ orders, signed-in only" />
         <StatCard label="Pending Verification" value={String(stats.pendingVerification)} />
+      </section>
+
+      <section className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="text-body font-semibold text-foreground">COD Quality</h2>
+        <p className="text-xs text-foreground/70">
+          Confirmation/delivery/cancellation rates across all {codQuality.receivedCount} orders received — pending orders aren&apos;t counted as
+          failures, only as not-yet-decided.
+        </p>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <StatCard label="Confirmation Rate" value={formatPercent(codQuality.confirmationRate)} hint={`${codQuality.confirmedCount} confirmed`} />
+          <StatCard label="Delivery Rate" value={formatPercent(codQuality.deliveryRate)} hint={`${codQuality.deliveredCount} delivered`} />
+          <StatCard label="Cancellation Rate" value={formatPercent(codQuality.cancellationRate)} hint={`${codQuality.cancelledCount} cancelled`} />
+        </div>
       </section>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

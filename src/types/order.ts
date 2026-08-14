@@ -47,24 +47,32 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 };
 
 /**
- * Phase 10 admin order-status workflow. Deliberately not a free-for-all
- * graph: `cancelled` is reachable from any non-terminal status (orders get
- * cancelled at any stage before delivery), `returned` only from
- * `delivered`, and `cancelled`/`returned` are terminal (no further
- * transitions). `adminUpdateOrderStatus` (`src/actions/admin/orders.ts`) is
- * the only place this is enforced — never trust a client-submitted status
- * string without checking it against this table first.
+ * Phase 10 admin order-status workflow, extended in Phase 12. Deliberately not a free-for-all
+ * graph: `cancelled` is reachable from any non-terminal status (orders get cancelled at any stage
+ * before delivery), `returned` is reachable from `shipped` (a courier return-to-sender — the
+ * package never actually reached the customer) as well as `delivered` (a genuine post-delivery
+ * return), and `cancelled`/`returned` are terminal (no further transitions). `processing` can move
+ * straight to `shipped`, skipping the internal-only `supplier_submitted` step — not every order
+ * needs a recorded "submitted to supplier" milestone. This is a strict DAG: no status is ever
+ * revisited once left, which is also what makes the Phase 12 inventory decrement/restore logic
+ * (`src/services/inventory.ts`) safe without its own separate idempotency flag — a given real
+ * transition can happen at most once per order. `adminUpdateOrderStatus`
+ * (`src/actions/admin/orders.ts`) is the only place this is enforced — never trust a
+ * client-submitted status string without checking it against this table first.
  */
 export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["processing", "cancelled"],
-  processing: ["supplier_submitted", "cancelled"],
+  processing: ["supplier_submitted", "shipped", "cancelled"],
   supplier_submitted: ["shipped", "cancelled"],
-  shipped: ["delivered", "cancelled"],
+  shipped: ["delivered", "cancelled", "returned"],
   delivered: ["returned"],
   cancelled: [],
   returned: [],
 };
+
+/** Statuses at/after which inventory has already been decremented for this order (i.e. everything from `confirmed` onward) — used by `src/actions/admin/orders.ts` to decide whether a cancellation needs to restore stock. `pending -> cancelled` never decremented anything, so it's deliberately excluded. */
+export const INVENTORY_DECREMENTED_STATUSES: OrderStatus[] = ["confirmed", "processing", "supplier_submitted", "shipped", "delivered"];
 
 export function canTransitionOrderStatus(from: OrderStatus, to: OrderStatus): boolean {
   return ORDER_STATUS_TRANSITIONS[from].includes(to);
@@ -75,6 +83,8 @@ export interface OrderStatusHistoryEntry {
   changedAt: string;
   /** Better Auth admin user id, or `null` for the initial `"pending"` entry `createOrder` sets. */
   changedBy: string | null;
+  /** Optional internal note attached to this transition — admin-only, never customer-facing. */
+  note: string | null;
 }
 
 export interface OrderCustomer {
@@ -117,6 +127,63 @@ export interface OrderPayment {
   status: PaymentStatus;
 }
 
+export type ConfirmationMethod = "phone" | "whatsapp" | "none";
+
+/**
+ * Phase 12 — set when an order transitions `pending` -> `confirmed`. Phone OTP verification
+ * remains deferred (CLAUDE.md's Phase 10.5 section); this instead records *how* staff confirmed
+ * the order was genuine, matching the existing manual phone/WhatsApp confirmation workflow.
+ * `confirmedBy`/`note` are admin-only; `method`/`confirmedAt` are customer-safe — see
+ * `CustomerOrderConfirmation` below.
+ */
+export interface OrderConfirmation {
+  method: ConfirmationMethod;
+  confirmedAt: string | null;
+  confirmedBy: string | null;
+  note: string | null;
+}
+
+/** Customer-safe subset of `OrderConfirmation` — surfaced on the tracking timeline. */
+export type CustomerOrderConfirmation = Pick<OrderConfirmation, "method" | "confirmedAt">;
+
+export type CancellationReason = "customer_request" | "unreachable" | "out_of_stock" | "invalid_order" | "payment_failed" | "duplicate" | "other";
+
+/**
+ * Phase 12 — set when an order transitions to `cancelled`. Entirely admin-only: the customer only
+ * ever sees the neutral "Cancelled" status label, never the internal reason code or note (see
+ * CLAUDE.md's "Cancellation flow" section).
+ */
+export interface OrderCancellation {
+  reason: CancellationReason | null;
+  note: string | null;
+}
+
+export type ReturnReason = "damaged" | "wrong_item" | "customer_return" | "delivery_failure" | "other";
+
+/**
+ * Phase 12 — set when an order transitions to `returned`. `resellable` decides whether
+ * `src/services/inventory.ts` restores stock. Entirely admin-only, same reasoning as
+ * `OrderCancellation`.
+ */
+export interface OrderReturn {
+  reason: ReturnReason | null;
+  resellable: boolean | null;
+  note: string | null;
+}
+
+/**
+ * Phase 12 — courier/shipment readiness fields only, no courier API integration yet. `provider` is
+ * free text, not an enum, so no single Bangladesh courier is hardcoded as mandatory. Fully
+ * customer-safe — surfaced on the tracking timeline when present.
+ */
+export interface OrderCourier {
+  provider: string | null;
+  trackingId: string | null;
+  trackingUrl: string | null;
+  consignmentId: string | null;
+  shippedAt: string | null;
+}
+
 export type OrderConfirmationEmailStatus = "not_applicable" | "pending" | "sent" | "failed";
 
 /**
@@ -126,13 +193,20 @@ export type OrderConfirmationEmailStatus = "not_applicable" | "pending" | "sent"
  * Resend's internal email id, never customer-facing — see
  * `AdminOrderDetail` vs. `OrderSummary` below.
  */
+interface EmailAttemptStatus {
+  status: OrderConfirmationEmailStatus;
+  sentAt: string | null;
+  providerMessageId: string | null;
+  lastError: string | null;
+}
+
+/** Order statuses that trigger a customer email — deliberately a small subset (see CLAUDE.md's "Customer emails" note: not every minor internal status update is worth an email). */
+export type StatusEmailStatus = "confirmed" | "shipped" | "delivered" | "cancelled" | "returned";
+
 export interface OrderNotifications {
-  orderConfirmationEmail: {
-    status: OrderConfirmationEmailStatus;
-    sentAt: string | null;
-    providerMessageId: string | null;
-    lastError: string | null;
-  };
+  orderConfirmationEmail: EmailAttemptStatus;
+  /** Phase 12 — one attempt-tracking record per status-change email, same shape/semantics as `orderConfirmationEmail`. */
+  statusEmails: Record<StatusEmailStatus, EmailAttemptStatus>;
 }
 
 export type MetaPurchaseStatus = "not_applicable" | "pending" | "sent" | "failed";
@@ -171,12 +245,33 @@ export interface Order {
   statusHistory: OrderStatusHistoryEntry[];
   notifications: OrderNotifications;
   analytics: OrderAnalytics;
+  confirmation: OrderConfirmation;
+  cancellation: OrderCancellation;
+  return: OrderReturn;
+  courier: OrderCourier;
   createdAt: string;
   updatedAt: string;
 }
 
-/** Sanitized projection returned to the client after order creation and shown on `/order-success/[orderNumber]` — no Mongo `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never customer-facing), no `notifications` (Resend's internal message id is admin-only), no `analytics` (Meta's internal send status is admin-only — the browser Purchase event itself is fired separately by `PurchaseTracker.tsx` using only `orderNumber`/items/value, not this field). */
-export type OrderSummary = Omit<Order, "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications" | "analytics">;
+/**
+ * Sanitized projection returned to the client after order creation and shown on
+ * `/order-success/[orderNumber]`, `/account/orders/[orderNumber]`, and `/track-order` — no Mongo
+ * `_id`, no `idempotencyKey`, no `customerUserId` (an internal linkage field, not useful to expose
+ * even for the order's own owner), no `statusHistory` (`changedBy` is an admin user id, never
+ * customer-facing, and entries may carry an internal `note`), no `notifications` (Resend's internal
+ * message id is admin-only), no `analytics` (Meta's internal send status is admin-only), no
+ * `cancellation`/full `return` (internal reason codes/notes — the customer only ever sees the
+ * neutral status label, see CLAUDE.md's "Cancellation flow"/"Return flow" sections). `confirmation`
+ * is narrowed to its customer-safe subset (`CustomerOrderConfirmation` — method + timestamp only,
+ * never the admin id/note); `courier` is included in full — a customer tracking their own order
+ * should see tracking info as soon as it exists.
+ */
+export type OrderSummary = Omit<
+  Order,
+  "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications" | "analytics" | "confirmation" | "cancellation" | "return"
+> & {
+  confirmation: CustomerOrderConfirmation;
+};
 
 /** Full admin projection — the only place `statusHistory`/`customerUserId`/`idempotencyKey` are ever returned. See `src/services/orders.ts`'s `toAdminOrderDetail`. */
 export type AdminOrderDetail = Order;
@@ -204,7 +299,7 @@ export interface OrderListItem {
   itemCount: number;
 }
 
-/** Even more restricted projection for `/track-order` — no transactionId, no full address (division/district/upazila only). */
+/** Even more restricted projection for `/track-order` — no transactionId, no full address (division/district/upazila only). `confirmation`/`courier` are the same customer-safe shapes `OrderSummary` uses, so both surfaces can share one timeline component. */
 export interface OrderTrackingSummary {
   orderNumber: string;
   customerName: string;
@@ -220,5 +315,27 @@ export interface OrderTrackingSummary {
     district: string;
     upazila: string;
   };
+  confirmation: CustomerOrderConfirmation;
+  courier: OrderCourier;
   createdAt: string;
+}
+
+/**
+ * Phase 12 — Bangladesh COD quality metrics for `/admin/analytics` (`src/services/orders.ts`'s
+ * `getCodQualityMetrics`). Deliberately excludes `pending` orders from the denominator of every
+ * rate below except `receivedCount` itself — a still-pending order hasn't failed anything yet, it
+ * just hasn't been acted on; counting it as a cancellation or a non-confirmation would mislabel a
+ * normal in-flight state as a failure (see CLAUDE.md's "COD quality metrics" section).
+ */
+export interface CodQualityMetrics {
+  receivedCount: number;
+  confirmedCount: number;
+  deliveredCount: number;
+  cancelledCount: number;
+  /** confirmedCount / receivedCount — 0 when receivedCount is 0. */
+  confirmationRate: number;
+  /** deliveredCount / confirmedCount — 0 when confirmedCount is 0. */
+  deliveryRate: number;
+  /** cancelledCount / receivedCount — 0 when receivedCount is 0. */
+  cancellationRate: number;
 }

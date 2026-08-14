@@ -50,11 +50,38 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     return qs ? `/admin/orders?${qs}` : "/admin/orders";
   }
 
+  const QUICK_TABS: { status: OrderStatus | ""; label: string }[] = [
+    { status: "", label: "All" },
+    { status: "pending", label: ORDER_STATUS_LABELS.pending },
+    { status: "confirmed", label: ORDER_STATUS_LABELS.confirmed },
+    { status: "processing", label: ORDER_STATUS_LABELS.processing },
+    { status: "shipped", label: ORDER_STATUS_LABELS.shipped },
+    { status: "delivered", label: ORDER_STATUS_LABELS.delivered },
+    { status: "cancelled", label: ORDER_STATUS_LABELS.cancelled },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h1 className="text-h2 font-semibold text-foreground">Orders</h1>
         <p className="mt-1 text-small text-foreground/70">{result.total} order{result.total === 1 ? "" : "s"}</p>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quick status filter">
+        {QUICK_TABS.map((tab) => (
+          <Link
+            key={tab.status || "all"}
+            href={tab.status ? `/admin/orders?orderStatus=${tab.status}` : "/admin/orders"}
+            aria-current={orderStatus === tab.status || (!orderStatus && !tab.status) ? "true" : undefined}
+            className={`inline-flex h-8 items-center rounded-full px-3 text-xs font-medium transition-colors ${
+              orderStatus === tab.status || (!orderStatus && !tab.status)
+                ? "bg-accent text-white"
+                : "border border-border bg-surface text-foreground hover:border-accent"
+            }`}
+          >
+            {tab.label}
+          </Link>
+        ))}
       </div>
 
       <form method="get" className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-surface p-4">

@@ -76,6 +76,76 @@ const orderStatusHistoryEntrySchema = new Schema(
     },
     changedAt: { type: Date, required: true, default: Date.now },
     changedBy: { type: String, default: null },
+    // Phase 12: optional internal note attached to this specific transition (e.g. "customer
+    // confirmed via WhatsApp", "unreachable after 3 attempts") — admin-only, never shown to the
+    // customer (see `toOrderSummary`/`toTrackingSummary`, which omit `statusHistory` entirely).
+    note: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+/**
+ * Phase 12: set when an order transitions `pending` -> `confirmed`. Phone OTP verification
+ * remains deferred (see CLAUDE.md's Phase 10.5 section) — this instead records how staff
+ * confirmed the order was genuine (phone call or WhatsApp), matching the existing manual
+ * confirmation workflow. `confirmedBy` (admin user id) and `note` are admin-only; `method`/
+ * `confirmedAt` are customer-safe (surfaced on the tracking timeline).
+ */
+const orderConfirmationSchema = new Schema(
+  {
+    method: { type: String, enum: ["phone", "whatsapp", "none"], default: "none" },
+    confirmedAt: { type: Date, default: null },
+    confirmedBy: { type: String, default: null },
+    note: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+/**
+ * Phase 12: set when an order transitions to `cancelled`. `reason` is a fixed internal code (never
+ * a free-text customer-facing claim) and, together with `note`, is admin-only — the customer only
+ * ever sees the neutral "Cancelled" status label (see CLAUDE.md's "Cancellation flow" section for
+ * why no reason is ever exposed).
+ */
+const orderCancellationSchema = new Schema(
+  {
+    reason: {
+      type: String,
+      enum: ["customer_request", "unreachable", "out_of_stock", "invalid_order", "payment_failed", "duplicate", "other"],
+      default: null,
+    },
+    note: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+/**
+ * Phase 12: set when an order transitions to `returned`. `resellable` decides whether
+ * `src/services/inventory.ts` restores stock — a damaged/lost return must never silently re-enter
+ * sellable inventory. Admin-only, same reasoning as `orderCancellationSchema`.
+ */
+const orderReturnSchema = new Schema(
+  {
+    reason: { type: String, enum: ["damaged", "wrong_item", "customer_return", "delivery_failure", "other"], default: null },
+    resellable: { type: Boolean, default: null },
+    note: { type: String, default: null },
+  },
+  { _id: false },
+);
+
+/**
+ * Phase 12: courier/shipment readiness — fields only, no courier API integration yet (see
+ * CLAUDE.md's "Courier readiness" section). `provider` is a free-text label deliberately, not an
+ * enum, so no single Bangladesh courier (Pathao/Steadfast/RedX/Paperfly) is hardcoded as mandatory.
+ * Fully customer-safe — surfaced on the tracking timeline when present.
+ */
+const orderCourierSchema = new Schema(
+  {
+    provider: { type: String, default: null },
+    trackingId: { type: String, default: null },
+    trackingUrl: { type: String, default: null },
+    consignmentId: { type: String, default: null },
+    shippedAt: { type: Date, default: null },
   },
   { _id: false },
 );
@@ -93,13 +163,30 @@ const orderStatusHistoryEntrySchema = new Schema(
  * returned to the customer (see `toOrderSummary`, which omits this whole
  * subdocument).
  */
+const emailAttemptSchema = {
+  status: { type: String, enum: ["not_applicable", "pending", "sent", "failed"], default: "not_applicable" },
+  sentAt: { type: Date, default: null },
+  providerMessageId: { type: String, default: null },
+  lastError: { type: String, default: null },
+};
+
 const orderNotificationsSchema = new Schema(
   {
-    orderConfirmationEmail: {
-      status: { type: String, enum: ["not_applicable", "pending", "sent", "failed"], default: "not_applicable" },
-      sentAt: { type: Date, default: null },
-      providerMessageId: { type: String, default: null },
-      lastError: { type: String, default: null },
+    orderConfirmationEmail: emailAttemptSchema,
+    // Phase 12: one attempt-tracking record per status-change email, same shape/semantics as
+    // `orderConfirmationEmail` above — `"not_applicable"` until that specific status is actually
+    // reached (a `returned` order was never `shipped` a second time, etc.), never a queue, never
+    // auto-retried. Keyed by the exact `OrderStatus` string that triggers the send (see
+    // `src/actions/admin/orders.ts`'s `STATUS_EMAIL_TEMPLATES` map) — only `confirmed`/`shipped`/
+    // `delivered`/`cancelled`/`returned` ever populate; `pending`/`processing`/`supplier_submitted`
+    // deliberately send no email (see CLAUDE.md's "Customer emails" note — not every minor internal
+    // status update is worth an email).
+    statusEmails: {
+      confirmed: emailAttemptSchema,
+      shipped: emailAttemptSchema,
+      delivered: emailAttemptSchema,
+      cancelled: emailAttemptSchema,
+      returned: emailAttemptSchema,
     },
   },
   { _id: false },
@@ -149,6 +236,11 @@ const orderSchema = new Schema(
     statusHistory: { type: [orderStatusHistoryEntrySchema], default: [] },
     notifications: { type: orderNotificationsSchema, default: () => ({}) },
     analytics: { type: orderAnalyticsSchema, default: () => ({}) },
+
+    confirmation: { type: orderConfirmationSchema, default: () => ({}) },
+    cancellation: { type: orderCancellationSchema, default: () => ({}) },
+    return: { type: orderReturnSchema, default: () => ({}) },
+    courier: { type: orderCourierSchema, default: () => ({}) },
   },
   { timestamps: true },
 );
