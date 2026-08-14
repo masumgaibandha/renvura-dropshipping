@@ -32,6 +32,13 @@ const SESSION_MARKER_PREFIX = "renvura:analytics:purchase:";
  * a UX nicety only. Meta's `event_id` dedup and GA4's `transaction_id` are what actually make a
  * refresh or a re-fire harmless even without this marker, so its absence (private browsing,
  * cleared storage) is never treated as a correctness problem.
+ *
+ * The marker is written only AFTER at least one provider actually fires (`trackMetaPurchase`/
+ * `trackGaPurchase` each report back whether their call actually reached `fbq`/`gtag` — see their
+ * doc comments). This was a real bug: the marker used to be written unconditionally before even
+ * attempting the calls, so if `fbq`/`gtag` weren't ready yet for any reason, the Purchase was lost
+ * AND a same-tab reload would still see the marker and refuse to retry. Now a failed attempt
+ * leaves no marker, so a reload gets a genuine second chance.
  */
 export function PurchaseTracker({ eventId, orderNumber, items, value, deliveryFee }: PurchaseTrackerProps) {
   const hasFired = useRef(false);
@@ -41,16 +48,26 @@ export function PurchaseTracker({ eventId, orderNumber, items, value, deliveryFe
     hasFired.current = true;
 
     const marker = `${SESSION_MARKER_PREFIX}${orderNumber}`;
+    let alreadyMarked = false;
     try {
-      if (sessionStorage.getItem(marker)) return;
-      sessionStorage.setItem(marker, "1");
+      alreadyMarked = sessionStorage.getItem(marker) !== null;
     } catch {
-      // sessionStorage unavailable (private mode, disabled storage) — fire anyway; provider-side
-      // dedup (event_id / transaction_id) still protects against a real double-count.
+      // sessionStorage unavailable (private mode, disabled storage) — fall through and fire
+      // anyway; provider-side dedup (event_id / transaction_id) still protects against a real
+      // double-count, and there's nothing to persist a marker into regardless.
     }
+    if (alreadyMarked) return;
 
-    trackMetaPurchase({ eventId, orderNumber, items, value, deliveryFee });
-    trackGaPurchase({ eventId, orderNumber, items, value, deliveryFee });
+    const metaFired = trackMetaPurchase({ eventId, orderNumber, items, value, deliveryFee });
+    const gaFired = trackGaPurchase({ eventId, orderNumber, items, value, deliveryFee });
+
+    if (metaFired || gaFired) {
+      try {
+        sessionStorage.setItem(marker, "1");
+      } catch {
+        // Nothing to do — the events already fired; the marker is purely a same-tab UX nicety.
+      }
+    }
   }, [eventId, orderNumber, items, value, deliveryFee]);
 
   return null;

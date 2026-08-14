@@ -15,12 +15,15 @@ declare global {
   }
 }
 
-function gtagEvent(eventName: string, params: Record<string, unknown>): void {
-  if (typeof window === "undefined" || typeof window.gtag !== "function" || !isGa4Enabled()) return;
+/** Returns whether the call was actually dispatched to `gtag` — see `meta-client.ts`'s `fbqTrack` doc comment for why this matters for Purchase specifically. */
+function gtagEvent(eventName: string, params: Record<string, unknown>): boolean {
+  if (typeof window === "undefined" || typeof window.gtag !== "function" || !isGa4Enabled()) return false;
   try {
     window.gtag("event", eventName, params);
+    return true;
   } catch {
     // Analytics must never break the page it's tracking.
+    return false;
   }
 }
 
@@ -61,9 +64,9 @@ export function trackGaBeginCheckout({ items, value }: InitiateCheckoutEventData
   gtagEvent("begin_checkout", { currency: ANALYTICS_CURRENCY, value, items: toGa4Items(items) });
 }
 
-/** `transaction_id = orderNumber` gives GA4 its own natural duplicate-event protection, independent of Meta's `event_id` dedup. */
-export function trackGaPurchase({ orderNumber, items, value, deliveryFee }: PurchaseEventData): void {
-  gtagEvent("purchase", {
+/** `transaction_id = orderNumber` gives GA4 its own natural duplicate-event protection, independent of Meta's `event_id` dedup. Returns whether the call actually reached `gtag`. */
+export function trackGaPurchase({ orderNumber, items, value, deliveryFee }: PurchaseEventData): boolean {
+  return gtagEvent("purchase", {
     transaction_id: orderNumber,
     currency: ANALYTICS_CURRENCY,
     value,

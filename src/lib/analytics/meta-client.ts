@@ -16,16 +16,22 @@ declare global {
   }
 }
 
-function fbqTrack(eventName: string, params: Record<string, unknown>, eventId?: string): void {
-  if (typeof window === "undefined" || typeof window.fbq !== "function" || !isMetaPixelEnabled()) return;
+/** Returns whether the call was actually dispatched to `fbq` — `false` covers both "intentionally
+ * disabled" and "fbq unavailable" cases alike. `PurchaseTracker.tsx` uses this to avoid marking a
+ * Purchase as sent when nothing actually fired, so a genuine failure can still be retried on a
+ * same-tab reload rather than being silently and permanently lost. */
+function fbqTrack(eventName: string, params: Record<string, unknown>, eventId?: string): boolean {
+  if (typeof window === "undefined" || typeof window.fbq !== "function" || !isMetaPixelEnabled()) return false;
   try {
     if (eventId) {
       window.fbq("track", eventName, params, { eventID: eventId });
     } else {
       window.fbq("track", eventName);
     }
+    return true;
   } catch {
     // Analytics must never break the page it's tracking.
+    return false;
   }
 }
 
@@ -80,9 +86,9 @@ export function trackMetaInitiateCheckout({ items, value }: InitiateCheckoutEven
   });
 }
 
-/** `eventId` must be the exact same value the server-side CAPI Purchase used for this order (`purchaseEventId(orderNumber)`) — see `event-id.ts`. */
-export function trackMetaPurchase({ eventId, items, value }: PurchaseEventData): void {
-  fbqTrack(
+/** `eventId` must be the exact same value the server-side CAPI Purchase used for this order (`purchaseEventId(orderNumber)`) — see `event-id.ts`. Returns whether the call actually reached `fbq` (see `fbqTrack`'s doc comment). */
+export function trackMetaPurchase({ eventId, items, value }: PurchaseEventData): boolean {
+  return fbqTrack(
     "Purchase",
     {
       content_ids: toMetaContentIds(items),
