@@ -791,7 +791,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/bioaqua-lip-sleeping-mask/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: 20 },
       specifications: [{ label: "Net Weight", value: "20g / 0.7 fl.oz" }],
       status: "draft",
     },
@@ -831,7 +831,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/lanbena-blackhead-remover-mask/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 450, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
+      inventory: { stock: 450, unit: "pcs", status: "in_stock", shippingWeightGrams: 5 },
       features: ["Blackheads Remove", "Deep Cleaning"],
       specifications: [
         { label: "Brand", value: "LANBENA" },
@@ -851,6 +851,7 @@ export const products: VerifiedProductRecord[] = [
       dataQualityNotes: [
         "Source has no free-text description, only the repeated label/value block captured under specifications.",
         "Title says \"5 pc\" and also states \"5g\"; unclear whether 5g is per piece or total, or whether the pack truly contains 5 masks — not resolved from the screenshot.",
+        "Phase 14 shipping-weight audit: the supplier's own description block explicitly repeats a labeled \"Product weight: 5g\" field (distinct from \"Product size\"), so 5g was accepted as the defensible shippingWeightGrams value despite the per-piece-vs-total ambiguity above — it is the supplier's own explicit total-product-weight figure, not a derived/guessed number.",
       ],
     },
   },

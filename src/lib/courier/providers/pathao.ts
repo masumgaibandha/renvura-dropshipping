@@ -722,12 +722,21 @@ export function createPathaoProvider(): CourierProvider {
      * `recipient_city`/`recipient_zone`/`recipient_area` are OPTIONAL — Pathao resolves them from
      * `recipient_address` when omitted, so a missing `CourierLocationMapping` entry is no longer a
      * hard block (Phase 13 correction: the fields are included only when verified IDs exist, and
-     * omitted entirely otherwise — never sent as `null`/`0`/a guess). `item_weight` is validated
-     * against the documented 0.5–10 kg range and blocked with a precise message outside it, never
-     * silently clamped. `item_quantity` is set to `1` (one Renvura order = one physical parcel) —
-     * the docs label this "quantity of parcels," which is ambiguous against multi-unit orders;
-     * this is a judgment call pending confirmation via Pathao support or a real test order, not a
-     * verified fact.
+     * omitted entirely otherwise — never sent as `null`/`0`/a guess). `item_quantity` is set to `1`
+     * (one Renvura order = one physical parcel) — the docs label this "quantity of parcels," which
+     * is ambiguous against multi-unit orders; this is a judgment call pending confirmation via
+     * Pathao support or a real test order, not a verified fact.
+     *
+     * Weight model (Phase 14 correction): `order.totalWeightGrams` is always the real,
+     * unmodified sum of each line item's stored product weight × quantity — this function never
+     * rewrites a product's actual weight to satisfy Pathao's minimum. Pathao's own documented
+     * `item_weight` constraint (0.5–10 kg) is instead applied only to the outgoing *request* value:
+     * a real parcel under 0.5kg is floored to 0.5kg for this API call only (Pathao has no smaller
+     * unit — this is an operational courier-request adjustment, not a claim that the parcel
+     * actually weighs 500g); a real parcel over 10kg is a genuine operational blocker (no verified
+     * Pathao mechanism splits or accepts an overweight single consignment) and fails with a precise
+     * message rather than being silently clamped down, which would misrepresent the parcel to the
+     * courier.
      */
     async createShipment(order: ShipmentOrderInput): Promise<CreateShipmentResult> {
       if (!isPathaoConfigured()) return { status: "not_configured" };
@@ -736,9 +745,15 @@ export function createPathaoProvider(): CourierProvider {
       }
 
       const weightKg = order.totalWeightGrams / 1000;
-      if (weightKg < MIN_ITEM_WEIGHT_KG || weightKg > MAX_ITEM_WEIGHT_KG) {
-        return { status: "failed", error: `Order weight ${weightKg.toFixed(2)}kg is outside Pathao's supported range (${MIN_ITEM_WEIGHT_KG}–${MAX_ITEM_WEIGHT_KG}kg).` };
+      if (weightKg > MAX_ITEM_WEIGHT_KG) {
+        return {
+          status: "failed",
+          error: `Order weight ${weightKg.toFixed(2)}kg exceeds Pathao's maximum supported parcel weight (${MAX_ITEM_WEIGHT_KG}kg). This order cannot be shipped as a single Pathao consignment.`,
+        };
       }
+      // Real parcels lighter than Pathao's documented minimum are floored only for the request —
+      // see the doc comment above. order.totalWeightGrams itself is never touched.
+      const requestWeightKg = Math.max(weightKg, MIN_ITEM_WEIGHT_KG);
 
       const storeResult = await resolveStoreId();
       if (!storeResult.ok) return { status: "failed", error: storeResult.error };
@@ -758,7 +773,7 @@ export function createPathaoProvider(): CourierProvider {
         delivery_type: DELIVERY_TYPE_NORMAL,
         item_type: ITEM_TYPE_PARCEL,
         item_quantity: 1,
-        item_weight: Number(weightKg.toFixed(2)),
+        item_weight: Number(requestWeightKg.toFixed(2)),
         item_description: itemDescription,
         amount_to_collect: order.codAmountBdt,
       };
