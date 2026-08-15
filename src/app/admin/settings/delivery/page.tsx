@@ -1,3 +1,4 @@
+import { PathaoProductionDiagnostic } from "@/components/admin/PathaoProductionDiagnostic";
 import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
 import {
   getPathaoEnv,
@@ -66,6 +67,8 @@ function CourierProviderHealth() {
           </div>
         ))}
       </div>
+
+      <PathaoProductionDiagnostic />
     </div>
   );
 }

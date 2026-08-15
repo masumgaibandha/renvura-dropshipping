@@ -1,4 +1,5 @@
-import { getPathaoConfig, isPathaoConfigured, isPathaoCredentialsConfigured } from "../config";
+import { getPathaoConfig, getPathaoEnv, isPathaoConfigured, isPathaoCredentialsConfigured } from "../config";
+import type { PathaoEnv } from "../config";
 import type { CourierProvider, CreateShipmentResult, NormalizedCourierStatus, ShipmentOrderInput, ShipmentStatusResult } from "../types";
 
 /**
@@ -238,7 +239,7 @@ export async function checkPathaoTokenRefresh(): Promise<PathaoRefreshCheckResul
   };
 }
 
-interface PathaoStoreRow {
+export interface PathaoStoreRow {
   storeId: number;
   storeName: string;
   isActive: boolean;
@@ -306,6 +307,80 @@ async function listStores(): Promise<ListStoresResult> {
 export async function checkPathaoStores(): Promise<ListStoresResult> {
   if (!isPathaoCredentialsConfigured()) return { ok: false, error: "Pathao credentials are not configured." };
   return listStores();
+}
+
+/**
+ * Renvura's real, known production Pathao store — used ONLY as a display/comparison reference
+ * point in `checkPathaoProductionConnection()` below (does this store appear, and is it active).
+ * Never used as a fallback/default/selected store id anywhere a real shipment is actually created
+ * — that stays exclusively controlled by `PATHAO_STORE_ID` / `resolveStoreId()`, unaffected by
+ * this constant.
+ */
+const KNOWN_PRODUCTION_STORE_ID = 435082;
+
+export type PathaoProductionConnectionCheck =
+  | { outcome: "wrong_env"; resolvedEnv: PathaoEnv }
+  | { outcome: "not_configured"; resolvedEnv: PathaoEnv }
+  | { outcome: "auth_failed"; resolvedEnv: PathaoEnv; error: string }
+  | { outcome: "stores_failed"; resolvedEnv: PathaoEnv; error: string }
+  | {
+      outcome: "success";
+      resolvedEnv: PathaoEnv;
+      storeCount: number;
+      activeStores: PathaoStoreRow[];
+      expectedStoreId: number;
+      expectedStoreFound: boolean;
+      expectedStoreActive: boolean;
+    };
+
+/**
+ * Composed, read-only admin diagnostic (Phase 17) — verifies the currently configured Pathao
+ * credentials can authenticate against the *live* API and that Renvura's known real production
+ * store is present and active. Reuses `checkPathaoAuth()`/`checkPathaoStores()` exactly as they
+ * already exist — no new network call shape is introduced here, only composition + a safe summary.
+ *
+ * Deliberately does NOT check `isPathaoConfigured()`/require `COURIER_PATHAO_ENABLED` — that flag
+ * gates real shipment creation, not this read-only check (see CLAUDE.md's Phase 17 note). It DOES
+ * refuse to call Pathao's API at all unless `PATHAO_ENV` resolves to exactly `"production"` — this
+ * diagnostic's whole purpose is verifying the *production* account, and silently running it against
+ * sandbox (or vice versa) would be a misleading result, not a safety concern either way.
+ *
+ * Never creates, updates, or deletes any Pathao resource (both underlying calls are GET/POST-token
+ * and GET-list, nothing else). Never touches MongoDB in any way, and — unlike every other admin
+ * courier action — is deliberately never wrapped in `recordAuditLog()` by its caller, since an
+ * audit-log write is itself a MongoDB write and this diagnostic must not cause one.
+ */
+export async function checkPathaoProductionConnection(): Promise<PathaoProductionConnectionCheck> {
+  const resolvedEnv = getPathaoEnv();
+  if (resolvedEnv !== "production") {
+    return { outcome: "wrong_env", resolvedEnv };
+  }
+  if (!isPathaoCredentialsConfigured()) {
+    return { outcome: "not_configured", resolvedEnv };
+  }
+
+  const authResult = await checkPathaoAuth();
+  if (!authResult.ok) {
+    return { outcome: "auth_failed", resolvedEnv, error: authResult.error };
+  }
+
+  const storesResult = await checkPathaoStores();
+  if (!storesResult.ok) {
+    return { outcome: "stores_failed", resolvedEnv, error: storesResult.error };
+  }
+
+  const expected = storesResult.stores.find((store) => store.storeId === KNOWN_PRODUCTION_STORE_ID);
+  const activeStores = storesResult.stores.filter((store) => store.isActive);
+
+  return {
+    outcome: "success",
+    resolvedEnv,
+    storeCount: storesResult.stores.length,
+    activeStores,
+    expectedStoreId: KNOWN_PRODUCTION_STORE_ID,
+    expectedStoreFound: Boolean(expected),
+    expectedStoreActive: expected?.isActive ?? false,
+  };
 }
 
 export interface PathaoCity {

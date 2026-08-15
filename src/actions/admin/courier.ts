@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth-session";
+import { checkPathaoProductionConnection, type PathaoProductionConnectionCheck } from "@/lib/courier/providers/pathao";
 import { recordAuditLog } from "@/services/audit-log";
 import { createShipmentForOrder, refreshShipmentStatus, setManualCourierTracking } from "@/services/courier";
 import { findOrderByOrderNumber } from "@/services/orders";
@@ -115,4 +116,20 @@ export async function adminSetManualCourierTracking(orderNumber: string, raw: Ad
 
   revalidatePath(`/admin/orders/${orderNumber}`);
   return { ok: true };
+}
+
+export type AdminPathaoProductionConnectionResult = PathaoProductionConnectionCheck | { outcome: "unauthorized" };
+
+/**
+ * Read-only admin diagnostic (Phase 17) — verifies the currently configured Pathao credentials
+ * authenticate against the live API and that Renvura's known production store is present/active.
+ * Deliberately does NOT call `recordAuditLog()` (unlike every other action in this file) — an
+ * audit-log write is itself a MongoDB write, and this diagnostic must never touch MongoDB in any
+ * way, only Pathao's own API. `checkPathaoProductionConnection()` itself never requires
+ * `COURIER_PATHAO_ENABLED` — that flag gates real shipment creation, not this safe check.
+ */
+export async function adminCheckPathaoProductionConnection(): Promise<AdminPathaoProductionConnectionResult> {
+  const admin = await requireAdmin().catch(() => null);
+  if (!admin) return { outcome: "unauthorized" };
+  return checkPathaoProductionConnection();
 }
