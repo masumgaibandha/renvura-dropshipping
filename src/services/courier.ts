@@ -1,9 +1,12 @@
 import { connectToDatabase } from "@/lib/db";
+import { getConfiguredPathaoStoreId } from "@/lib/courier/config";
 import { getProvider, isProviderApiEnabled } from "@/lib/courier/registry";
 import { COURIER_PROVIDER_LABELS } from "@/lib/courier/types";
 import type { ShipmentOrderInput } from "@/lib/courier/types";
+import { mapWebhookEventToNormalizedStatus, type PathaoWebhookPayload } from "@/lib/courier/webhook";
 import { CourierLocationMappingModel } from "@/models/CourierLocationMapping";
 import { OrderModel } from "@/models/Order";
+import { recordAuditLog } from "@/services/audit-log";
 import { findOrderByOrderNumber } from "@/services/orders";
 import { getProductBySlug } from "@/services/products";
 import type { CourierProviderId, NormalizedCourierStatus, OrderStatus } from "@/types/order";
@@ -238,4 +241,114 @@ export async function setManualCourierTracking(
 
   await OrderModel.updateOne({ orderNumber }, { $set: setFields });
   return { ok: true };
+}
+
+type WebhookOrderLookup = {
+  orderNumber: string;
+  courier: {
+    consignmentId: string | null;
+    externalOrderId: string | null;
+    normalizedStatus: NormalizedCourierStatus;
+    rawStatusCode: string | null;
+  } | null;
+};
+
+export type ProcessPathaoWebhookOutcome = "order_not_found" | "merchant_order_id_mismatch" | "store_id_mismatch" | "unknown_event_acknowledged" | "updated";
+
+export interface ProcessPathaoWebhookResult {
+  outcome: ProcessPathaoWebhookOutcome;
+  orderNumber: string | null;
+  normalizedStatusChanged: boolean;
+}
+
+/**
+ * Persists a Pathao webhook event (Phase 14) — the DB-touching counterpart to
+ * `src/lib/courier/webhook.ts`'s pure parsing/verification. The route handler must have already
+ * verified `X-PATHAO-Signature` and parsed the payload before calling this; this function trusts
+ * its input and focuses on safe order-matching + a strict mutation boundary.
+ *
+ * Looks up the order by `courier.consignmentId` (scoped to `providerId: "pathao"`) — never by
+ * `merchant_order_id`/`store_id` alone, both of which are used only as secondary consistency
+ * checks. A mismatch on either STOPS mutation for that webhook (an audit entry records the
+ * mismatch; the order is left untouched) rather than trusting a payload that disagrees with what
+ * Renvura itself created the shipment with.
+ *
+ * Mutation boundary: only `courier.rawStatusCode`/`courier.normalizedStatus`/`courier.lastSyncedAt`
+ * are ever written here — never `orderStatus`, inventory, payment, or analytics. Staff still drive
+ * the real order lifecycle through the existing Phase 12 `OrderStatusActions` transitions; a
+ * webhook is a courier-metadata signal, not a trigger for business-state changes (matching
+ * `refreshShipmentStatus()`'s existing "safe status synchronization" boundary above).
+ *
+ * Naturally idempotent: every write is a `$set` of the same field values a repeated identical
+ * delivery would produce again, so no separate webhook-event-dedup collection was built for this
+ * (see CLAUDE.md's Phase 14 webhook note) — a deliberate choice, not an oversight.
+ */
+export async function processPathaoWebhookEvent(payload: PathaoWebhookPayload): Promise<ProcessPathaoWebhookResult> {
+  await connectToDatabase();
+
+  const order = await OrderModel.findOne({ "courier.providerId": "pathao", "courier.consignmentId": payload.consignmentId })
+    .select({ orderNumber: 1, courier: 1 })
+    .lean<WebhookOrderLookup | null>();
+
+  if (!order) {
+    return { outcome: "order_not_found", orderNumber: null, normalizedStatusChanged: false };
+  }
+
+  if (payload.merchantOrderId && order.courier?.externalOrderId && payload.merchantOrderId !== order.courier.externalOrderId) {
+    await recordAuditLog({
+      adminUserId: "system",
+      action: "courier.webhook_mismatch",
+      entityType: "order",
+      entityId: order.orderNumber,
+      before: null,
+      after: {
+        reason: "merchant_order_id_mismatch",
+        event: payload.event,
+        receivedMerchantOrderId: payload.merchantOrderId,
+        expectedExternalOrderId: order.courier.externalOrderId,
+      },
+    });
+    return { outcome: "merchant_order_id_mismatch", orderNumber: order.orderNumber, normalizedStatusChanged: false };
+  }
+
+  const configuredStoreId = getConfiguredPathaoStoreId();
+  if (payload.storeId !== null && configuredStoreId !== null && String(payload.storeId) !== configuredStoreId) {
+    await recordAuditLog({
+      adminUserId: "system",
+      action: "courier.webhook_mismatch",
+      entityType: "order",
+      entityId: order.orderNumber,
+      before: null,
+      after: { reason: "store_id_mismatch", event: payload.event, receivedStoreId: payload.storeId, configuredStoreId },
+    });
+    return { outcome: "store_id_mismatch", orderNumber: order.orderNumber, normalizedStatusChanged: false };
+  }
+
+  const mappedStatus = mapWebhookEventToNormalizedStatus(payload.event);
+  const previousNormalizedStatus = order.courier?.normalizedStatus ?? "unknown";
+
+  const setFields: Record<string, unknown> = {
+    "courier.rawStatusCode": payload.event,
+    "courier.lastSyncedAt": new Date(),
+  };
+  // See mapWebhookEventToNormalizedStatus's doc comment: an unrecognized event leaves
+  // normalizedStatus untouched rather than downgrading it to "unknown".
+  if (mappedStatus !== null) {
+    setFields["courier.normalizedStatus"] = mappedStatus;
+  }
+  await OrderModel.updateOne({ orderNumber: order.orderNumber }, { $set: setFields });
+
+  await recordAuditLog({
+    adminUserId: "system",
+    action: "courier.webhook_received",
+    entityType: "order",
+    entityId: order.orderNumber,
+    before: { normalizedStatus: previousNormalizedStatus, rawStatusCode: order.courier?.rawStatusCode ?? null },
+    after: { normalizedStatus: mappedStatus ?? previousNormalizedStatus, rawStatusCode: payload.event, event: payload.event, statusMapped: mappedStatus !== null },
+  });
+
+  if (mappedStatus === null) {
+    return { outcome: "unknown_event_acknowledged", orderNumber: order.orderNumber, normalizedStatusChanged: false };
+  }
+  return { outcome: "updated", orderNumber: order.orderNumber, normalizedStatusChanged: mappedStatus !== previousNormalizedStatus };
 }

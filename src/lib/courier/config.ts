@@ -126,3 +126,26 @@ export function getSteadfastConfig(): SteadfastConfig {
 export function isMockCourierEnabled(): boolean {
   return process.env.NODE_ENV !== "production" && process.env.COURIER_MOCK_ENABLED === "true";
 }
+
+/**
+ * Pathao webhook secrets (inbound, `POST /api/webhooks/pathao` — see `src/lib/courier/webhook.ts`).
+ * Deliberately modeled as two independent secrets, never assumed equal:
+ * - `PATHAO_WEBHOOK_SECRET` — the value Pathao sends back verbatim in the `X-PATHAO-Signature`
+ *   header on every real event notification; compared against incoming requests.
+ * - `PATHAO_WEBHOOK_INTEGRATION_SECRET` — returned verbatim in the
+ *   `X-Pathao-Merchant-Webhook-Integration-Secret` response header only for the one-time
+ *   `{"event":"webhook_integration"}` handshake Pathao's panel uses to verify the endpoint.
+ * Neither is ever `NEXT_PUBLIC_*` — both are inbound-verification secrets, not client config.
+ */
+export function getPathaoWebhookSecret(): string | null {
+  return process.env.PATHAO_WEBHOOK_SECRET || null;
+}
+
+export function getPathaoWebhookIntegrationSecret(): string | null {
+  return process.env.PATHAO_WEBHOOK_INTEGRATION_SECRET || null;
+}
+
+/** Raw comparison value only — non-throwing, unlike `getPathaoConfig()`. Used by the webhook handler to sanity-check `payload.store_id` without requiring full Pathao API credentials to be configured (a webhook may legitimately arrive before/independent of outbound API access). */
+export function getConfiguredPathaoStoreId(): string | null {
+  return process.env.PATHAO_STORE_ID || null;
+}
