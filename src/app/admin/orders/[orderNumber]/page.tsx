@@ -3,13 +3,18 @@ import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { IconArrowLeft } from "@/components/ui/icons";
+import { CourierPanel } from "@/components/admin/CourierPanel";
 import { OrderStatusActions } from "@/components/admin/OrderStatusActions";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { RefundPaymentButton } from "@/components/admin/RefundPaymentButton";
 import { paymentMethodLabels } from "@/config/payment";
+import { isProviderApiEnabled } from "@/lib/courier/registry";
+import { isOrderEligibleForShipmentCreation } from "@/services/courier";
 import { findOrderByOrderNumber, toAdminOrderDetail } from "@/services/orders";
-import { ORDER_STATUS_LABELS } from "@/types/order";
+import { ORDER_STATUS_LABELS, type CourierProviderId } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
+
+const COURIER_PROVIDER_IDS: CourierProviderId[] = ["pathao", "steadfast", "redx", "paperfly", "other"];
 
 const CANCELLATION_REASON_LABELS: Record<string, string> = {
   customer_request: "Customer requested cancellation",
@@ -45,6 +50,8 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
   const order = toAdminOrderDetail(record);
   const canRefund = order.payment.status === "paid" && (order.orderStatus === "cancelled" || order.orderStatus === "returned");
+  const apiEnabledProviders = Object.fromEntries(COURIER_PROVIDER_IDS.map((id) => [id, isProviderApiEnabled(id)]));
+  const showCourierPanel = isOrderEligibleForShipmentCreation(order.orderStatus) || order.orderStatus === "shipped" || order.courier.creationStatus !== "not_created";
 
   return (
     <div className="flex flex-col gap-6">
@@ -67,7 +74,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
       <section className="rounded-xl border border-border bg-surface p-4">
         <h2 className="text-body font-semibold text-foreground">Order Status</h2>
         <div className="mt-3">
-          <OrderStatusActions orderNumber={order.orderNumber} currentStatus={order.orderStatus} />
+          <OrderStatusActions orderNumber={order.orderNumber} currentStatus={order.orderStatus} courierAlreadyCreated={order.courier.creationStatus === "created"} />
         </div>
 
         {(order.confirmation.method !== "none" || order.cancellation.reason || order.return.reason || order.courier.provider || order.courier.trackingId) && (
@@ -119,6 +126,15 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
           </ol>
         )}
       </section>
+
+      {showCourierPanel && (
+        <CourierPanel
+          orderNumber={order.orderNumber}
+          courier={order.courier}
+          apiEnabledProviders={apiEnabledProviders}
+          eligibleForCreation={isOrderEligibleForShipmentCreation(order.orderStatus)}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className="rounded-xl border border-border bg-surface p-4">

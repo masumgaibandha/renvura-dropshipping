@@ -77,6 +77,9 @@ function parseAdminProductInput(raw: unknown): { ok: true; value: AdminProductIn
   if (r.stock !== null && !(typeof r.stock === "number" && Number.isInteger(r.stock) && r.stock >= 0)) {
     return { ok: false, error: "Stock must be a non-negative whole number or empty." };
   }
+  if (!isNullableNonNegativeNumber(r.shippingWeightGrams)) {
+    return { ok: false, error: "Shipping weight must be a non-negative number of grams or empty." };
+  }
   if (typeof r.inventoryStatus !== "string" || !INVENTORY_STATUS_VALUES.includes(r.inventoryStatus as InventoryStatus)) {
     return { ok: false, error: "Invalid stock status." };
   }
@@ -109,6 +112,7 @@ function parseAdminProductInput(raw: unknown): { ok: true; value: AdminProductIn
       regularPrice: r.regularPrice,
       sellingPrice: r.sellingPrice,
       stock: r.stock as number | null,
+      shippingWeightGrams: r.shippingWeightGrams as number | null,
       inventoryStatus: r.inventoryStatus as InventoryStatus,
       status: r.status as ProductStatus,
       featured: r.featured,
@@ -157,7 +161,7 @@ export async function adminUpdateProduct(slug: string, raw: unknown): Promise<Ad
       discountPercentage: calculateDiscountPercentage(parsed.value.regularPrice, parsed.value.sellingPrice),
     },
     media: { thumbnail: parsed.value.thumbnail, images: parsed.value.images, videos: existing.media.videos },
-    inventory: { stock: parsed.value.stock, unit: existing.inventory.unit, status: parsed.value.inventoryStatus },
+    inventory: { stock: parsed.value.stock, unit: existing.inventory.unit, status: parsed.value.inventoryStatus, shippingWeightGrams: parsed.value.shippingWeightGrams },
     variants: existing.variants,
     features: parsed.value.features,
     specifications: parsed.value.specifications,
@@ -219,7 +223,7 @@ export async function adminCreateProduct(rawSlug: unknown, raw: unknown): Promis
       discountPercentage: calculateDiscountPercentage(parsed.value.regularPrice, parsed.value.sellingPrice),
     },
     media: { thumbnail: parsed.value.thumbnail, images: parsed.value.images, videos: [] },
-    inventory: { stock: parsed.value.stock, unit: null, status: parsed.value.inventoryStatus },
+    inventory: { stock: parsed.value.stock, unit: null, status: parsed.value.inventoryStatus, shippingWeightGrams: parsed.value.shippingWeightGrams },
     features: parsed.value.features,
     specifications: parsed.value.specifications,
     status: parsed.value.status,

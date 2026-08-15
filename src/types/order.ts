@@ -171,18 +171,50 @@ export interface OrderReturn {
   note: string | null;
 }
 
+/** Phase 13 — see `src/lib/courier/types.ts` for the full provider-neutral shape docs. `pathao`/`steadfast` have real (credential-gated) adapters; `redx`/`paperfly`/`other` are recognized labels only; `manual` covers everything else; `null` marks a legacy pre-Phase-13 order. */
+export type CourierProviderId = "pathao" | "steadfast" | "redx" | "paperfly" | "other";
+export type CourierMode = "api" | "manual";
+export type CourierCreationStatus = "not_created" | "creating" | "created" | "failed";
+export type NormalizedCourierStatus =
+  | "unknown"
+  | "pending"
+  | "pickup_requested"
+  | "picked_up"
+  | "in_transit"
+  | "out_for_delivery"
+  | "delivered"
+  | "delivery_failed"
+  | "returned"
+  | "cancelled";
+
 /**
- * Phase 12 — courier/shipment readiness fields only, no courier API integration yet. `provider` is
- * free text, not an enum, so no single Bangladesh courier is hardcoded as mandatory. Fully
- * customer-safe — surfaced on the tracking timeline when present.
+ * Phase 13 — extended from Phase 12's readiness-only shape now that a real (credential-gated)
+ * courier provider integration exists (`src/lib/courier/`). `providerId` is the new controlled
+ * identifier; `provider` stays a free-text *display* label for backward compatibility with every
+ * Phase 12 order that already has an arbitrary string there (e.g. `"Test Courier"`) — see
+ * CLAUDE.md's "Historical data compatibility" note. `mode`/`creationStatus`/`creationError`/
+ * `externalOrderId`/`rawStatusCode`/`shipmentCreatedAt`/`lastSyncedAt` are admin-only diagnostic
+ * fields, never customer-facing — see `CustomerOrderCourier` below.
  */
 export interface OrderCourier {
+  providerId: CourierProviderId | null;
   provider: string | null;
+  mode: CourierMode | null;
   trackingId: string | null;
   trackingUrl: string | null;
   consignmentId: string | null;
+  externalOrderId: string | null;
+  creationStatus: CourierCreationStatus;
+  creationError: string | null;
+  normalizedStatus: NormalizedCourierStatus;
+  rawStatusCode: string | null;
+  shipmentCreatedAt: string | null;
   shippedAt: string | null;
+  lastSyncedAt: string | null;
 }
+
+/** Customer-safe subset of `OrderCourier` — surfaced on the tracking timeline/shipped email. Omits every internal diagnostic field (mode, creationStatus/creationError, externalOrderId, rawStatusCode, shipmentCreatedAt, lastSyncedAt) per CLAUDE.md's "Customer tracking page"/"Account order page" rules — no internal API IDs, no provider errors. */
+export type CustomerOrderCourier = Pick<OrderCourier, "providerId" | "provider" | "trackingId" | "trackingUrl" | "consignmentId" | "normalizedStatus" | "shippedAt">;
 
 export type OrderConfirmationEmailStatus = "not_applicable" | "pending" | "sent" | "failed";
 
@@ -263,14 +295,15 @@ export interface Order {
  * `cancellation`/full `return` (internal reason codes/notes — the customer only ever sees the
  * neutral status label, see CLAUDE.md's "Cancellation flow"/"Return flow" sections). `confirmation`
  * is narrowed to its customer-safe subset (`CustomerOrderConfirmation` — method + timestamp only,
- * never the admin id/note); `courier` is included in full — a customer tracking their own order
- * should see tracking info as soon as it exists.
+ * never the admin id/note); `courier` is narrowed to `CustomerOrderCourier` (Phase 13 — no
+ * creation-status/error/raw provider status code/internal IDs, see that type's doc comment).
  */
 export type OrderSummary = Omit<
   Order,
-  "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications" | "analytics" | "confirmation" | "cancellation" | "return"
+  "idempotencyKey" | "customerUserId" | "statusHistory" | "notifications" | "analytics" | "confirmation" | "cancellation" | "return" | "courier"
 > & {
   confirmation: CustomerOrderConfirmation;
+  courier: CustomerOrderCourier;
 };
 
 /** Full admin projection — the only place `statusHistory`/`customerUserId`/`idempotencyKey` are ever returned. See `src/services/orders.ts`'s `toAdminOrderDetail`. */
@@ -316,7 +349,7 @@ export interface OrderTrackingSummary {
     upazila: string;
   };
   confirmation: CustomerOrderConfirmation;
-  courier: OrderCourier;
+  courier: CustomerOrderCourier;
   createdAt: string;
 }
 

@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 
 import { adminUpdateOrderStatus, type AdminUpdateOrderStatusDetails } from "@/actions/admin/orders";
-import { ORDER_STATUS_LABELS, ORDER_STATUS_TRANSITIONS, type CancellationReason, type ConfirmationMethod, type OrderStatus, type ReturnReason } from "@/types/order";
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_TRANSITIONS,
+  type CancellationReason,
+  type ConfirmationMethod,
+  type CourierProviderId,
+  type OrderStatus,
+  type ReturnReason,
+} from "@/types/order";
 
 const inputClass = "h-9 rounded-lg border border-border bg-background px-2 text-small text-foreground";
 
@@ -19,6 +27,15 @@ const ACTION_LABELS: Partial<Record<OrderStatus, string>> = {
   cancelled: "Cancel Order",
   returned: "Mark Returned",
 };
+
+/** "Test Courier"/similar free-text values only ever exist on legacy pre-Phase-13 orders (see CLAUDE.md's "Historical data compatibility" note) — this dropdown is the only way to set `courier.providerId` going forward. */
+const COURIER_PROVIDER_OPTIONS: { value: CourierProviderId; label: string }[] = [
+  { value: "pathao", label: "Pathao" },
+  { value: "steadfast", label: "Steadfast" },
+  { value: "redx", label: "RedX" },
+  { value: "paperfly", label: "Paperfly" },
+  { value: "other", label: "Other / Manual" },
+];
 
 const CANCELLATION_REASON_OPTIONS: { value: CancellationReason; label: string }[] = [
   { value: "customer_request", label: "Customer requested cancellation" },
@@ -47,7 +64,16 @@ const RETURN_REASON_OPTIONS: { value: ReturnReason; label: string }[] = [
  * optional internal note. Reason codes and notes are always internal — never shown to the
  * customer (see `OrderStatusTimeline.tsx`, which only ever receives the customer-safe projection).
  */
-export function OrderStatusActions({ orderNumber, currentStatus }: { orderNumber: string; currentStatus: OrderStatus }) {
+export function OrderStatusActions({
+  orderNumber,
+  currentStatus,
+  courierAlreadyCreated,
+}: {
+  orderNumber: string;
+  currentStatus: OrderStatus;
+  /** Phase 13 — `true` when a courier shipment already exists via the `CourierPanel` API flow (`courier.creationStatus === "created"`). When true, the `shipped` transition below skips its own manual courier fields entirely so this quick-entry path can never overwrite the API-created `provider`/`consignmentId`/`mode`. */
+  courierAlreadyCreated?: boolean;
+}) {
   const nextOptions = ORDER_STATUS_TRANSITIONS[currentStatus];
   const [activeAction, setActiveAction] = useState<OrderStatus | null>(null);
 
@@ -70,19 +96,31 @@ export function OrderStatusActions({ orderNumber, currentStatus }: { orderNumber
         ))}
       </div>
 
-      {activeAction && <TransitionForm orderNumber={orderNumber} targetStatus={activeAction} onDone={() => setActiveAction(null)} />}
+      {activeAction && (
+        <TransitionForm orderNumber={orderNumber} targetStatus={activeAction} courierAlreadyCreated={Boolean(courierAlreadyCreated)} onDone={() => setActiveAction(null)} />
+      )}
     </div>
   );
 }
 
-function TransitionForm({ orderNumber, targetStatus, onDone }: { orderNumber: string; targetStatus: OrderStatus; onDone: () => void }) {
+function TransitionForm({
+  orderNumber,
+  targetStatus,
+  courierAlreadyCreated,
+  onDone,
+}: {
+  orderNumber: string;
+  targetStatus: OrderStatus;
+  courierAlreadyCreated: boolean;
+  onDone: () => void;
+}) {
   const router = useRouter();
   const [note, setNote] = useState("");
   const [confirmationMethod, setConfirmationMethod] = useState<ConfirmationMethod | "">("");
   const [cancellationReason, setCancellationReason] = useState<CancellationReason | "">("");
   const [returnReason, setReturnReason] = useState<ReturnReason | "">("");
   const [returnResellable, setReturnResellable] = useState<"yes" | "no" | "">("");
-  const [courierProvider, setCourierProvider] = useState("");
+  const [courierProviderId, setCourierProviderId] = useState<CourierProviderId | "">("");
   const [trackingId, setTrackingId] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -111,10 +149,10 @@ function TransitionForm({ orderNumber, targetStatus, onDone }: { orderNumber: st
       ...(cancellationReason ? { cancellationReason } : {}),
       ...(returnReason ? { returnReason } : {}),
       ...(returnResellable ? { returnResellable: returnResellable === "yes" } : {}),
-      ...(targetStatus === "shipped"
+      ...(targetStatus === "shipped" && !courierAlreadyCreated
         ? {
             courier: {
-              ...(courierProvider.trim() ? { provider: courierProvider.trim() } : {}),
+              ...(courierProviderId ? { providerId: courierProviderId } : {}),
               ...(trackingId.trim() ? { trackingId: trackingId.trim() } : {}),
               ...(trackingUrl.trim() ? { trackingUrl: trackingUrl.trim() } : {}),
             },
@@ -192,9 +230,17 @@ function TransitionForm({ orderNumber, targetStatus, onDone }: { orderNumber: st
         </>
       )}
 
-      {targetStatus === "shipped" && (
+      {targetStatus === "shipped" && courierAlreadyCreated && (
+        <p className="text-xs text-foreground/70">A courier shipment was already created for this order — see the Courier section below. Tracking info is left as-is.</p>
+      )}
+      {targetStatus === "shipped" && !courierAlreadyCreated && (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <input placeholder="Courier (e.g. Pathao, Steadfast)" value={courierProvider} onChange={(event) => setCourierProvider(event.target.value)} className={inputClass} />
+          <select value={courierProviderId} onChange={(event) => setCourierProviderId(event.target.value as CourierProviderId | "")} className={inputClass}>
+            <option value="">Select courier…</option>
+            {COURIER_PROVIDER_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
           <input placeholder="Tracking ID" value={trackingId} onChange={(event) => setTrackingId(event.target.value)} className={inputClass} />
           <input placeholder="Tracking URL" value={trackingUrl} onChange={(event) => setTrackingUrl(event.target.value)} className={inputClass} />
         </div>

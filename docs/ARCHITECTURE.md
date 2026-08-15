@@ -227,8 +227,12 @@ Auth user id or `null` for the initial system-set `"pending"` entry) — see "Ad
 authorization" below. As of Phase 12, `statusHistory` entries also carry an optional `note`, and
 `Order` gained four new subdocuments — `confirmation` (method/timestamp, customer-safe;
 confirmedBy/note, admin-only), `cancellation`/`return` (reason codes + notes, entirely
-admin-only), and `courier` (provider/trackingId/trackingUrl/consignmentId/shippedAt, fully
-customer-safe) — see "Order operations & customer lifecycle (Phase 12)" below.
+admin-only), and `courier` (see "Order operations & customer lifecycle (Phase 12)" below). As of
+Phase 13, `courier` gained `providerId`/`mode`/`creationStatus`/`creationError`/
+`normalizedStatus`/`rawStatusCode`/`externalOrderId`/`shipmentCreatedAt`/`lastSyncedAt` (all
+admin-only diagnostics) alongside the Phase 12 customer-safe fields
+(`provider`/`trackingId`/`trackingUrl`/`consignmentId`/`shippedAt`) — see "Courier / fulfillment
+integration (Phase 13)" below.
 
 ### InventoryMovement (Phase 12 — new, MongoDB-connected)
 
@@ -653,11 +657,72 @@ documentation). In brief:
 - `src/components/admin/OrderStatusActions.tsx` replaces the old dropdown-based
   `OrderStatusForm.tsx` — one button per valid transition, each expanding into exactly the fields
   that transition needs.
-- No courier API integration — schema/UI readiness only, `provider` is free text so no single
-  Bangladesh courier is hardcoded as mandatory.
+- Courier API integration was schema/UI readiness only in this phase — `provider` was free text so
+  no single Bangladesh courier was hardcoded as mandatory. A real (credential-gated, unverified)
+  integration was built in Phase 13 — see below.
 - The Meta/GA4 retargeting audience recommendations (recommended windows, purchase-exclusion
   logic, product-specific/catalog-ad readiness) are pure documentation — no application code
   implements or applies any of it; see CLAUDE.md.
+
+## Courier / fulfillment integration (Phase 13)
+
+Provider-neutral courier abstraction under `src/lib/courier/` — see CLAUDE.md's "Courier /
+fulfillment integration (Phase 13)" section for the full architecture writeup. In brief:
+
+- `src/lib/courier/types.ts` defines `CourierProvider` (one adapter interface implemented per
+  provider), `CourierProviderId` (`pathao`/`steadfast`/`redx`/`paperfly`/`other`),
+  `NormalizedCourierStatus` (provider-neutral shipment status), and `ShipmentOrderInput`
+  (authoritative, server-only payload — never client-submitted).
+- `src/lib/courier/registry.ts` is the single lookup point (`getProvider()`,
+  `isProviderApiEnabled()`) — no provider-specific logic anywhere outside `src/lib/courier/`.
+- `src/lib/courier/providers/{pathao,steadfast}.ts` are real adapters, but **unverified against
+  official documentation** — both providers gate their API docs behind a merchant-account login
+  this project doesn't have, so every endpoint/field name is reconstructed from cross-referenced
+  third-party sources, clearly flagged in-file. `isPathaoConfigured()`/`isSteadfastConfigured()`
+  (`src/lib/courier/config.ts`) gate every network call and require **both** real credentials
+  *and* an explicit `COURIER_PATHAO_ENABLED`/`COURIER_STEADFAST_ENABLED=true` flag (default
+  `false`) — a credential being present is deliberately not sufficient on its own, since neither
+  adapter's request/response shape has been verified. Neither flag is set in this environment, so
+  nothing has ever actually called either API.
+- `src/lib/courier/providers/manual.ts` backs `redx`/`paperfly`/`other` — label-only, never
+  API-enabled. `src/lib/courier/providers/mock.ts` is dev-only (`isMockCourierEnabled()` is hard-
+  gated to `NODE_ENV !== "production"`), for exercising the create/refresh flow without real
+  credentials.
+- `Order.courier` (`src/models/Order.ts`) extended from Phase 12's readiness-only shape:
+  `providerId` (new controlled field) + `provider` (free-text *display* label, kept for backward
+  compatibility with every pre-Phase-13 order's arbitrary string, e.g. `"Test Courier"`) + `mode`
+  (`api`/`manual`) + `creationStatus`/`creationError` + `normalizedStatus`/`rawStatusCode` +
+  `externalOrderId`/`shipmentCreatedAt`/`lastSyncedAt`. `CustomerOrderCourier`
+  (`src/types/order.ts`) narrows to the customer-safe subset — no diagnostics, no internal IDs.
+- `src/services/courier.ts` — the only place a shipment gets created/refreshed. Idempotent
+  creation via a `courier.creationStatus` compare-and-swap (`not_created`/`failed` → `creating`,
+  atomic `findOneAndUpdate`) claimed *before* any network call, so a double-click/retry can only
+  ever create one consignment. Weight (`Product.inventory.shippingWeightGrams`) and, for Pathao,
+  location mapping (`CourierLocationMappingModel`) are validated *before* calling the provider,
+  with a precise error message, never a generic one. Never touches `orderStatus`, inventory, or
+  `payment.status` — those stay entirely inside `adminUpdateOrderStatus`'s existing Phase 12 CAS
+  lifecycle, including the automatic COD `cod_pending → paid` coordination.
+- `src/services/courier.ts`'s `refreshShipmentStatus` is read-only in this first implementation —
+  updates `courier.normalizedStatus`/`rawStatusCode`/`lastSyncedAt` only, never auto-transitions
+  `orderStatus`. Webhooks were not implemented (neither provider's webhook signing/auth could be
+  verified against official docs — the same reasoning that keeps the adapters themselves
+  unverified), so status sync is manual-refresh-only for now.
+- `src/components/admin/CourierPanel.tsx` — new, separate from `OrderStatusActions`'s own
+  shipped-time manual courier fields (which now use a controlled provider dropdown instead of free
+  text, but are otherwise unchanged from Phase 12). Shown at `confirmed`/`processing`/
+  `supplier_submitted`/`shipped`; offers "Create Shipment" only when the selected provider is both
+  API-capable and currently configured, falling back to manual tracking entry otherwise.
+  Deliberately decoupled from "Mark Shipped" — creating a consignment (`shipmentCreatedAt`) is not
+  the same fact as the order having physically shipped (`shippedAt`, Renvura's own transition
+  timestamp).
+- `CourierLocationMappingModel` (`src/models/CourierLocationMapping.ts`) maps Renvura's
+  division/district/upazila to a provider's own city/zone/area IDs — only Pathao needs this
+  (Steadfast accepts a plain address string). Starts empty; no mapping is ever guessed.
+- `Product.inventory.shippingWeightGrams` (new, nullable) — every existing product has `null`
+  today (no verified physical weight in the source data); a hard block on API shipment creation
+  per item, never a fabricated default. Editable via `/admin/products`' `ProductForm`.
+- No Meta/GA4 event is ever fired by any courier action — `scheduleMetaPurchaseCapi` is still only
+  called from `createOrder`, untouched by this phase.
 
 ## SEO readiness
 
@@ -695,6 +760,13 @@ instead of a checked-in `.env.example`.
 | `META_GRAPH_API_VERSION` | No | Server-only. Defaults to the snapshot documented in `src/lib/analytics/meta-server.ts` — verify against Meta's current Graph API changelog before relying on the default in production. |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No — GA4 simply doesn't load until set | Public by design. Currently unset — no GA4 property configured yet. |
 | `NEXT_PUBLIC_ANALYTICS_ENABLED` | No | Public. Set to `"true"` to opt into loading Meta Pixel/GA4 locally during `npm run dev` for testing — otherwise analytics only loads automatically when `NODE_ENV=production` (Vercel Production/Preview), so local development never pollutes real Meta/GA4 data. |
+| `PATHAO_CLIENT_ID` / `PATHAO_CLIENT_SECRET` / `PATHAO_USERNAME` / `PATHAO_PASSWORD` / `PATHAO_STORE_ID` | **Credentials.** No — Pathao API shipment creation is unavailable regardless (see `COURIER_PATHAO_ENABLED` below) until all five are set | Server-only, never logged, never `NEXT_PUBLIC_*`. Unverified against Pathao's own docs (gated behind a merchant-account login) — see CLAUDE.md's Phase 13 section before relying on these. `PATHAO_STORE_ID` is a pickup-point ID from Pathao's own merchant dashboard, not something Renvura invents. |
+| `PATHAO_BASE_URL` | **Non-secret config.** No | Server-only. Defaults to `https://api-hermes.pathao.com` (unverified, see above) — override if that host is wrong. |
+| `COURIER_PATHAO_ENABLED` | **Enable flag.** No, defaults to `false`/unset | Server-only. Real API calls require this to be exactly `"true"` **in addition to** all five Pathao credentials — a credential being present is deliberately not enough on its own (defense-in-depth against unverified request/response shapes going live by accident). Only set this after reviewing Pathao's real docs via a merchant account. |
+| `STEADFAST_API_KEY` / `STEADFAST_SECRET_KEY` | **Credentials.** No — unavailable regardless until both are set, see `COURIER_STEADFAST_ENABLED` below | Server-only, never logged, never `NEXT_PUBLIC_*`. Also unverified against Steadfast's own docs. |
+| `STEADFAST_BASE_URL` | **Non-secret config.** No | Server-only. Defaults to `https://portal.packzy.com/api/v1` (unverified) — override if wrong. |
+| `COURIER_STEADFAST_ENABLED` | **Enable flag.** No, defaults to `false`/unset | Server-only. Same two-part gate as `COURIER_PATHAO_ENABLED` above — only set after reviewing Steadfast's real docs via a merchant account. |
+| `COURIER_MOCK_ENABLED` | No, dev-only | Public-safe name but has no effect unless `NODE_ENV !== "production"` regardless of its value — see `src/lib/courier/config.ts`'s `isMockCourierEnabled()`. Set to `"true"` locally to exercise the shipment-creation flow with a fake `TEST-`-prefixed provider. |
 
 Phone OTP verification is deferred (see "Customer verification & account recovery" above) — no
 `SMS_PROVIDER*` variables exist in this codebase.
@@ -715,11 +787,14 @@ production order-operations workflow — status transitions, inventory reservati
 cancellation/return handling, courier readiness fields, status-change customer emails, the
 customer-safe tracking timeline, COD quality metrics, and Meta/GA4 retargeting audience
 documentation (see "Order operations & customer lifecycle (Phase 12)" above) — is done as of Phase
-12 (see `docs/DESIGN-SYSTEM.md`
+12, and a provider-neutral courier integration (Pathao/Steadfast adapters — unverified against
+official docs, credential-gated, never actually called in this environment — plus manual-provider
+support, idempotent shipment creation, and an admin courier panel; see "Courier / fulfillment
+integration (Phase 13)" above) is done as of Phase 13 (see `docs/DESIGN-SYSTEM.md`
 §§9–14 and `docs/PRODUCT-ROADMAP.md`) — still deferred: checkout phone OTP verification (built,
 then explicitly deferred in favor of manual phone/WhatsApp order confirmation — see above),
-automated payment gateway integration (bKash/Nagad/Rocket APIs), courier API integration (schema/
-UI *readiness* exists as of Phase 12 — `Order.courier` — but no courier is actually called),
+automated payment gateway integration (bKash/Nagad/Rocket APIs), real (verified, credentialed)
+Pathao/Steadfast courier delivery, courier webhooks and automatic courier-driven order-status sync,
 Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email marketing automation, CRM
 integrations, server-side GTM, Meta refund/cancellation attribution, bulk admin order actions
 (deliberately deferred — see CLAUDE.md's Phase 12 section), historical guest-order linking, in-app email *change*

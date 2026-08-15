@@ -134,18 +134,41 @@ const orderReturnSchema = new Schema(
 );
 
 /**
- * Phase 12: courier/shipment readiness — fields only, no courier API integration yet (see
- * CLAUDE.md's "Courier readiness" section). `provider` is a free-text label deliberately, not an
- * enum, so no single Bangladesh courier (Pathao/Steadfast/RedX/Paperfly) is hardcoded as mandatory.
- * Fully customer-safe — surfaced on the tracking timeline when present.
+ * Phase 13: courier/shipment fields, extended from Phase 12's readiness-only shape now that a real
+ * (though credential-gated, see `src/lib/courier/`) provider integration exists. `providerId` is
+ * the new controlled identifier (`pathao`/`steadfast`/`redx`/`paperfly`/`manual`/`other`/`null`);
+ * `provider` stays a free-text *display* label for backward compatibility with every Phase 12 order
+ * that already has an arbitrary string there (e.g. `"Test Courier"`) — new orders going through the
+ * controlled dropdown populate both fields together, see `COURIER_PROVIDER_LABELS`. `mode`/
+ * `creationStatus`/`creationError`/`externalOrderId`/`rawStatusCode`/`shipmentCreatedAt`/
+ * `lastSyncedAt` are admin-only diagnostic fields (see `CustomerOrderCourier` in
+ * `src/types/order.ts`, which omits them); `consignmentId`/`trackingId`/`trackingUrl`/
+ * `normalizedStatus`/`shippedAt` remain fully customer-safe, unchanged from Phase 12.
  */
 const orderCourierSchema = new Schema(
   {
+    providerId: { type: String, enum: ["pathao", "steadfast", "redx", "paperfly", "other"], default: null },
     provider: { type: String, default: null },
+    mode: { type: String, enum: ["api", "manual"], default: null },
     trackingId: { type: String, default: null },
     trackingUrl: { type: String, default: null },
     consignmentId: { type: String, default: null },
+    externalOrderId: { type: String, default: null },
+    creationStatus: { type: String, enum: ["not_created", "creating", "created", "failed"], default: "not_created" },
+    creationError: { type: String, default: null },
+    normalizedStatus: {
+      type: String,
+      enum: ["unknown", "pending", "pickup_requested", "picked_up", "in_transit", "out_for_delivery", "delivered", "delivery_failed", "returned", "cancelled"],
+      default: "unknown",
+    },
+    rawStatusCode: { type: String, default: null },
+    shipmentCreatedAt: { type: Date, default: null },
+    // Renvura's own "shipped" order-status transition time — deliberately distinct from
+    // `shipmentCreatedAt` (when the courier accepted the consignment). Creating a shipment does not
+    // by itself mean the order has physically shipped — see CLAUDE.md's "Shipment creation
+    // eligibility" note.
     shippedAt: { type: Date, default: null },
+    lastSyncedAt: { type: Date, default: null },
   },
   { _id: false },
 );

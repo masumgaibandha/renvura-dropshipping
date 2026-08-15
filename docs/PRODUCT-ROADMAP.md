@@ -452,9 +452,43 @@ never fires a second Purchase event or any other CAPI/Pixel/GA event.
 actions (single-order transitions only, for now), automatic manual-payment refunds, Google Ads/
 TikTok/Microsoft Ads audience sync, GA4-Google-Ads account linking.
 
-## Phase 13 — SEO / performance / testing
-Dynamic metadata, canonical URLs, sitemap, robots.txt, Open Graph, JSON-LD Product schema, Core
-Web Vitals pass, test coverage.
+## Phase 13 — Courier / fulfillment integration ✅
+Provider-neutral courier abstraction (`src/lib/courier/`) with a controlled `CourierProviderId`
+enum (`pathao`/`steadfast`/`redx`/`paperfly`/`other`) replacing the old free-text
+`Order.courier.provider`, plus real (though credential-gated and unverified against official
+docs — see below) Pathao and Steadfast adapters, a manual/label-only adapter for RedX/Paperfly/
+Other, and a dev-only mock provider. `Order.courier` extended with `providerId`/`mode`/
+`creationStatus`/`creationError`/`normalizedStatus`/`rawStatusCode`/`shipmentCreatedAt`/
+`lastSyncedAt`/`externalOrderId` (all admin-only diagnostics — `CustomerOrderCourier` narrows to
+the same customer-safe fields Phase 12 already exposed, plus a friendly `normalizedStatus` label).
+Idempotent shipment creation via a `courier.creationStatus` compare-and-swap
+(`src/services/courier.ts`); a new admin `CourierPanel` (separate from — and decoupled from —
+`OrderStatusActions`'s "Mark Shipped" transition, since creating a consignment is not the same
+fact as the order having physically shipped) offering "Create Shipment" only for a provider that's
+both API-capable and currently configured, falling back to manual tracking entry otherwise; a new
+`CourierLocationMapping` model for Pathao's city/zone/area ID requirement (starts empty — no
+mapping is ever guessed); a new `Product.inventory.shippingWeightGrams` field (also empty for
+every existing product — real courier weight is a real blocker, tracked in CLAUDE.md's "Known
+Phase 13 limitations," not silently defaulted). See CLAUDE.md's "Courier / fulfillment integration
+(Phase 13)" section and `docs/ARCHITECTURE.md`'s matching section for the full architecture.
+
+**Neither provider's official API documentation could be verified** — both are gated behind a
+merchant-account login this project doesn't have (confirmed directly: Pathao's own public help
+article points only to its merchant dashboard's "Developer API" section; Steadfast's docs live
+behind their merchant portal). Both adapters are built from cross-referenced third-party/community
+sources, clearly flagged unverified in-file, and gated behind real env credentials that are absent
+in this environment — so nothing in either adapter has ever made a real network call. **Real
+Pathao/Steadfast delivery is unverified.**
+
+**Webhooks were not implemented** — Phase 13's own safety rule ("if official webhook security
+can't be verified, don't activate webhook writes") applies for the same reason the adapters are
+unverified. Status sync is manual-refresh only (`adminRefreshCourierStatus`), and deliberately
+never auto-transitions `orderStatus`/inventory/payment — those stay entirely inside Phase 12's
+already-validated, CAS-protected lifecycle.
+
+**Explicitly not built**: webhook endpoints, automatic order-status sync from courier status,
+courier consignment cancellation, bulk shipment creation, a real (non-empty) Pathao location-ID
+mapping table, real product shipping weights, Core Web Vitals pass, automated test coverage.
 
 ## Phase 14 — Deployment
 Production Vercel deployment, environment configuration, domain setup, monitoring.

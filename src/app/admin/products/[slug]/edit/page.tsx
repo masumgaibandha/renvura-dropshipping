@@ -23,6 +23,7 @@ export default async function AdminEditProductPage({ params }: { params: Promise
     regularPrice: product.pricing.regularPrice !== null ? String(product.pricing.regularPrice) : "",
     sellingPrice: product.pricing.sellingPrice !== null ? String(product.pricing.sellingPrice) : "",
     stock: product.inventory.stock !== null ? String(product.inventory.stock) : "",
+    shippingWeightGrams: product.inventory.shippingWeightGrams !== null ? String(product.inventory.shippingWeightGrams) : "",
     inventoryStatus: product.inventory.status,
     status: product.status,
     featured: product.featured ?? false,

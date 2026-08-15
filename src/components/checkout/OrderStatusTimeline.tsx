@@ -1,3 +1,4 @@
+import { NORMALIZED_STATUS_LABELS } from "@/lib/courier/types";
 import type { OrderStatus, OrderSummary, OrderTrackingSummary } from "@/types/order";
 
 const TIMELINE_STEPS: { status: OrderStatus; label: string }[] = [
@@ -94,8 +95,13 @@ export function OrderStatusTimeline({ order, className }: OrderStatusTimelinePro
               <span className="font-medium text-foreground">Tracking ID:</span> {order.courier.trackingId}
             </p>
           )}
+          {order.courier.normalizedStatus !== "unknown" && (
+            <p>
+              <span className="font-medium text-foreground">Courier status:</span> {NORMALIZED_STATUS_LABELS[order.courier.normalizedStatus]}
+            </p>
+          )}
           {order.courier.trackingUrl && (
-            <a href={order.courier.trackingUrl} target="_blank" rel="noopener noreferrer" className="font-medium text-accent hover:underline">
+            <a href={order.courier.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block font-medium text-accent hover:underline">
               Track shipment →
             </a>
           )}

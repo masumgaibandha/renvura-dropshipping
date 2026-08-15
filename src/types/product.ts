@@ -47,6 +47,8 @@ export interface ProductInventory {
   stock: number | null;
   unit: string | null;
   status: InventoryStatus;
+  /** Phase 13 — parcel weight in grams, required for real courier API shipment creation. `null` for every product until a verified physical weight is recorded; never a fabricated default. */
+  shippingWeightGrams: number | null;
 }
 
 export interface ProductVariant {

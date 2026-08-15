@@ -39,6 +39,13 @@ const inventorySchema = new Schema(
       default: "unknown",
       required: true,
     },
+    // Phase 13: parcel weight for courier API shipment creation (Pathao/Steadfast both require a
+    // weight). `null` for every product today — the source screenshots this catalog was extracted
+    // from never captured a verified physical weight, and this codebase's own rule is to never
+    // invent a number the source data doesn't support (see CLAUDE.md's "Weight" note). Real API
+    // shipment creation for a product with `shippingWeightGrams: null` is a hard block, not a
+    // fallback to a guessed default — see `src/services/courier.ts`.
+    shippingWeightGrams: { type: Number, default: null, min: 0 },
   },
   { _id: false },
 );

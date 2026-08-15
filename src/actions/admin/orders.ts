@@ -18,6 +18,7 @@ import {
   INVENTORY_DECREMENTED_STATUSES,
   type CancellationReason,
   type ConfirmationMethod,
+  type CourierProviderId,
   type OrderStatus,
   type OrderSummary,
   type ReturnReason,
@@ -65,7 +66,7 @@ export interface AdminUpdateOrderStatusDetails {
   cancellationReason?: CancellationReason;
   returnReason?: ReturnReason;
   returnResellable?: boolean;
-  courier?: { provider?: string; trackingId?: string; trackingUrl?: string; consignmentId?: string };
+  courier?: { providerId?: CourierProviderId; trackingId?: string; trackingUrl?: string; consignmentId?: string };
 }
 
 interface ParsedDetails {
@@ -74,8 +75,10 @@ interface ParsedDetails {
   cancellationReason: CancellationReason | null;
   returnReason: ReturnReason | null;
   returnResellable: boolean | null;
-  courier: { provider?: string; trackingId?: string; trackingUrl?: string; consignmentId?: string } | null;
+  courier: { providerId?: CourierProviderId; trackingId?: string; trackingUrl?: string; consignmentId?: string } | null;
 }
+
+const COURIER_PROVIDER_ID_VALUES: CourierProviderId[] = ["pathao", "steadfast", "redx", "paperfly", "other"];
 
 /** Hand-rolled runtime validation of the raw details payload — a Server Action is a real HTTP endpoint, reachable directly with any payload regardless of what the TypeScript types would normally prevent client-side. */
 function parseDetails(raw: unknown): { ok: true; value: ParsedDetails } | { ok: false; error: string } {
@@ -129,9 +132,15 @@ function parseDetails(raw: unknown): { ok: true; value: ParsedDetails } | { ok: 
   if (r.courier !== undefined) {
     if (typeof r.courier !== "object" || r.courier === null) return { ok: false, error: "Invalid courier details." };
     const c = r.courier as Record<string, unknown>;
-    const fields: (keyof NonNullable<ParsedDetails["courier"]>)[] = ["provider", "trackingId", "trackingUrl", "consignmentId"];
     const parsedCourier: NonNullable<ParsedDetails["courier"]> = {};
-    for (const field of fields) {
+    if (c.providerId !== undefined) {
+      if (typeof c.providerId !== "string" || !COURIER_PROVIDER_ID_VALUES.includes(c.providerId as CourierProviderId)) {
+        return { ok: false, error: "Invalid courier provider." };
+      }
+      parsedCourier.providerId = c.providerId as CourierProviderId;
+    }
+    const stringFields: (keyof Omit<NonNullable<ParsedDetails["courier"]>, "providerId">)[] = ["trackingId", "trackingUrl", "consignmentId"];
+    for (const field of stringFields) {
       if (c[field] === undefined) continue;
       if (typeof c[field] !== "string") return { ok: false, error: "Invalid courier details." };
       const trimmed = (c[field] as string).trim();

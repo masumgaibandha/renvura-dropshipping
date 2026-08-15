@@ -25,6 +25,7 @@ export interface ProductFormValues {
   regularPrice: string;
   sellingPrice: string;
   stock: string;
+  shippingWeightGrams: string;
   inventoryStatus: InventoryStatus;
   status: ProductStatus;
   featured: boolean;
@@ -94,12 +95,17 @@ export function ProductForm({ mode, slug, categories, initialValues }: ProductFo
     const regularPrice = toNullableNumber(values.regularPrice);
     const sellingPrice = toNullableNumber(values.sellingPrice);
     const stock = toNullableNumber(values.stock);
-    if (Number.isNaN(regularPrice) || Number.isNaN(sellingPrice) || Number.isNaN(stock)) {
-      setError("Prices and stock must be numbers, or left empty.");
+    const shippingWeightGrams = toNullableNumber(values.shippingWeightGrams);
+    if (Number.isNaN(regularPrice) || Number.isNaN(sellingPrice) || Number.isNaN(stock) || Number.isNaN(shippingWeightGrams)) {
+      setError("Prices, stock, and weight must be numbers, or left empty.");
       return;
     }
     if (stock !== null && !Number.isInteger(stock)) {
       setError("Stock must be a whole number.");
+      return;
+    }
+    if (shippingWeightGrams !== null && shippingWeightGrams < 0) {
+      setError("Shipping weight must be zero or more.");
       return;
     }
 
@@ -115,6 +121,7 @@ export function ProductForm({ mode, slug, categories, initialValues }: ProductFo
       regularPrice,
       sellingPrice,
       stock,
+      shippingWeightGrams,
       inventoryStatus: values.inventoryStatus,
       status: values.status,
       featured: values.featured,
@@ -214,6 +221,15 @@ export function ProductForm({ mode, slug, categories, initialValues }: ProductFo
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Field label="Shipping Weight (grams)">
+          <input
+            value={values.shippingWeightGrams}
+            onChange={(event) => update("shippingWeightGrams", event.target.value)}
+            inputMode="numeric"
+            placeholder="Empty = unknown (blocks courier API shipment creation)"
+            className="h-9 w-full rounded-lg border border-border bg-background px-3 text-small text-foreground"
+          />
+        </Field>
         <Field label="Stock Status">
           <select value={values.inventoryStatus} onChange={(event) => update("inventoryStatus", event.target.value as InventoryStatus)} className="h-9 w-full rounded-lg border border-border bg-background px-2 text-small text-foreground">
             {INVENTORY_STATUS_VALUES.map((value) => (

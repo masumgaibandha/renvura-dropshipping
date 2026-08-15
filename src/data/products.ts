@@ -63,7 +63,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/x699-turbo-fan/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "USB rechargeable",
         "Digital display",
@@ -121,7 +121,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/handheld-spray-fan/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Strong wind airflow",
         "Fine mist spray function",
@@ -175,7 +175,7 @@ export const products: VerifiedProductRecord[] = [
         ],
         videos: [],
       },
-      inventory: { stock: 2500, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 2500, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "3-in-1 Design: Selfie Stick + Tripod + Gimbal Stabilizer",
         "AI Face Tracking / Intelligent Subject Tracking",
@@ -230,7 +230,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/q18-dual-axis-gimbal/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1250, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1250, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Dual-Axis Stabilization",
         "Smart AI Tracking",
@@ -284,7 +284,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/k28-selfie-stick-tripod/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Supports Two Phone Clamps",
         "Detachable Bluetooth Remote",
@@ -337,7 +337,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/cob-led-flashlight-dual-light/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Front Torch Light",
         "Side COB Light",
@@ -387,7 +387,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/jysuper-jy2600-flashlight/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "High Power LED Flashlight",
         "Rechargeable Battery",
@@ -445,7 +445,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/foldable-laptop-stand/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Ergonomic Adjustable Design",
         "Foldable & Portable",
@@ -502,7 +502,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/car-phone-holder-360/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Universal Smartphone Compatibility",
         "Strong Suction Cup Base",
@@ -554,7 +554,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/electronics-gadgets/f15-2-wireless-microphone/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1200, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1200, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: ["Windshield (Fur Wind Muff): Included", "USB Charging Cable: Included"],
       specifications: [
         { label: "Model", value: "F15-2" },
@@ -609,7 +609,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/dark-spot-correcting-glow-serum/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       status: "draft",
     },
     source: {
@@ -647,7 +647,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/beauty-of-joseon-sunscreen-10ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       status: "draft",
     },
     source: {
@@ -684,7 +684,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/skin1004-centella-ampoule-30ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Brightens uneven skin tone",
         "Reduces dark spots and hyperpigmentation",
@@ -737,7 +737,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/skin1004-centella-ampoule-100ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Brightens uneven skin tone",
         "Reduces dark spots and hyperpigmentation",
@@ -791,7 +791,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/bioaqua-lip-sleeping-mask/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       specifications: [{ label: "Net Weight", value: "20g / 0.7 fl.oz" }],
       status: "draft",
     },
@@ -831,7 +831,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/lanbena-blackhead-remover-mask/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 450, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 450, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: ["Blackheads Remove", "Deep Cleaning"],
       specifications: [
         { label: "Brand", value: "LANBENA" },
@@ -879,7 +879,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/silicone-body-scrubber-belt/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 400, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 400, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       features: [
         "Suitable for children, kids, elderly, men and women; usable on arms, legs, chest, back",
         "Dense brush head side penetrates pores to clean dirt and exfoliate",
@@ -928,7 +928,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/chamomile-whitening-sunscreen-spray/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 400, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 400, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       specifications: [{ label: "SPF", value: "50++" }],
       status: "draft",
     },
@@ -969,7 +969,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/dr-althea-345-relief-cream-50ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       specifications: [{ label: "Size", value: "50 mL / 1.69 fl.oz" }],
       status: "draft",
     },
@@ -1008,7 +1008,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/face-shop-rice-water-bright-cleanser-50ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 1000, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 1000, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       status: "draft",
     },
     source: {
@@ -1048,7 +1048,7 @@ export const products: VerifiedProductRecord[] = [
         images: ["/products/health-beauty/face-shop-rice-water-bright-cleanser-100ml/image-1.jpg"],
         videos: [],
       },
-      inventory: { stock: 100, unit: "pcs", status: "in_stock" },
+      inventory: { stock: 100, unit: "pcs", status: "in_stock", shippingWeightGrams: null },
       status: "draft",
     },
     source: {

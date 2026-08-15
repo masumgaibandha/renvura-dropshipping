@@ -408,6 +408,8 @@ export interface AdminProductInput {
   sellingPrice: number | null;
   stock: number | null;
   inventoryStatus: InventoryStatus;
+  /** Phase 13 — parcel weight in grams for courier API shipment creation. `null` until a verified physical weight is recorded; see `Product.inventory.shippingWeightGrams`'s doc comment. */
+  shippingWeightGrams: number | null;
   status: ProductStatus;
   featured: boolean;
   thumbnail: string | null;
@@ -438,6 +440,7 @@ export async function updateProductForAdmin(slug: string, input: AdminProductInp
         "media.images": input.images,
         "inventory.stock": input.stock,
         "inventory.status": input.inventoryStatus,
+        "inventory.shippingWeightGrams": input.shippingWeightGrams,
         features: input.features,
         specifications: input.specifications,
         status: input.status,
@@ -477,7 +480,7 @@ export async function createProductForAdmin(slug: string, input: AdminProductInp
       discountPercentage: calculateDiscountPercentage(input.regularPrice, input.sellingPrice),
     },
     media: { thumbnail: input.thumbnail, images: input.images, videos: [] },
-    inventory: { stock: input.stock, unit: null, status: input.inventoryStatus },
+    inventory: { stock: input.stock, unit: null, status: input.inventoryStatus, shippingWeightGrams: input.shippingWeightGrams },
     features: input.features,
     specifications: input.specifications,
     status: input.status,

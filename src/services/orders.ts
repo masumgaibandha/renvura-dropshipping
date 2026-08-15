@@ -2,13 +2,19 @@ import { connectToDatabase } from "@/lib/db";
 import { OrderModel } from "@/models/Order";
 import { isMetaCapiConfigured } from "@/lib/analytics/config";
 import { purchaseEventId } from "@/lib/analytics/event-id";
+import { COURIER_PROVIDER_LABELS } from "@/lib/courier/types";
 import type {
   AdminOrderDetail,
   AdminOrderListItem,
   CancellationReason,
   CodQualityMetrics,
   ConfirmationMethod,
+  CourierCreationStatus,
+  CourierMode,
+  CourierProviderId,
+  CustomerOrderCourier,
   MetaPurchaseStatus,
+  NormalizedCourierStatus,
   Order,
   OrderConfirmationEmailStatus,
   OrderListItem,
@@ -52,7 +58,22 @@ interface OrderRecord
   confirmation?: { method: ConfirmationMethod; confirmedAt: Date | null; confirmedBy: string | null; note: string | null };
   cancellation?: { reason: CancellationReason | null; note: string | null };
   return?: { reason: ReturnReason | null; resellable: boolean | null; note: string | null };
-  courier?: { provider: string | null; trackingId: string | null; trackingUrl: string | null; consignmentId: string | null; shippedAt: Date | null };
+  courier?: {
+    providerId: CourierProviderId | null;
+    provider: string | null;
+    mode: CourierMode | null;
+    trackingId: string | null;
+    trackingUrl: string | null;
+    consignmentId: string | null;
+    externalOrderId: string | null;
+    creationStatus: CourierCreationStatus;
+    creationError: string | null;
+    normalizedStatus: NormalizedCourierStatus;
+    rawStatusCode: string | null;
+    shipmentCreatedAt: Date | null;
+    shippedAt: Date | null;
+    lastSyncedAt: Date | null;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -75,7 +96,22 @@ const DEFAULT_ORDER_NOTIFICATIONS: NonNullable<OrderRecord["notifications"]> = {
 const DEFAULT_ORDER_CONFIRMATION: NonNullable<OrderRecord["confirmation"]> = { method: "none", confirmedAt: null, confirmedBy: null, note: null };
 const DEFAULT_ORDER_CANCELLATION: NonNullable<OrderRecord["cancellation"]> = { reason: null, note: null };
 const DEFAULT_ORDER_RETURN: NonNullable<OrderRecord["return"]> = { reason: null, resellable: null, note: null };
-const DEFAULT_ORDER_COURIER: NonNullable<OrderRecord["courier"]> = { provider: null, trackingId: null, trackingUrl: null, consignmentId: null, shippedAt: null };
+const DEFAULT_ORDER_COURIER: NonNullable<OrderRecord["courier"]> = {
+  providerId: null,
+  provider: null,
+  mode: null,
+  trackingId: null,
+  trackingUrl: null,
+  consignmentId: null,
+  externalOrderId: null,
+  creationStatus: "not_created",
+  creationError: null,
+  normalizedStatus: "unknown",
+  rawStatusCode: null,
+  shipmentCreatedAt: null,
+  shippedAt: null,
+  lastSyncedAt: null,
+};
 
 const DEFAULT_ORDER_ANALYTICS: NonNullable<OrderRecord["analytics"]> = {
   metaPurchase: { status: "not_applicable", eventId: null, sentAt: null },
@@ -269,15 +305,35 @@ export function toOrderSummary(record: OrderRecord): OrderSummary {
     payment: record.payment,
     orderStatus: record.orderStatus,
     confirmation: { method: confirmation.method, confirmedAt: confirmation.confirmedAt ? confirmation.confirmedAt.toISOString() : null },
-    courier: toCourierSummary(record.courier),
+    courier: toCustomerCourier(record.courier),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };
 }
 
+/** Full admin-facing courier projection — every field, including internal diagnostics. Only ever used by `toAdminOrderDetail`. */
 function toCourierSummary(courier: OrderRecord["courier"]): Order["courier"] {
   const value = courier ?? DEFAULT_ORDER_COURIER;
-  return { ...value, shippedAt: value.shippedAt ? value.shippedAt.toISOString() : null };
+  return {
+    ...value,
+    shipmentCreatedAt: value.shipmentCreatedAt ? value.shipmentCreatedAt.toISOString() : null,
+    shippedAt: value.shippedAt ? value.shippedAt.toISOString() : null,
+    lastSyncedAt: value.lastSyncedAt ? value.lastSyncedAt.toISOString() : null,
+  };
+}
+
+/** Customer-safe courier projection (Phase 13) — used by `toOrderSummary`/`toTrackingSummary`. Never includes `mode`/`creationStatus`/`creationError`/`externalOrderId`/`rawStatusCode`/`shipmentCreatedAt`/`lastSyncedAt` (see `CustomerOrderCourier`'s doc comment in `src/types/order.ts`). */
+function toCustomerCourier(courier: OrderRecord["courier"]): CustomerOrderCourier {
+  const value = courier ?? DEFAULT_ORDER_COURIER;
+  return {
+    providerId: value.providerId,
+    provider: value.provider,
+    trackingId: value.trackingId,
+    trackingUrl: value.trackingUrl,
+    consignmentId: value.consignmentId,
+    normalizedStatus: value.normalizedStatus,
+    shippedAt: value.shippedAt ? value.shippedAt.toISOString() : null,
+  };
 }
 
 /** Row projection for `/account/orders` — just enough to list, never the full item/address detail. */
@@ -308,7 +364,7 @@ export function toTrackingSummary(record: OrderRecord): OrderTrackingSummary {
       upazila: record.shippingAddress.upazila,
     },
     confirmation: { method: confirmation.method, confirmedAt: confirmation.confirmedAt ? confirmation.confirmedAt.toISOString() : null },
-    courier: toCourierSummary(record.courier),
+    courier: toCustomerCourier(record.courier),
     createdAt: record.createdAt.toISOString(),
   };
 }
@@ -457,7 +513,8 @@ export interface UpdateOrderStatusInput {
   confirmation?: { method: ConfirmationMethod; note?: string | null };
   cancellation?: { reason: CancellationReason; note?: string | null };
   returnInfo?: { reason: ReturnReason; resellable: boolean; note?: string | null };
-  courier?: { provider?: string | null; trackingId?: string | null; trackingUrl?: string | null; consignmentId?: string | null };
+  /** Manual courier entry at ship time (see `src/components/admin/OrderStatusActions.tsx`) — `providerId` drives the display `provider` label via `COURIER_PROVIDER_LABELS`. A shipment already created through the Phase 13 API flow (`courier.creationStatus === "created"`) is left untouched by this path — see `adminUpdateOrderStatus`'s doc comment. */
+  courier?: { providerId?: CourierProviderId | null; trackingId?: string | null; trackingUrl?: string | null; consignmentId?: string | null };
 }
 
 /**
@@ -494,7 +551,11 @@ export async function updateOrderStatusForAdmin(input: UpdateOrderStatusInput): 
     setFields["return.note"] = input.returnInfo.note ?? null;
   }
   if (input.courier) {
-    if (input.courier.provider !== undefined) setFields["courier.provider"] = input.courier.provider;
+    if (input.courier.providerId !== undefined) {
+      setFields["courier.providerId"] = input.courier.providerId;
+      setFields["courier.provider"] = input.courier.providerId ? COURIER_PROVIDER_LABELS[input.courier.providerId] : null;
+      setFields["courier.mode"] = "manual";
+    }
     if (input.courier.trackingId !== undefined) setFields["courier.trackingId"] = input.courier.trackingId;
     if (input.courier.trackingUrl !== undefined) setFields["courier.trackingUrl"] = input.courier.trackingUrl;
     if (input.courier.consignmentId !== undefined) setFields["courier.consignmentId"] = input.courier.consignmentId;

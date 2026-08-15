@@ -16,6 +16,7 @@ const EMPTY_VALUES: ProductFormValues = {
   regularPrice: "",
   sellingPrice: "",
   stock: "",
+  shippingWeightGrams: "",
   inventoryStatus: "unknown",
   status: "draft",
   featured: false,
