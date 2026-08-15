@@ -1,4 +1,4 @@
-# Pathao Production Readiness (Phase 15)
+# Pathao Production Readiness (Phase 15–16)
 
 This document is the single source of truth for what's left before Pathao is ever enabled for
 real customer orders. It exists so go-live is a deliberate, checklist-driven decision — never an
@@ -7,6 +7,186 @@ accidental side effect of an env var edit. See `CLAUDE.md`'s "Courier / fulfillm
 
 **Current status: NOT LIVE.** `COURIER_PATHAO_ENABLED` is unset in every real Vercel environment.
 Nothing in this document changes that — it prepares for a future, explicit go-live decision.
+
+## Phase 16 — production activation preparation (current verified state)
+
+Re-verified against Vercel Production directly this pass (names only, no values ever printed):
+
+| Variable | Present in Vercel Production? |
+|---|---|
+| `PATHAO_ENV` | **Missing** |
+| `PATHAO_CLIENT_ID` | **Missing** |
+| `PATHAO_CLIENT_SECRET` | **Missing** |
+| `PATHAO_USERNAME` | **Missing** |
+| `PATHAO_PASSWORD` | **Missing** |
+| `PATHAO_STORE_ID` | **Missing** |
+| `COURIER_PATHAO_ENABLED` | **Missing** (unset — correct, expected state) |
+| `PATHAO_WEBHOOK_SECRET` | Present (added Phase 14, needed for the webhook receiver to function) |
+| `PATHAO_WEBHOOK_INTEGRATION_SECRET` | Present (added Phase 14, same reason) |
+
+**Production store readiness: BLOCKED.** No production credentials exist at all, so there is
+nothing to discover or verify a store ID against yet. This is the first, hard blocker — every
+other item in this document is downstream of obtaining real production credentials from Pathao.
+Sandbox store ID `150696` must never be reused for production (it is a distinct, sandbox-only
+value tied to sandbox credentials — production requires its own real store, registered under real
+production credentials).
+
+**Production base URL:** confirmed in code (`src/lib/courier/config.ts`) —
+`PATHAO_PRODUCTION_BASE_URL = "https://api-hermes.pathao.com"`, selected only when
+`PATHAO_ENV === "production"` exactly (`getPathaoEnv()` defaults to `"sandbox"` for anything else,
+including unset). No network request was made to confirm this pass — this is a static code read,
+not a live production API call.
+
+**Webhook readiness: re-confirmed, unchanged.** `https://renvura.com/api/webhooks/pathao` (via the
+`www` redirect) is still deployed and enforcing signature validation — re-verified this pass with a
+read-only negative-control request (missing signature → `401`, no mutation). The handshake, a real
+Pathao TEST event, and the integration response header were all already verified live against
+production in Phase 14/15 (see `CLAUDE.md`'s "Pathao webhook (Phase 14)" section) — not re-run this
+pass, since nothing about the deployed code changed and a full re-test isn't needed to reconfirm a
+negative control still holds. No defect found; no behavior changed.
+
+**Product weight readiness:**
+- Total SKUs: 21 (source catalog, `src/data/products.ts`)
+- Resolved (verified) weights: 2 — Bioaqua Lip Sleeping Mask (20g), LANBENA Blackhead Remover Mask (5g)
+- Unresolved: 19 — `null`, per the Phase 14 audit's strict evidence rules (no supplier weight statement found, and volume-only figures were deliberately not converted via an assumed density)
+- **Production `Product` collection**: has **zero** `shippingWeightGrams` values populated — the
+  Phase 14 audit only ever wrote to `renvura_sandbox`. This pass did not query production MongoDB
+  to re-confirm this (querying production is off-limits even read-only per this project's standing
+  rule); it is taken as given, consistent with every prior phase's account of what was and wasn't
+  written where.
+
+### Chosen live-test SKU: `bioaqua-lip-sleeping-mask`
+
+**Bioaqua Lip Sleeping Mask 20g** — selling price ৳790, verified shipping weight 20g.
+
+Why this one over LANBENA Blackhead Remover Mask (the other verified-weight SKU):
+- Both have a verified weight and low monetary value (৳790 vs ৳690 — comparable).
+- **Bioaqua has no known catalog data mismatch.** Its 20g weight was read directly off an
+  unambiguous "20g/0.7FL.OZ.e" printed on the product packaging in the source photo.
+- **LANBENA does have a documented ambiguity** (`src/data/products.ts`'s own `dataQualityNotes`):
+  the supplier's "Product weight: 5g" field is unclear whether it means per-piece or total-pack
+  weight, and the pack is titled "5 pc" — a genuine, acknowledged open question, not resolved.
+- Bioaqua is a single self-contained jar (simple packaging); LANBENA is a multi-piece pack, a
+  slightly more complex shipment to reason about for a first live test.
+- Both have ample stock (Bioaqua: 100, LANBENA: 450) — not a differentiator.
+
+For the live test: **quantity 1**, a single Bioaqua Lip Sleeping Mask.
+
+### Expected COD logic (conceptual only — not applied to any real order)
+
+`Renvura's delivery fee is a live, admin-editable StoreSettings value — not re-read from production
+this pass (would require a production DB read, off-limits). Using the documented business-approved
+starting values (`src/config/delivery.ts`'s fallback, ৳80 inside Dhaka / ৳150 outside Dhaka) purely
+to illustrate the arithmetic; the real value in effect at test time must be read from the live
+`StoreSettings` singleton when the actual test order is placed, not assumed from this document.
+
+- Product selling price: ৳790
+- + Delivery fee: ৳80 (inside Dhaka) or ৳150 (outside Dhaka)
+- = Authoritative order total: **৳870** (inside Dhaka) or **৳940** (outside Dhaka)
+
+- If the test order is **unpaid COD**: Pathao `amount_to_collect` should equal the authoritative
+  order total above (`payment.status !== "paid"` branch of `buildShipmentOrderInput`).
+- If the test order is **prepaid/already verified paid**: `amount_to_collect` should be `0`
+  (`payment.status === "paid"` branch).
+
+No pricing was modified to produce these numbers.
+
+### Production database weight-migration plan (prepared, NOT executed)
+
+Mirrors the exact read-verify-write-verify pattern used for every sandbox write this project has
+ever done, targeted at production for the first time — with an extra compare-before-write step
+since production is real customer-facing data:
+
+1. **Confirm active DB name is exactly `renvura` (production)** before anything else — the inverse
+   of every sandbox script's `renvura_sandbox` assertion. Abort immediately if it's anything else.
+2. **Read current state first** — fetch `inventory.shippingWeightGrams` for exactly the two slugs
+   below and print it, even if expected to be `null`. Never assume the current value.
+3. **Compare before write** — if a slug's current value is already non-null and *different* from
+   the intended value, STOP and report the conflict rather than overwriting silently (someone may
+   have already set a real production value another way).
+4. **Update only `inventory.shippingWeightGrams`**, via a scoped `$set` on that single dot-path —
+   never a full-document replace, never touching price, stock, status, or any other field.
+5. **Identify by stable slug**, never by Mongo `_id`:
+   - `bioaqua-lip-sleeping-mask` → `20`
+   - `lanbena-blackhead-remover-mask` → `5`
+6. **Read back and report before/after** for both slugs after the write, matching the exact format
+   used for every sandbox weight update in Phase 14.
+7. **Rollback**: since the "before" value is always captured and printed in step 2, reverting is a
+   single `$set` back to that exact captured value (expected `null` in both cases, since production
+   has never had these populated) — no destructive operation, no backup file needed beyond what's
+   already printed in the migration's own output.
+
+This plan is not executed by this document. It requires an explicit, separate instruction to run
+against production, per this project's standing "never write to production without being told to"
+rule.
+
+### Exact future go-live sequence
+
+Documented once, here, as the authoritative order — every other reference to "the enablement
+sequence" in this project should point back to this list, not restate it:
+
+1. Verify production credentials (`PATHAO_CLIENT_ID`/`SECRET`/`USERNAME`/`PASSWORD`) are real and
+   obtained directly from Pathao's merchant panel — never guessed or reused from sandbox.
+2. Verify the production store ID — obtained via Pathao's real production Store Info/merchant
+   dashboard, never sandbox store `150696`.
+3. Verify the webhook — callback registered, handshake + a real Pathao TEST event pass against
+   production (already done in Phase 14/15; reconfirm if the callback is ever re-registered).
+4. Update the chosen production SKU's `shippingWeightGrams` in **production** MongoDB (the
+   migration plan above) — and only that SKU/those two SKUs, not a blanket catalog write.
+5. Create or identify one controlled real order for the live test.
+6. Confirm that order through the normal manual phone/WhatsApp process (`pending → confirmed`).
+7. Set `PATHAO_ENV=production` in Vercel Production.
+8. Set the real production credentials/store ID in Vercel Production.
+9. **Last step, only after everything above is verified**: set `COURIER_PATHAO_ENABLED=true`.
+10. Redeploy (or wait for env changes to take effect).
+11. Create exactly one Pathao shipment for the one controlled order.
+12. Verify the returned consignment ID, status, and a real webhook delivery/manual refresh for it.
+13. If *anything* in steps 11–12 is unexpected: immediately set `COURIER_PATHAO_ENABLED=false` and
+    investigate before retrying.
+
+The activation flag (`COURIER_PATHAO_ENABLED=true`) is deliberately the **last** configuration
+step, never the first — every credential and the store ID must already be in place and verified
+before it's flipped, so flipping it is never the moment something else gets checked for the first
+time.
+
+### Kill switch (reconfirmed, unchanged from Phase 15)
+
+Set `COURIER_PATHAO_ENABLED=false` in Vercel Production (or remove it) and redeploy. This
+immediately stops new Pathao API shipment creation — `isPathaoConfigured()` returns `false`,
+`createShipmentForOrder()`/`refreshShipmentStatus()` fail cleanly without a network call. Existing
+`Order.courier` data, tracking display, and inbound webhook processing for already-created
+shipments are unaffected (the webhook route doesn't gate on this flag at all). Credentials are
+never deleted merely to disable the provider — removing the enable flag alone is sufficient and
+is the intended, reversible mechanism.
+
+### Live-test success criteria
+
+The one controlled production shipment (step 11 above) is only a success if **all** of the
+following hold — any failure means step 13 (immediate disable) applies:
+
+- A real consignment ID is returned and persisted (`courier.creationStatus === "created"`).
+- The Pathao delivery fee/response is plausible, not wildly inconsistent with a manual estimate.
+- `orderStatus`, `payment.status`, `Product.inventory.stock`, and `Order.analytics.metaPurchase`
+  are all byte-for-byte unchanged from immediately before shipment creation.
+- A second "Create Shipment" attempt for the same order returns the existing consignment, never a
+  second one.
+- Either a real Pathao webhook delivery or a manual "Refresh Status" call successfully updates
+  `courier.normalizedStatus`/`rawStatusCode`/`lastSyncedAt` for this specific consignment.
+- Nothing in Vercel Production logs indicates an unexpected error, retry storm, or unhandled
+  exception during or immediately after the test.
+
+### Admin go-live UX (Phase 16)
+
+Assessed whether an admin could accidentally create a production shipment without realizing
+Pathao is live: the prior "Pathao: Sandbox"/"Pathao: Production" indicator (`CourierPanel.tsx`,
+`/admin/settings/delivery`) used identical neutral styling for both states — only the word
+differed. An admin used to always seeing "Sandbox" could plausibly not notice the day it reads
+"Production" in the exact same low-contrast pill. Fixed this pass: the production state now reads
+"⚠ Production (live)" in a distinct amber/warning style, while sandbox stays neutral — the visual
+weight changes, not only the text. No confirmation modal was added — a passive status indicator
+change is proportionate to the risk here (the real gate remains `COURIER_PATHAO_ENABLED`, which
+requires a Vercel environment-variable edit, not a click any admin user could make from this UI);
+a modal would add friction without closing any actual gap this indicator doesn't already close.
 
 ## 1. Go-live checklist
 

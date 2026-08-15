@@ -45,7 +45,17 @@ function CourierProviderHealth() {
           <div key={row.label}>
             <div className="flex items-center gap-2">
               <p className="font-medium text-foreground">{row.label}</p>
-              {row.env && <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-foreground/70">{row.env}</span>}
+              {row.env && (
+                <span
+                  className={
+                    row.env === "Production"
+                      ? "rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"
+                      : "rounded-full border border-border px-2 py-0.5 text-xs font-medium text-foreground/70"
+                  }
+                >
+                  {row.env === "Production" ? "⚠ Production (live)" : row.env}
+                </span>
+              )}
             </div>
             <dl className="mt-1 flex flex-col gap-1">
               <StatusRow label="Credentials" ok={row.credentials} />

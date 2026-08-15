@@ -99,8 +99,18 @@ export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligib
     <section className="rounded-xl border border-border bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-body font-semibold text-foreground">Courier</h2>
-        <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground/70">
-          Pathao: {pathaoEnv === "production" ? "Production" : "Sandbox"}
+        {/* Phase 16: deliberately NOT the same neutral style for both states — an admin used to
+            always seeing "Sandbox" must not be able to miss the day this flips to a real, live,
+            billable Production account. No modal (not justified for a passive status indicator),
+            but the visual weight must differ, not just the word. */}
+        <span
+          className={
+            pathaoEnv === "production"
+              ? "rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+              : "rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground/70"
+          }
+        >
+          Pathao: {pathaoEnv === "production" ? "⚠ Production (live)" : "Sandbox"}
         </span>
       </div>
 
