@@ -675,15 +675,22 @@ fulfillment integration (Phase 13)" section for the full architecture writeup. I
   (authoritative, server-only payload — never client-submitted).
 - `src/lib/courier/registry.ts` is the single lookup point (`getProvider()`,
   `isProviderApiEnabled()`) — no provider-specific logic anywhere outside `src/lib/courier/`.
-- `src/lib/courier/providers/{pathao,steadfast}.ts` are real adapters, but **unverified against
-  official documentation** — both providers gate their API docs behind a merchant-account login
-  this project doesn't have, so every endpoint/field name is reconstructed from cross-referenced
-  third-party sources, clearly flagged in-file. `isPathaoConfigured()`/`isSteadfastConfigured()`
-  (`src/lib/courier/config.ts`) gate every network call and require **both** real credentials
-  *and* an explicit `COURIER_PATHAO_ENABLED`/`COURIER_STEADFAST_ENABLED=true` flag (default
-  `false`) — a credential being present is deliberately not sufficient on its own, since neither
-  adapter's request/response shape has been verified. Neither flag is set in this environment, so
-  nothing has ever actually called either API.
+- `src/lib/courier/providers/pathao.ts` is now **officially verified and live-tested against
+  Pathao's sandbox** — auth (password + refresh-token grants), Get Merchant Store Info, Create a
+  New Store, Get List of Cities/Zones/Areas, Create a New Order, Get Order Short Info, and Price
+  Calculation all match documentation read directly from the Merchant Panel → Developer API
+  (screenshots, not third-party sources), and a full E2E pass through the real service layer
+  (`createShipmentForOrder` → real Pathao sandbox consignment → courier metadata persisted back to
+  a real Order document) has passed. Only Webhook Integration remains unimplemented (no official
+  docs supplied for it). `src/lib/courier/providers/steadfast.ts` remains **fully unverified** —
+  reconstructed from third-party sources only, never tested against a real Steadfast account.
+  `isPathaoConfigured()`/`isSteadfastConfigured()` (`src/lib/courier/config.ts`) gate every network
+  call and require **both** real credentials *and* an explicit
+  `COURIER_PATHAO_ENABLED`/`COURIER_STEADFAST_ENABLED=true` flag (default `false`), plus
+  `PATHAO_ENV` (default `sandbox`, confirmed sandbox/production base URLs) — this stays true even
+  for the now-verified Pathao adapter, since verification happened against sandbox only; real
+  production Pathao delivery has never been attempted and `COURIER_PATHAO_ENABLED` remains unset in
+  Vercel's production environment.
 - `src/lib/courier/providers/manual.ts` backs `redx`/`paperfly`/`other` — label-only, never
   API-enabled. `src/lib/courier/providers/mock.ts` is dev-only (`isMockCourierEnabled()` is hard-
   gated to `NODE_ENV !== "production"`), for exercising the create/refresh flow without real
@@ -697,11 +704,16 @@ fulfillment integration (Phase 13)" section for the full architecture writeup. I
 - `src/services/courier.ts` — the only place a shipment gets created/refreshed. Idempotent
   creation via a `courier.creationStatus` compare-and-swap (`not_created`/`failed` → `creating`,
   atomic `findOneAndUpdate`) claimed *before* any network call, so a double-click/retry can only
-  ever create one consignment. Weight (`Product.inventory.shippingWeightGrams`) and, for Pathao,
-  location mapping (`CourierLocationMappingModel`) are validated *before* calling the provider,
-  with a precise error message, never a generic one. Never touches `orderStatus`, inventory, or
-  `payment.status` — those stay entirely inside `adminUpdateOrderStatus`'s existing Phase 12 CAS
-  lifecycle, including the automatic COD `cod_pending → paid` coordination.
+  ever create one consignment (E2E-verified: a second `createShipmentForOrder` call against an
+  already-created order returns the existing consignment without a second Pathao `POST`). Weight
+  (`Product.inventory.shippingWeightGrams`) is validated *before* calling the provider with a
+  precise error message. Pathao's `CourierLocationMappingModel` lookup is precision-only, not a
+  precondition — Pathao's verified Create Order contract resolves `recipient_city`/`recipient_zone`/
+  `recipient_area` from the address automatically when omitted, so a missing mapping row no longer
+  blocks shipment creation. Never touches `orderStatus`, inventory, or `payment.status` — those
+  stay entirely inside `adminUpdateOrderStatus`'s existing Phase 12 CAS lifecycle, including the
+  automatic COD `cod_pending → paid` coordination (E2E-verified: both remained untouched by
+  shipment creation and status refresh in a real end-to-end test).
 - `src/services/courier.ts`'s `refreshShipmentStatus` is read-only in this first implementation —
   updates `courier.normalizedStatus`/`rawStatusCode`/`lastSyncedAt` only, never auto-transitions
   `orderStatus`. Webhooks were not implemented (neither provider's webhook signing/auth could be
@@ -760,8 +772,10 @@ instead of a checked-in `.env.example`.
 | `META_GRAPH_API_VERSION` | No | Server-only. Defaults to the snapshot documented in `src/lib/analytics/meta-server.ts` — verify against Meta's current Graph API changelog before relying on the default in production. |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No — GA4 simply doesn't load until set | Public by design. Currently unset — no GA4 property configured yet. |
 | `NEXT_PUBLIC_ANALYTICS_ENABLED` | No | Public. Set to `"true"` to opt into loading Meta Pixel/GA4 locally during `npm run dev` for testing — otherwise analytics only loads automatically when `NODE_ENV=production` (Vercel Production/Preview), so local development never pollutes real Meta/GA4 data. |
-| `PATHAO_CLIENT_ID` / `PATHAO_CLIENT_SECRET` / `PATHAO_USERNAME` / `PATHAO_PASSWORD` / `PATHAO_STORE_ID` | **Credentials.** No — Pathao API shipment creation is unavailable regardless (see `COURIER_PATHAO_ENABLED` below) until all five are set | Server-only, never logged, never `NEXT_PUBLIC_*`. Unverified against Pathao's own docs (gated behind a merchant-account login) — see CLAUDE.md's Phase 13 section before relying on these. `PATHAO_STORE_ID` is a pickup-point ID from Pathao's own merchant dashboard, not something Renvura invents. |
-| `PATHAO_BASE_URL` | **Non-secret config.** No | Server-only. Defaults to `https://api-hermes.pathao.com` (unverified, see above) — override if that host is wrong. |
+| `PATHAO_CLIENT_ID` / `PATHAO_CLIENT_SECRET` / `PATHAO_USERNAME` / `PATHAO_PASSWORD` | **Credentials.** No — Pathao API shipment creation is unavailable regardless (see `COURIER_PATHAO_ENABLED` below) until all four are set | Server-only, never logged, never `NEXT_PUBLIC_*`. Officially verified auth contract — see CLAUDE.md's Phase 13 section. |
+| `PATHAO_STORE_ID` | **Non-secret config, optional.** No | Server-only. A pickup-point ID from Pathao's own merchant dashboard — not something Renvura invents. If unset, `resolveStoreId()` (`src/lib/courier/providers/pathao.ts`) discovers it dynamically via the verified Store Info endpoint, but only when exactly one unambiguous active/default store exists; setting this explicitly is faster and avoids that ambiguity. |
+| `PATHAO_ENV` | **Non-secret config.** No, defaults to `sandbox` | Server-only. `"sandbox"` or `"production"` — anything else (including unset) resolves to `sandbox`. Selects between the two **confirmed** (read directly from the Merchant Panel dashboard) base URLs: sandbox `https://courier-api-sandbox.pathao.com`, production `https://api-hermes.pathao.com`. Never defaults to production. |
+| `PATHAO_BASE_URL` | **Non-secret config.** No | Server-only. Overrides the `PATHAO_ENV`-derived URL entirely if set — an explicit escape hatch, not the normal path. |
 | `COURIER_PATHAO_ENABLED` | **Enable flag.** No, defaults to `false`/unset | Server-only. Real API calls require this to be exactly `"true"` **in addition to** all five Pathao credentials — a credential being present is deliberately not enough on its own (defense-in-depth against unverified request/response shapes going live by accident). Only set this after reviewing Pathao's real docs via a merchant account. |
 | `STEADFAST_API_KEY` / `STEADFAST_SECRET_KEY` | **Credentials.** No — unavailable regardless until both are set, see `COURIER_STEADFAST_ENABLED` below | Server-only, never logged, never `NEXT_PUBLIC_*`. Also unverified against Steadfast's own docs. |
 | `STEADFAST_BASE_URL` | **Non-secret config.** No | Server-only. Defaults to `https://portal.packzy.com/api/v1` (unverified) — override if wrong. |
@@ -770,6 +784,45 @@ instead of a checked-in `.env.example`.
 
 Phone OTP verification is deferred (see "Customer verification & account recovery" above) — no
 `SMS_PROVIDER*` variables exist in this codebase.
+
+### ⚠️ Development database warning
+
+There is currently **no separate development/sandbox MongoDB database** — `.env.local`'s
+`MONGODB_URI`/`MONGODB_DB_NAME` point at the **same production database** `renvura.com` reads and
+writes in production (confirmed directly during Phase 13 validation: local queries surfaced real
+production order data). This means any local script or `npm run dev` session that writes to the
+database writes to production data, not an isolated copy — there is no safety net from a separate
+environment.
+
+**Recommended future architecture** (not implemented in this pass — flagging only):
+- Production: `MONGODB_DB_NAME=renvura` (unchanged)
+- Development/local: a genuinely separate database, e.g. `MONGODB_DB_NAME=renvura_dev`, ideally a
+  distinct MongoDB Atlas project/cluster entirely rather than just a different database name on the
+  same cluster (a different DB name alone still shares billing/network access/backup scope with
+  production).
+
+Until that migration happens, any script-driven local testing that writes data (as opposed to
+read-only queries) must use obviously-fake, clearly-labeled records — see the Phase 13 test data
+note directly below for the pattern this project has used so far.
+
+### Phase 13 test data (currently residing in the production database)
+
+Two records were created directly via real service-layer functions (not fabricated ad hoc) during
+Phase 13's end-to-end Pathao sandbox validation, and were deliberately **retained** rather than
+deleted (removing them would break the audit trail / `InventoryMovement` / `AdminAuditLog`
+referential history they're now part of):
+
+- **Order `PHASE13-E2E-PATHAO-001`** — `orderStatus: confirmed`, COD, courier
+  `creationStatus: created` against a real Pathao **sandbox** consignment. Customer name, phone,
+  and address are all obviously fake and clearly labeled as a test order in every field (never a
+  real customer's data — see `src/services/orders.ts`'s `insertOrder`/`updateOrderStatusForAdmin`
+  for how it was created, not a raw hand-edited document).
+- **Product `phase13-e2e-test-product`** — `status: "draft"` (invisible on the live storefront),
+  `shippingWeightGrams: 500`, title explicitly says "DO NOT SELL."
+
+Neither record should ever be confused with real customer/catalog data — both are named/labeled
+unambiguously as Phase 13 test fixtures. No credential, token, or the test order's phone number is
+recorded in this file or any other documentation.
 
 ## Explicitly deferred (not built yet)
 

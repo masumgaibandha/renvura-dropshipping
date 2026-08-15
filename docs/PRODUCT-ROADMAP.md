@@ -455,9 +455,10 @@ TikTok/Microsoft Ads audience sync, GA4-Google-Ads account linking.
 ## Phase 13 — Courier / fulfillment integration ✅
 Provider-neutral courier abstraction (`src/lib/courier/`) with a controlled `CourierProviderId`
 enum (`pathao`/`steadfast`/`redx`/`paperfly`/`other`) replacing the old free-text
-`Order.courier.provider`, plus real (though credential-gated and unverified against official
-docs — see below) Pathao and Steadfast adapters, a manual/label-only adapter for RedX/Paperfly/
-Other, and a dev-only mock provider. `Order.courier` extended with `providerId`/`mode`/
+`Order.courier.provider`, plus real, credential-gated Pathao and Steadfast adapters (Pathao
+officially verified and E2E-tested against sandbox; Steadfast still unverified — see below), a
+manual/label-only adapter for RedX/Paperfly/Other, and a dev-only mock provider. `Order.courier`
+extended with `providerId`/`mode`/
 `creationStatus`/`creationError`/`normalizedStatus`/`rawStatusCode`/`shipmentCreatedAt`/
 `lastSyncedAt`/`externalOrderId` (all admin-only diagnostics — `CustomerOrderCourier` narrows to
 the same customer-safe fields Phase 12 already exposed, plus a friendly `normalizedStatus` label).
@@ -472,19 +473,24 @@ every existing product — real courier weight is a real blocker, tracked in CLA
 Phase 13 limitations," not silently defaulted). See CLAUDE.md's "Courier / fulfillment integration
 (Phase 13)" section and `docs/ARCHITECTURE.md`'s matching section for the full architecture.
 
-**Neither provider's official API documentation could be verified** — both are gated behind a
-merchant-account login this project doesn't have (confirmed directly: Pathao's own public help
-article points only to its merchant dashboard's "Developer API" section; Steadfast's docs live
-behind their merchant portal). Both adapters are built from cross-referenced third-party/community
-sources, clearly flagged unverified in-file, and gated behind real env credentials that are absent
-in this environment — so nothing in either adapter has ever made a real network call. **Real
-Pathao/Steadfast delivery is unverified.**
+**Pathao's official API documentation was obtained mid-phase** (screenshots from the Merchant
+Panel → Developer API) and used to verify/correct auth, store info/creation, cities/zones/areas,
+create order, order info, and price calculation — all now officially validated, not a
+reconstruction, and live-tested end to end against Pathao's real sandbox, including a full pass
+through the actual `createShipmentForOrder()` service layer against a real (retained, clearly
+test-labeled) Order and a real sandbox consignment. **Steadfast's documentation was never
+obtained** — its adapter remains built from cross-referenced third-party/community sources,
+clearly flagged unverified in-file, gated behind credentials that are absent in every environment,
+and has never made a real network call. **Real production Pathao delivery is unverified** —
+`COURIER_PATHAO_ENABLED` remains unset in every Vercel environment; only sandbox has been
+exercised, using credentials that exist only in a local, gitignored `.env.local`.
 
-**Webhooks were not implemented** — Phase 13's own safety rule ("if official webhook security
-can't be verified, don't activate webhook writes") applies for the same reason the adapters are
-unverified. Status sync is manual-refresh only (`adminRefreshCourierStatus`), and deliberately
-never auto-transitions `orderStatus`/inventory/payment — those stay entirely inside Phase 12's
-already-validated, CAS-protected lifecycle.
+**Webhooks were not implemented for either provider** — Phase 13's own safety rule ("if official
+webhook security can't be verified, don't activate webhook writes") applies, and no webhook
+documentation was ever supplied even for Pathao. Status sync is manual-refresh only
+(`adminRefreshCourierStatus`, itself E2E-verified against a real sandbox consignment), and
+deliberately never auto-transitions `orderStatus`/inventory/payment — those stay entirely inside
+Phase 12's already-validated, CAS-protected lifecycle (also confirmed unaffected by the E2E test).
 
 **Explicitly not built**: webhook endpoints, automatic order-status sync from courier status,
 courier consignment cancellation, bulk shipment creation, a real (non-empty) Pathao location-ID

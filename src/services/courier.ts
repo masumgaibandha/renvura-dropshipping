@@ -25,6 +25,7 @@ export function isOrderEligibleForShipmentCreation(orderStatus: OrderStatus): bo
   return SHIPMENT_ELIGIBLE_STATUSES.includes(orderStatus);
 }
 
+/** Best-effort precision lookup, not a shipment-creation precondition (see the Phase 13 correction above) — `null` just means Pathao resolves the address itself. */
 async function resolvePathaoLocation(address: { division: string; district: string; upazila: string }) {
   await connectToDatabase();
   const mapping = await CourierLocationMappingModel.findOne({
@@ -58,16 +59,12 @@ async function buildShipmentOrderInput(order: OrderRecord, providerId: CourierPr
     return { ok: false, error: "One or more items in this order are missing a shipping weight. Set a shipping weight on each product in /admin/products before creating this shipment." };
   }
 
-  let pathaoLocation: ShipmentOrderInput["pathaoLocation"] = null;
-  if (providerId === "pathao") {
-    pathaoLocation = await resolvePathaoLocation(order.shippingAddress);
-    if (!pathaoLocation) {
-      return {
-        ok: false,
-        error: `Pathao area mapping is required for this delivery address (${order.shippingAddress.upazila}, ${order.shippingAddress.district}, ${order.shippingAddress.division}). Add a CourierLocationMapping entry for it before creating this shipment.`,
-      };
-    }
-  }
+  // Phase 13 correction: Pathao's officially verified Create Order contract documents
+  // recipient_city/recipient_zone/recipient_area as OPTIONAL — Pathao resolves them from
+  // recipient_address when omitted. A missing CourierLocationMapping entry is therefore no longer
+  // a hard block; verified IDs are sent when available (for precision), and simply omitted
+  // otherwise — never null/0/guessed. See CLAUDE.md's "Pathao location mapping" note.
+  const pathaoLocation: ShipmentOrderInput["pathaoLocation"] = providerId === "pathao" ? await resolvePathaoLocation(order.shippingAddress) : null;
 
   // Already-verified manual payments (paid) collect nothing further on delivery; COD/unverified
   // orders collect the full total. See CLAUDE.md's "COD amount" note — never taken from client input.

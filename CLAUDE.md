@@ -888,27 +888,47 @@ project's event semantics.
 ## Courier / fulfillment integration (Phase 13)
 
 - **Scope**: a provider-neutral courier abstraction (`src/lib/courier/`) replacing Phase 12's
-  free-text-only `Order.courier`. Real (though credential-gated and **unverified against official
-  documentation**, see below) adapters for Pathao and Steadfast; label-only manual support for
-  RedX/Paperfly/Other; a dev-only mock provider. Idempotent shipment creation, an admin courier
-  panel, and a `Product.inventory.shippingWeightGrams` field. Explicitly NOT built this phase:
-  webhooks, automatic courier-driven order-status sync, courier consignment cancellation, bulk
-  shipment creation — don't add any of these without a fresh scoping conversation.
-- **Neither provider's official API documentation is publicly reachable.** Pathao's own docs live
-  only inside their merchant dashboard's "Developer API" section (confirmed by reading Pathao's own
-  public help article, which points there and nowhere else); Steadfast's live behind their
-  merchant portal (portal.packzy.com — their platform is also known as "Packzy"). This project has
-  no merchant account for either. `src/lib/courier/providers/pathao.ts`/`steadfast.ts` are built
-  from cross-referencing several independent third-party sources (community SDKs on GitHub/npm/
-  PyPI, integration blog posts) — every endpoint path and field name is a best-effort placeholder,
-  loudly flagged as such in both files' top comments. **Before the first real shipment with either
-  provider**: get real credentials from a merchant account, read that provider's actual docs, and
+  free-text-only `Order.courier`. Real, credential-gated adapters for Pathao and Steadfast; label-
+  only manual support for RedX/Paperfly/Other; a dev-only mock provider. Idempotent shipment
+  creation, an admin courier panel, and a `Product.inventory.shippingWeightGrams` field. Explicitly
+  NOT built this phase: webhooks, automatic courier-driven order-status sync, courier consignment
+  cancellation, bulk shipment creation — don't add any of these without a fresh scoping
+  conversation.
+- **POST-VALIDATION STATUS UPDATE**: after this section was first written (below, largely
+  preserved as-is for the historical record of *why* the architecture looks the way it does), real
+  official Pathao documentation was obtained (screenshots from the Merchant Panel → Developer API)
+  and every section implemented was verified against it, then live-tested end to end against
+  Pathao's real sandbox — including a full pass through the actual `createShipmentForOrder()`
+  service layer (not just the raw adapter) against a real, retained test Order
+  (`PHASE13-E2E-PATHAO-001`, see `docs/ARCHITECTURE.md`'s "Phase 13 test data" note). **Pathao is
+  now officially verified**, not the "unverified, reconstructed from third-party sources" adapter
+  described in the paragraph below — only Webhook Integration remains unimplemented (no docs
+  supplied). **Steadfast was never given official documentation and remains exactly as described
+  below: fully unverified.** Neither provider is enabled in production — `COURIER_PATHAO_ENABLED`/
+  `COURIER_STEADFAST_ENABLED` remain unset in every Vercel environment; Pathao sandbox credentials
+  exist only in a local, gitignored `.env.local`.
+- **Neither provider's official API documentation was publicly reachable at the time this
+  architecture was designed.** Pathao's own docs live only inside their merchant dashboard's
+  "Developer API" section (confirmed by reading Pathao's own public help article, which points
+  there and nowhere else); Steadfast's live behind their merchant portal (portal.packzy.com — their
+  platform is also known as "Packzy"). This project had no merchant account for either at design
+  time. `src/lib/courier/providers/pathao.ts`/`steadfast.ts` were originally built from
+  cross-referencing several independent third-party sources (community SDKs on GitHub/npm/PyPI,
+  integration blog posts) — every endpoint path and field name was a best-effort placeholder,
+  loudly flagged as such in both files' top comments. **Pathao's adapter has since been corrected
+  against real official documentation (see the status update above) — this paragraph now describes
+  Steadfast's adapter only, which remains untouched since this original design.** Before the first
+  real Steadfast shipment: get real credentials from a merchant account, read that provider's actual docs, and
   diff every literal string in the adapter against what's really there.
-- **Pathao's official status**: Pathao officially confirms merchant website API integration exists
-  — it's reachable through Merchant Panel → Developer API — but the detailed request/response
-  contract requires merchant access to read, which this project doesn't have. The current adapter
-  has **not** been officially validated; treat every endpoint/field/status value in
-  `providers/pathao.ts` as an unverified reconstruction, never as confirmed by Pathao.
+- **Pathao's official status (updated post-validation)**: real documentation (screenshots from
+  Merchant Panel → Developer API) was obtained and used to verify/correct auth (password + refresh
+  grants), Get Merchant Store Info, Create a New Store, Get List of Cities/Zones/Areas, Create a
+  New Order, Get Order Short Info, and Price Calculation — every one of these is now **officially
+  validated**, not a reconstruction, and has been live-tested against Pathao's real sandbox
+  (including creating a real sandbox store and a real sandbox consignment). Only Webhook
+  Integration remains unimplemented. This does **not** mean production-ready — verification
+  happened against sandbox only, `COURIER_PATHAO_ENABLED` stays unset in every real environment,
+  and going live still requires the Privacy Policy update noted below.
 - **Steadfast's official status**: Steadfast publicly demonstrates the capability to create
   consignments/tracking via API (their own marketing materials reference it), but the specific
   implementation contract this adapter uses (`providers/steadfast.ts`) has **not** been verified
@@ -917,7 +937,7 @@ project's event semantics.
 - **Provider capability classification** — don't overstate support beyond this:
   | Provider | Status |
   |---|---|
-  | Pathao | API adapter implemented, **unverified, disabled by default** (`COURIER_PATHAO_ENABLED` unset) — manual-ready |
+  | Pathao | API adapter implemented, **officially verified + E2E-tested against sandbox**, still **disabled in production by default** (`COURIER_PATHAO_ENABLED` unset in every real environment) — manual-ready |
   | Steadfast | API adapter implemented, **unverified, disabled by default** (`COURIER_STEADFAST_ENABLED` unset) — manual-ready |
   | RedX, Paperfly | Not integrated — label-only, manual tracking entry only, no adapter exists |
   | Other | Manual-ready catch-all, no adapter |
@@ -1020,14 +1040,20 @@ project's event semantics.
   missing one, API shipment creation is hard-blocked with a precise message (never a generic
   error, never a guessed default) — set real weights via `/admin/products`'s `ProductForm` before
   relying on real courier API creation.
-- **Pathao location mapping is never guessed.** Pathao's create-order API requires numeric
-  city/zone/area IDs (per the unverified third-party sources above); Steadfast does not (it
-  accepts a plain address string). `CourierLocationMappingModel`
-  (`src/models/CourierLocationMapping.ts`) maps Renvura's division/district/upazila to a
-  provider's own location IDs, unique-indexed on `(provider, renvuraDivision, renvuraDistrict,
-  renvuraUpazila)` — it starts **completely empty**. A missing mapping for a given delivery address
-  is a hard block on Pathao shipment creation, surfaced as "Pathao area mapping is required for
-  this delivery address" — never a guessed ID, never a generic 500.
+- **Pathao location mapping is never guessed, and (correction, post-validation) is no longer a
+  shipment-creation blocker.** Pathao's officially verified Create Order contract documents
+  `recipient_city`/`recipient_zone`/`recipient_area` as **optional** — Pathao resolves them from
+  `recipient_address` automatically when omitted, contradicting an earlier design assumption that
+  these IDs were required. `CourierLocationMappingModel` (`src/models/CourierLocationMapping.ts`)
+  maps Renvura's division/district/upazila to a provider's own location IDs, unique-indexed on
+  `(provider, renvuraDivision, renvuraDistrict, renvuraUpazila)` — it starts **empty**, and stays
+  empty unless a specific address's mapping is deliberately resolved and persisted (the official
+  Cities/Zones/Areas lookup endpoints — `getPathaoCities()`/`getPathaoZones()`/`getPathaoAreas()`
+  in `providers/pathao.ts` — are implemented and were used exactly this way to resolve the pickup
+  store's own Gaibandha/Saghata/Bonarpara IDs, not to bulk-populate the table). A verified mapping
+  is sent when present, for precision; when absent, the fields are simply omitted (never `null`,
+  `0`, or a guessed ID) and Pathao resolves the destination from the address text itself. Steadfast
+  never needed this — it accepts a plain address string.
 - **Pickup/store configuration is env-only, not a `StoreSettings` field.** `PATHAO_STORE_ID` is a
   pickup-point ID obtained from Pathao's own merchant dashboard (Stores) — Renvura doesn't invent
   or store a pickup address for it, matching how Pathao's own system actually works (a
@@ -1113,15 +1139,21 @@ project's event semantics.
   cancels a courier consignment automatically or otherwise — `CourierProvider.cancelShipment()`
   wasn't even added to the interface yet. Revisit only once a specific provider's cancellation API
   and this codebase's own cancellation business rules have both been verified together.
-- **Known Phase 13 limitations (deferred, not forgotten)**: real Pathao/Steadfast delivery is
-  unverified (no merchant credentials exist in this environment, and neither adapter has ever made
-  a real network call); the `CourierLocationMapping` table is empty (no verified Pathao
-  city/zone/area data exists); every product's `shippingWeightGrams` is `null` (no verified
-  physical weights exist); no webhook endpoint exists; courier status never auto-drives
-  `orderStatus`; there is no consignment-cancellation action; there is no bulk shipment-creation
-  UI. None of these block the rest of the app — `isProviderApiEnabled()` returning `false` for
-  every real provider means the system behaves exactly like Phase 12's manual-only courier fields
-  until real, verified credentials are added.
+- **Known Phase 13 limitations (deferred, not forgotten)**: real **production** Pathao delivery is
+  unverified — Pathao's own API contract has been officially verified and E2E-tested against
+  **sandbox only**, with `COURIER_PATHAO_ENABLED` unset in every real Vercel environment, so no
+  production shipment has ever been attempted; Steadfast remains fully unverified (no official docs
+  obtained, no credentials configured anywhere); the `CourierLocationMapping` table is empty except
+  for whatever a specific future address resolution deliberately adds (it's a precision lookup, not
+  a shipment-creation precondition, and nothing bulk-populates it); every real catalog product's
+  `shippingWeightGrams` is still `null` (no verified physical weights exist — this remains a real
+  hard block on API shipment creation for real orders, confirmed unchanged by the E2E test, which
+  used a dedicated test product with a manually-set weight instead of a real one); no webhook
+  endpoint exists; courier status never auto-drives `orderStatus`; there is no consignment-
+  cancellation action; there is no bulk shipment-creation UI. None of these block the rest of the
+  app — `isProviderApiEnabled()` returning `false` for every provider in every real environment
+  means the system behaves exactly like Phase 12's manual-only courier fields there, regardless of
+  what's been verified in sandbox.
 
 ## Design system contrast rule
 
@@ -1147,10 +1179,10 @@ payment (Transaction ID + manual verification, no gateway) also exists — see "
 rules" above. As of Phase 9, saved addresses (`/account/addresses`) reuse this exact same
 hierarchy and validation — see "Authentication & customer account rules" below; never duplicate
 the location data or its dependent-select validation logic. A provider-neutral courier
-integration (Pathao/Steadfast adapters, unverified against official docs and credential-gated —
-see "Courier / fulfillment integration (Phase 13)" above) exists as of Phase 13; an automated
-payment gateway (e.g. SSLCommerz) still comes later — don't hardcode a specific payment provider
-prematurely.
+integration exists as of Phase 13 (Pathao officially verified and E2E-tested against sandbox;
+Steadfast still unverified — both remain credential-gated and disabled in production — see
+"Courier / fulfillment integration (Phase 13)" above); an automated payment gateway (e.g.
+SSLCommerz) still comes later — don't hardcode a specific payment provider prematurely.
 
 ## Marketing / tracking / SEO
 
@@ -1195,10 +1227,10 @@ operations & customer lifecycle — status transitions, inventory reservation, c
 cancellation/return handling, courier readiness, status-change emails, customer tracking
 timeline, COD quality metrics, Meta/GA4 retargeting audience documentation — see "Order operations
 & customer lifecycle (Phase 12)" above), and 13 (Courier / fulfillment integration — provider-
-neutral abstraction, Pathao/Steadfast adapters unverified against official docs and
-credential-gated, idempotent shipment creation, admin courier panel, `CourierLocationMapping`,
-`Product.inventory.shippingWeightGrams` — see "Courier / fulfillment integration (Phase 13)"
-above) are done —
+neutral abstraction, Pathao officially verified and E2E-tested against sandbox (Steadfast still
+unverified), both credential-gated and disabled in production, idempotent shipment creation, admin
+courier panel, `CourierLocationMapping`, `Product.inventory.shippingWeightGrams` — see "Courier /
+fulfillment integration (Phase 13)" above) are done —
 see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and
 `docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI shell, homepage, listing pages, product detail
 page, cart/wishlist, checkout/order creation/tracking, customer accounts, the admin dashboard,
@@ -1223,9 +1255,12 @@ verified location data exists) and Better Auth's own `user`/`session`/`account`/
 collections. Resend, Meta Pixel/Conversions API, and GA4 are all configured and live in
 production as of this phase — see "Analytics & measurement (Phase 11)" above for the credential
 names, and note that `META_TEST_EVENT_CODE` must not stay enabled for normal production traffic
-once testing is done. No Pathao or Steadfast credentials are configured in any environment as of
-Phase 13 — both adapters are unverified against official docs and have never made a real network
-call; see "Courier / fulfillment integration (Phase 13)" above before adding real credentials. Do
+once testing is done. No Pathao or Steadfast credentials are configured in **any Vercel
+environment** (production or preview) as of Phase 13 — Pathao sandbox credentials exist only in
+the gitignored local `.env.local` used for validation, and `COURIER_PATHAO_ENABLED`/
+`COURIER_STEADFAST_ENABLED` remain unset everywhere that matters for real traffic; see "Courier /
+fulfillment integration (Phase 13)" above before adding real credentials anywhere, and note that
+Pathao's adapter is now officially verified while Steadfast's remains unverified. Do
 not wire up real newsletter logic, or
 create fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
 values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,

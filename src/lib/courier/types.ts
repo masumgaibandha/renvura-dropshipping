@@ -84,7 +84,17 @@ export interface ShipmentOrderInput {
 }
 
 export type CreateShipmentResult =
-  | { status: "created"; consignmentId: string; trackingId: string; trackingUrl: string | null; externalOrderId: string | null }
+  | {
+      status: "created";
+      consignmentId: string;
+      trackingId: string;
+      trackingUrl: string | null;
+      externalOrderId: string | null;
+      /** Provider's own raw status string for the just-created consignment, if it returned one (e.g. Pathao's `order_status: "Pending"`) — diagnostic only, never persisted as Renvura order state. Optional since not every provider's response includes one. */
+      rawProviderStatus?: string;
+      /** Provider's own reported courier operational delivery fee, if returned (e.g. Pathao's `delivery_fee`) — diagnostic only. Never Renvura's customer-facing delivery fee; never persisted or used in checkout pricing. */
+      courierDeliveryFeeBdt?: number;
+    }
   | { status: "failed"; error: string }
   | { status: "not_configured" };
 

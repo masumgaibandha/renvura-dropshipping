@@ -23,16 +23,36 @@ export interface PathaoConfig {
   clientSecret: string;
   username: string;
   password: string;
-  /** Pickup point id from Pathao's own merchant dashboard (Stores). Not something Renvura invents or stores an address for — see CLAUDE.md's "Pickup / store configuration" note. */
-  storeId: string;
+  /**
+   * Optional explicit override — officially confirmed (Get Merchant Store Info,
+   * `GET /aladdin/api/v1/stores`) that a store id can be *discovered* rather than configured, so
+   * this is no longer a hard credential requirement. `providers/pathao.ts`'s `resolveStoreId()`
+   * uses this value if set, otherwise calls the Store Info endpoint and picks the
+   * active/default store — never guesses an id. See CLAUDE.md's "Pathao store resolution" note.
+   */
+  storeId: string | null;
   baseUrl: string;
+  env: PathaoEnv;
 }
 
-/** Credentials present in the environment — necessary but not sufficient. See `isPathaoConfigured()`. */
+export type PathaoEnv = "sandbox" | "production";
+
+/**
+ * Confirmed directly from the Pathao merchant dashboard (not a third-party source) — unlike the
+ * request/response field names elsewhere in `providers/pathao.ts`, these two host names are real,
+ * official facts.
+ */
+const PATHAO_SANDBOX_BASE_URL = "https://courier-api-sandbox.pathao.com";
+const PATHAO_PRODUCTION_BASE_URL = "https://api-hermes.pathao.com";
+
+/** Defaults to `sandbox` for anything other than the exact literal `"production"` — never silently default to calling the live courier account. */
+export function getPathaoEnv(): PathaoEnv {
+  return process.env.PATHAO_ENV === "production" ? "production" : "sandbox";
+}
+
+/** Credentials present in the environment — necessary but not sufficient. See `isPathaoConfigured()`. `PATHAO_STORE_ID` is deliberately not required here — it's resolved dynamically via the Store Info endpoint when unset (officially confirmed as safe, see `providers/pathao.ts`'s `resolveStoreId()`). */
 export function isPathaoCredentialsConfigured(): boolean {
-  return Boolean(
-    process.env.PATHAO_CLIENT_ID && process.env.PATHAO_CLIENT_SECRET && process.env.PATHAO_USERNAME && process.env.PATHAO_PASSWORD && process.env.PATHAO_STORE_ID,
-  );
+  return Boolean(process.env.PATHAO_CLIENT_ID && process.env.PATHAO_CLIENT_SECRET && process.env.PATHAO_USERNAME && process.env.PATHAO_PASSWORD);
 }
 
 /** Explicit human opt-in, independent of whether credentials happen to be present. Defaults to `false` — never assume "credentials exist" means "safe to call." */
@@ -48,18 +68,21 @@ export function isPathaoConfigured(): boolean {
 /** Throws if called while credentials are missing — callers must check `isPathaoCredentialsConfigured()` first (not `isPathaoConfigured()`, since this is also used for error-message redaction even when the enable flag is off). */
 export function getPathaoConfig(): PathaoConfig {
   const { PATHAO_CLIENT_ID, PATHAO_CLIENT_SECRET, PATHAO_USERNAME, PATHAO_PASSWORD, PATHAO_STORE_ID, PATHAO_BASE_URL } = process.env;
-  if (!PATHAO_CLIENT_ID || !PATHAO_CLIENT_SECRET || !PATHAO_USERNAME || !PATHAO_PASSWORD || !PATHAO_STORE_ID) {
+  if (!PATHAO_CLIENT_ID || !PATHAO_CLIENT_SECRET || !PATHAO_USERNAME || !PATHAO_PASSWORD) {
     throw new Error("getPathaoConfig called while Pathao credentials are not configured");
   }
+  const env = getPathaoEnv();
   return {
     clientId: PATHAO_CLIENT_ID,
     clientSecret: PATHAO_CLIENT_SECRET,
     username: PATHAO_USERNAME,
     password: PATHAO_PASSWORD,
-    storeId: PATHAO_STORE_ID,
-    // Default matches the host referenced by multiple independent unofficial sources — unverified
-    // against Pathao's own docs (unreachable without a merchant login), overridable in case it's wrong.
-    baseUrl: PATHAO_BASE_URL || "https://api-hermes.pathao.com",
+    storeId: PATHAO_STORE_ID || null,
+    // PATHAO_BASE_URL, if set, overrides the env-derived default entirely — an explicit escape
+    // hatch, not the normal path. Normally this is the confirmed sandbox/production host for
+    // whatever PATHAO_ENV resolves to.
+    baseUrl: PATHAO_BASE_URL || (env === "production" ? PATHAO_PRODUCTION_BASE_URL : PATHAO_SANDBOX_BASE_URL),
+    env,
   };
 }
 
