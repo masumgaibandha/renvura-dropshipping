@@ -9,29 +9,57 @@ import { processPathaoWebhookEvent } from "@/services/courier";
  * mutation in this codebase is a Server Action; a webhook is an external-consumer endpoint, the
  * one case CLAUDE.md's Server Actions note calls out as needing a real Route Handler).
  *
- * SANDBOX/LOCAL-DEVELOPMENT FOCUSED FOR THIS PASS. The real Pathao merchant panel callback URL is
- * NOT configured to point here yet, and Pathao production is not enabled anywhere (see
- * `COURIER_PATHAO_ENABLED`/`PATHAO_ENV` — unchanged, still sandbox-only). This route is built and
- * locally testable ahead of that step, not wired up to receive real traffic yet.
- *
  * Two independent secrets, per official docs — see `src/lib/courier/config.ts`'s doc comment:
  * `PATHAO_WEBHOOK_SECRET` (compared against every real event's `X-PATHAO-Signature`) and
- * `PATHAO_WEBHOOK_INTEGRATION_SECRET` (returned verbatim only for the one-time verification
- * handshake). Never assumed equal.
+ * `PATHAO_WEBHOOK_INTEGRATION_SECRET`. Never assumed equal.
+ *
+ * Pathao's real webhook TEST run revealed an additional runtime requirement beyond the initial
+ * `webhook_integration` handshake: `X-Pathao-Merchant-Webhook-Integration-Secret` must also be
+ * present on every successfully *authenticated* response — not just the handshake — including
+ * `order.created`, other known/unknown events, and safely-acknowledged non-mutating outcomes
+ * (order not found, a consignment/merchant-order mismatch). `pathaoWebhookResponse()` is the one
+ * place that attaches it, so no return branch below duplicates header logic. The header is
+ * deliberately withheld on anything that happens *before* successful signature verification
+ * (malformed JSON, a missing/invalid `X-PATHAO-Signature`) — see `verifyPathaoWebhookSignature()`
+ * below; that boundary is unchanged, only what happens *after* it changed.
  *
  * Response codes: 202 for a successful integration handshake; 200 for any authenticated event that
- * was safely processed (including "acknowledged but not mutated" cases — order not found, a
- * consignment/store mismatch, or a genuinely unknown event — all deliberately non-error responses
- * so Pathao doesn't retry indefinitely for something that will never resolve differently); 401 for
- * a missing/invalid signature; 400 for malformed JSON or an invalid payload shape; 503 if the
- * integration handshake is requested before `PATHAO_WEBHOOK_INTEGRATION_SECRET` is configured.
- * Never returns a stack trace or any secret value in a response body.
+ * was safely processed; 401 for a missing/invalid signature (no integration header — this is not
+ * an authenticated response); 400 for malformed JSON (pre-auth, no header) or an invalid payload
+ * shape on an authenticated request (header present); 503 if the integration handshake is
+ * requested before `PATHAO_WEBHOOK_INTEGRATION_SECRET` is configured (fails safely — no header,
+ * since there is no correct value to send). Never returns a stack trace or any secret value in a
+ * response body.
  */
+
+/**
+ * The single place `X-Pathao-Merchant-Webhook-Integration-Secret` is attached to a response.
+ * Only ever call this for a response that follows successful signature verification (or the
+ * integration handshake, which is its own distinct check) — never for a 401/pre-auth response.
+ * If the secret isn't configured, the event is still processed/acknowledged normally (a normal
+ * webhook must never fail just because an optional diagnostic header can't be set) — the header
+ * is simply omitted, never sent empty or with a wrong value.
+ */
+function pathaoWebhookResponse(body: unknown, status: number): NextResponse {
+  const integrationSecret = getPathaoWebhookIntegrationSecret();
+  const headers = new Headers();
+  if (integrationSecret) {
+    headers.set("X-Pathao-Merchant-Webhook-Integration-Secret", integrationSecret);
+  }
+  if (body === null) {
+    return new NextResponse(null, { status, headers });
+  }
+  headers.set("Content-Type", "application/json");
+  return new NextResponse(JSON.stringify(body), { status, headers });
+}
+
 export async function POST(request: NextRequest) {
   let rawBody: string;
   try {
     rawBody = await request.text();
   } catch {
+    // Pre-auth: body couldn't even be read. No integration header — never attach it to an
+    // unauthenticated/pre-auth response (see CLAUDE.md's Phase 14 webhook note).
     return NextResponse.json({ error: "Could not read request body." }, { status: 400 });
   }
 
@@ -39,44 +67,44 @@ export async function POST(request: NextRequest) {
   try {
     body = rawBody ? JSON.parse(rawBody) : null;
   } catch {
+    // Pre-auth malformed JSON — no header, same reasoning as above.
     return NextResponse.json({ error: "Malformed JSON." }, { status: 400 });
   }
 
   // Integration handshake: Pathao's own mechanism for verifying this endpoint. Checked before
-  // signature verification and never touches the database — see CLAUDE.md's Phase 14 webhook note
-  // on why this is modeled as a distinct, separate check from the ongoing per-event signature.
+  // signature verification and never touches the database — modeled as a distinct, separate check
+  // from the ongoing per-event signature (see `src/lib/courier/config.ts`'s doc comment).
   if (isWebhookIntegrationEvent(body)) {
     const integrationSecret = getPathaoWebhookIntegrationSecret();
     if (!integrationSecret) {
       console.error("Pathao webhook integration handshake received but PATHAO_WEBHOOK_INTEGRATION_SECRET is not configured.");
       return NextResponse.json({ error: "Webhook integration is not configured." }, { status: 503 });
     }
-    return new NextResponse(null, {
-      status: 202,
-      headers: { "X-Pathao-Merchant-Webhook-Integration-Secret": integrationSecret },
-    });
+    return pathaoWebhookResponse(null, 202);
   }
 
-  // Every other event must carry a valid signature BEFORE any further processing — reject first,
-  // parse/mutate never happens on an unverified request.
-  // Headers.get() is case-insensitive per the Fetch API spec, so this matches
-  // "X-PATHAO-Signature" regardless of the casing Pathao actually sends.
+  // Every other event must carry a valid signature BEFORE any further processing, and before any
+  // response carries the integration header — reject first, parse/mutate/header never happens on
+  // an unverified request. Headers.get() is case-insensitive per the Fetch API spec, so this
+  // matches "X-PATHAO-Signature" regardless of the casing Pathao actually sends.
   const receivedSignature = request.headers.get("x-pathao-signature");
   const configuredSecret = getPathaoWebhookSecret();
   if (!verifyPathaoWebhookSignature(receivedSignature, configuredSecret)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  // From this point on, the request is authenticated — every response below carries the
+  // integration header (best-effort if configured).
   const parsed = parsePathaoWebhookPayload(body);
   if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: 400 });
+    return pathaoWebhookResponse({ error: parsed.error }, 400);
   }
 
   try {
     const result = await processPathaoWebhookEvent(parsed.payload);
-    return NextResponse.json({ received: true, outcome: result.outcome }, { status: 200 });
+    return pathaoWebhookResponse({ received: true, outcome: result.outcome }, 200);
   } catch (error) {
     console.error("Pathao webhook processing failed:", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "Internal error while processing webhook." }, { status: 500 });
+    return pathaoWebhookResponse({ error: "Internal error while processing webhook." }, 500);
   }
 }
