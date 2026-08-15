@@ -44,9 +44,13 @@ const REQUEST_TIMEOUT_MS = 10_000;
 const DELIVERY_TYPE_NORMAL = 48;
 /** Officially confirmed: 1 = Document, 2 = Parcel. Every Renvura order is a physical product. */
 const ITEM_TYPE_PARCEL = 2;
-/** Officially confirmed: `item_weight` is in KG, minimum 0.5, maximum 10. */
-const MIN_ITEM_WEIGHT_KG = 0.5;
-const MAX_ITEM_WEIGHT_KG = 10;
+/**
+ * Officially confirmed: `item_weight` is in KG, minimum 0.5, maximum 10. Exported so
+ * `src/services/courier.ts`'s read-only shipment-readiness check (Phase 15) reuses this exact
+ * pair rather than a second hardcoded copy — one source of truth for the >10kg rule.
+ */
+export const MIN_ITEM_WEIGHT_KG = 0.5;
+export const MAX_ITEM_WEIGHT_KG = 10;
 
 interface CachedToken {
   accessToken: string;

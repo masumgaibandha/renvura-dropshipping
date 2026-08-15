@@ -1145,15 +1145,88 @@ project's event semantics.
   production shipment has ever been attempted; Steadfast remains fully unverified (no official docs
   obtained, no credentials configured anywhere); the `CourierLocationMapping` table is empty except
   for whatever a specific future address resolution deliberately adds (it's a precision lookup, not
-  a shipment-creation precondition, and nothing bulk-populates it); every real catalog product's
-  `shippingWeightGrams` is still `null` (no verified physical weights exist — this remains a real
-  hard block on API shipment creation for real orders, confirmed unchanged by the E2E test, which
-  used a dedicated test product with a manually-set weight instead of a real one); no webhook
-  endpoint exists; courier status never auto-drives `orderStatus`; there is no consignment-
-  cancellation action; there is no bulk shipment-creation UI. None of these block the rest of the
-  app — `isProviderApiEnabled()` returning `false` for every provider in every real environment
+  a shipment-creation precondition, and nothing bulk-populates it); courier status never auto-drives
+  `orderStatus`; there is no consignment-cancellation action; there is no bulk shipment-creation UI.
+  **Updated by Phase 14/15**: a real webhook endpoint now exists (see "Pathao webhook (Phase 14)"
+  below); 2 of 21 real catalog products now have a verified `shippingWeightGrams` (see "Pathao
+  production readiness (Phase 15)" below) — the remaining 19 are still `null` and remain a real
+  hard block on API shipment creation for orders containing them. None of this blocks the rest of
+  the app — `isProviderApiEnabled()` returning `false` for every provider in every real environment
   means the system behaves exactly like Phase 12's manual-only courier fields there, regardless of
   what's been verified in sandbox.
+
+## Pathao webhook (Phase 14)
+
+- **`POST /api/webhooks/pathao`** (`src/app/api/webhooks/pathao/route.ts`) — this project's first
+  Route Handler (every other mutation is a Server Action; a webhook is the one case that genuinely
+  needs a real HTTP endpoint external systems can call). Handles two distinct request shapes:
+  - **Integration handshake** (`{"event":"webhook_integration"}`) — Pathao's own mechanism for
+    verifying the endpoint. Checked before signature verification, never touches the database.
+    Responds `202` with `X-Pathao-Merchant-Webhook-Integration-Secret` set to
+    `PATHAO_WEBHOOK_INTEGRATION_SECRET`. Fails safely (`503`, no header) if that secret isn't
+    configured.
+  - **Normal events** (`order.created` confirmed; every other event string from Pathao's panel is
+    treated as unmapped/unknown, never guessed) — require a valid `X-PATHAO-Signature` header
+    (compared via constant-time comparison against `PATHAO_WEBHOOK_SECRET`, itself a distinct
+    secret from the integration one) before any parsing or DB access.
+- **`X-Pathao-Merchant-Webhook-Integration-Secret` is attached to every authenticated response**,
+  not only the handshake — Pathao's real webhook TEST run revealed this requirement after initial
+  implementation. `pathaoWebhookResponse()` (the route's one internal helper) is the single place
+  this header is attached; it's withheld on pre-auth responses (malformed JSON, missing/invalid
+  signature) and on the handshake's own `503` failure case.
+- **Mutation boundary is strict**: `processPathaoWebhookEvent()` (`src/services/courier.ts`) only
+  ever writes `courier.rawStatusCode`/`courier.normalizedStatus`/`courier.lastSyncedAt` — never
+  `orderStatus`, inventory, payment, or analytics. Order lookup is by `courier.consignmentId`
+  (scoped to `providerId:"pathao"`), with `merchant_order_id`/`store_id` as secondary consistency
+  checks; any mismatch or unmatched consignment is safely acknowledged (`200`) without mutating any
+  order. An unrecognized event updates `rawStatusCode` but leaves `normalizedStatus` unchanged
+  (never downgrades a previously-known-good status to `"unknown"`).
+- **Idempotency is structural** — every write is a `$set` of the same field values a repeated
+  identical delivery would produce again, so no dedup collection was built.
+- **Audit logging** reuses the `"system"` actor-id convention already established by
+  `InventoryMovement.actorUserId` ("Admin user id, or 'system' for a movement with no human actor")
+  — `AdminAuditLogModel.adminUserId` has no identity constraint beyond `required: true`, so this is
+  a safe, consistent reuse, not a fabricated admin identity. Records `courier.webhook_received`/
+  `courier.webhook_mismatch`.
+- **Verified live in production** (handshake + signature auth + safe non-mutating acknowledgment
+  for an order that doesn't exist in production's database) via Pathao's own real webhook TEST
+  button — `COURIER_PATHAO_ENABLED` was not touched to do this; the webhook receiver itself has no
+  dependency on that flag.
+
+## Pathao production readiness (Phase 15)
+
+- **Still not live** — `COURIER_PATHAO_ENABLED` remains unset in every real Vercel environment.
+  This phase is preparation only; see `docs/PATHAO-PRODUCTION-READINESS.md` for the full go-live
+  checklist, rollback procedure, and a prepared-but-not-executed live-test plan.
+- **Production enablement guard strengthened**: `isPathaoConfigured()`
+  (`src/lib/courier/config.ts`) now additionally requires `isPathaoProductionStoreConfigured()`
+  (an explicit, non-empty `PATHAO_STORE_ID`) whenever `PATHAO_ENV=production` — production can
+  never fall back to sandbox-style store auto-discovery, so a careless env flip with leftover
+  sandbox config can't silently resolve to an unintended store. No specific store/credential ID is
+  ever hardcoded as an allow/block value.
+- **Admin shipping-readiness UI**: `/admin/products` (list) and the product edit form
+  (`ProductForm.tsx`) both show a per-product "Pathao Readiness" badge (`READY` / `MISSING WEIGHT` /
+  `INVALID WEIGHT`, from the new pure `src/lib/courier/readiness.ts`) — a real weight under 500g is
+  explicitly `READY`, never conflated with "missing"; Pathao's 0.5kg minimum is a courier-request
+  concern (`providers/pathao.ts`), not a catalog-data validity rule. `/admin/orders/[orderNumber]`'s
+  Courier panel shows a read-only pre-flight "READY FOR PATHAO"/"BLOCKED" summary (per-item weight
+  gaps, order-status eligibility, already-created, Pathao's 10kg maximum) via the new
+  `getPathaoShipmentReadiness()` (`src/services/courier.ts`) — never mutates anything, never calls
+  Pathao's API, and disables the "Create Shipment" button when blocked. This is a display
+  convenience only; `createShipmentForOrder`'s own server-side checks remain the sole authoritative
+  gate regardless of what the UI shows.
+- **Non-secret environment indicator**: both the Courier panel and `/admin/settings/delivery`'s
+  diagnostic show "Pathao: Sandbox"/"Pathao: Production" (from `getPathaoEnv()`) — never any
+  credential, token, or secret value.
+- **Privacy Policy** (`src/app/privacy-policy/page.tsx`) gained a "Courier & Delivery Partners"
+  section describing exactly what `ShipmentOrderInput` actually sends (name, phone, address, items,
+  weight, COD amount — never email, payment/Transaction ID, or product cost) and states plainly
+  that the automated integration isn't live yet. The FAQ's delivery answer
+  (`src/app/faq/page.tsx`) now mentions third-party courier partners. No dedicated Shipping Policy
+  or Terms & Conditions page exists in this codebase to update further.
+- **Webhook production-safety audit** (this phase) found no defect — every property re-verified
+  against the deployed Phase 14 implementation unchanged; see
+  `docs/PATHAO-PRODUCTION-READINESS.md` §4 for the full audit record.
 
 ## Design system contrast rule
 
@@ -1226,20 +1299,30 @@ deduplication — see "Analytics & measurement (Phase 11)" above), and 12 (Produ
 operations & customer lifecycle — status transitions, inventory reservation, confirmation/
 cancellation/return handling, courier readiness, status-change emails, customer tracking
 timeline, COD quality metrics, Meta/GA4 retargeting audience documentation — see "Order operations
-& customer lifecycle (Phase 12)" above), and 13 (Courier / fulfillment integration — provider-
+& customer lifecycle (Phase 12)" above), 13 (Courier / fulfillment integration — provider-
 neutral abstraction, Pathao officially verified and E2E-tested against sandbox (Steadfast still
 unverified), both credential-gated and disabled in production, idempotent shipment creation, admin
 courier panel, `CourierLocationMapping`, `Product.inventory.shippingWeightGrams` — see "Courier /
-fulfillment integration (Phase 13)" above) are done —
-see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`, and
-`docs/DESIGN-SYSTEM.md` §§9–14. The reusable UI shell, homepage, listing pages, product detail
-page, cart/wishlist, checkout/order creation/tracking, customer accounts, the admin dashboard,
-analytics measurement, production order operations, and courier fulfillment scaffolding exist and
-are wired in, but do not build an automated payment gateway (bKash/Nagad/Rocket APIs), real
-(credentialed, verified) Pathao/Steadfast delivery, courier webhooks or automatic courier-driven
-order-status sync, courier consignment cancellation, bulk shipment creation, Google Ads conversion
-tracking, TikTok Pixel, Microsoft Ads, email marketing automation, CRM integrations, server-side
-GTM, Meta refund/cancellation attribution, bulk admin order actions, historical guest-order linking,
+fulfillment integration (Phase 13)" above), 14 (Pathao inbound webhook — `POST /api/webhooks/pathao`,
+signature + integration-handshake verification, strict courier-metadata-only mutation boundary,
+a shipping-weight audit that resolved 2 of 21 real catalog products and corrected the Pathao
+courier-request weight-flooring model — see "Pathao webhook (Phase 14)" above), and 15 (Pathao
+production readiness — admin shipping-readiness UI, a strengthened production-only config guard,
+non-secret environment indicators, Privacy Policy/FAQ courier disclosures, a webhook
+production-safety audit, and a full go-live checklist/rollback/live-test plan in
+`docs/PATHAO-PRODUCTION-READINESS.md` — still not live, see "Pathao production readiness (Phase 15)"
+above) are done —
+see `docs/PRODUCT-ROADMAP.md`, `docs/PRODUCT-DATA.md`, `docs/ARCHITECTURE.md`,
+`docs/DESIGN-SYSTEM.md` §§9–14, and `docs/PATHAO-PRODUCTION-READINESS.md`. The reusable UI shell,
+homepage, listing pages, product detail page, cart/wishlist, checkout/order creation/tracking,
+customer accounts, the admin dashboard, analytics measurement, production order operations, and
+courier fulfillment scaffolding (including a real, tested inbound webhook) exist and are wired in,
+but do not build an automated payment gateway (bKash/Nagad/Rocket APIs), real (credentialed,
+verified) Pathao/Steadfast production delivery, automatic courier-driven order-status sync (the
+webhook only ever updates courier metadata, by design), courier consignment cancellation, bulk
+shipment creation, Google Ads conversion tracking, TikTok Pixel, Microsoft Ads, email marketing
+automation, CRM integrations, server-side GTM, Meta refund/cancellation attribution, bulk admin
+order actions, historical guest-order linking,
 a verified email-*change* flow (email *verification* itself is done, see Phase 10.5 — "email is
 read-only on `/account/profile`" from Phase 9 still holds), social login, checkout phone OTP
 verification (deferred — see Phase 10.5), account phone-update verification, "log in as customer"
@@ -1255,12 +1338,18 @@ verified location data exists) and Better Auth's own `user`/`session`/`account`/
 collections. Resend, Meta Pixel/Conversions API, and GA4 are all configured and live in
 production as of this phase — see "Analytics & measurement (Phase 11)" above for the credential
 names, and note that `META_TEST_EVENT_CODE` must not stay enabled for normal production traffic
-once testing is done. No Pathao or Steadfast credentials are configured in **any Vercel
-environment** (production or preview) as of Phase 13 — Pathao sandbox credentials exist only in
-the gitignored local `.env.local` used for validation, and `COURIER_PATHAO_ENABLED`/
-`COURIER_STEADFAST_ENABLED` remain unset everywhere that matters for real traffic; see "Courier /
-fulfillment integration (Phase 13)" above before adding real credentials anywhere, and note that
-Pathao's adapter is now officially verified while Steadfast's remains unverified. Do
+once testing is done. No Pathao or Steadfast **operational** credentials
+(`PATHAO_CLIENT_ID`/`PATHAO_CLIENT_SECRET`/`PATHAO_USERNAME`/`PATHAO_PASSWORD`/`PATHAO_STORE_ID`,
+or any Steadfast equivalent) are configured in any Vercel environment as of Phase 15 — those exist
+only in the gitignored local `.env.local` used for sandbox validation, and
+`COURIER_PATHAO_ENABLED`/`COURIER_STEADFAST_ENABLED` remain unset everywhere that matters for real
+traffic. **Updated by Phase 14**: `PATHAO_WEBHOOK_SECRET`/`PATHAO_WEBHOOK_INTEGRATION_SECRET` *are*
+now configured in Vercel Production/Preview (needed for the real, deployed webhook receiver to
+function at all — see "Pathao webhook (Phase 14)" above) — this is a narrower exception than full
+operational credentials, and does not by itself enable shipment creation (`isPathaoConfigured()`
+is a separate, still-unmet gate). See `docs/PATHAO-PRODUCTION-READINESS.md` before adding any
+further real credentials anywhere, and note that Pathao's adapter is now officially verified while
+Steadfast's remains unverified. Do
 not wire up real newsletter logic, or
 create fake products/reviews/prices. 20 of the 21 catalog products have real approved `sellingPrice`
 values; `skin1004-centella-ampoule-100ml` is deliberately held back (`sellingPrice: null`,

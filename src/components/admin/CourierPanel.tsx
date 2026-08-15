@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 
 import { adminCreateShipment, adminRefreshCourierStatus, adminSetManualCourierTracking } from "@/actions/admin/courier";
 import { COURIER_PROVIDER_LABELS, NORMALIZED_STATUS_LABELS } from "@/lib/courier/types";
+import type { PathaoEnv } from "@/lib/courier/config";
+import type { PathaoShipmentReadiness } from "@/services/courier";
 import type { CourierProviderId, OrderCourier } from "@/types/order";
 
 const inputClass = "h-9 w-full rounded-lg border border-border bg-background px-2 text-small text-foreground";
@@ -26,6 +28,10 @@ interface CourierPanelProps {
   apiEnabledProviders: Partial<Record<CourierProviderId, boolean>>;
   /** Whether the order's current status allows creating a shipment (`confirmed`/`processing`/`supplier_submitted`) — see `isOrderEligibleForShipmentCreation`. */
   eligibleForCreation: boolean;
+  /** Server-computed, read-only pre-flight check (Phase 15) — see `getPathaoShipmentReadiness()`. Purely a display convenience; `adminCreateShipment`'s own server-side checks remain authoritative regardless of what this shows. */
+  pathaoReadiness: PathaoShipmentReadiness;
+  /** Non-secret provider-mode indicator only (`"sandbox"` | `"production"`) — never credentials/tokens. */
+  pathaoEnv: PathaoEnv;
 }
 
 /**
@@ -37,7 +43,7 @@ interface CourierPanelProps {
  * CLAUDE.md's "Shipment creation eligibility" note for why this is deliberately decoupled from
  * "Mark Shipped."
  */
-export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligibleForCreation }: CourierPanelProps) {
+export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligibleForCreation, pathaoReadiness, pathaoEnv }: CourierPanelProps) {
   const [providerId, setProviderId] = useState<CourierProviderId | "">(courier.providerId ?? "");
   const [trackingId, setTrackingId] = useState(courier.trackingId ?? "");
   const [trackingUrl, setTrackingUrl] = useState(courier.trackingUrl ?? "");
@@ -86,9 +92,35 @@ export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligib
     });
   }
 
+  const isPathaoSelected = providerId === "pathao";
+  const pathaoBlocked = isPathaoSelected && !pathaoReadiness.ready && !alreadyCreated;
+
   return (
     <section className="rounded-xl border border-border bg-surface p-4">
-      <h2 className="text-body font-semibold text-foreground">Courier</h2>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-body font-semibold text-foreground">Courier</h2>
+        <span className="rounded-full border border-border px-2.5 py-1 text-xs font-medium text-foreground/70">
+          Pathao: {pathaoEnv === "production" ? "Production" : "Sandbox"}
+        </span>
+      </div>
+
+      {isPathaoSelected && !alreadyCreated && (
+        <div
+          className={`mt-3 rounded-lg border p-3 text-small ${pathaoReadiness.ready ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-800"}`}
+        >
+          <p className="font-semibold">{pathaoReadiness.ready ? "READY FOR PATHAO" : "BLOCKED"}</p>
+          {!pathaoReadiness.ready && (
+            <ul className="mt-1.5 list-disc pl-4 text-xs">
+              {pathaoReadiness.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          )}
+          {pathaoReadiness.totalWeightGrams !== null && (
+            <p className="mt-1.5 text-xs opacity-80">Calculated parcel weight: {(pathaoReadiness.totalWeightGrams / 1000).toFixed(2)}kg</p>
+          )}
+        </div>
+      )}
 
       {alreadyCreated ? (
         <div className="mt-3 flex flex-col gap-3">
@@ -127,7 +159,8 @@ export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligib
             <button
               type="button"
               onClick={handleCreateShipment}
-              disabled={isPending || isCreating || !eligibleForCreation}
+              disabled={isPending || isCreating || !eligibleForCreation || pathaoBlocked}
+              title={pathaoBlocked ? pathaoReadiness.reasons.join(" ") : undefined}
               className="h-9 self-start rounded-lg bg-accent px-4 text-small font-medium text-white hover:bg-accent-hover disabled:opacity-50"
             >
               {isCreating ? "Creating…" : "Create Shipment"}
@@ -148,7 +181,7 @@ export function CourierPanel({ orderNumber, courier, apiEnabledProviders, eligib
             </button>
           )}
 
-          {!eligibleForCreation && isApiEnabled && (
+          {!eligibleForCreation && isApiEnabled && !isPathaoSelected && (
             <p className="text-xs text-foreground/70">Shipment creation is only available while the order is confirmed or processing.</p>
           )}
         </div>

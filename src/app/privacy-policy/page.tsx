@@ -96,6 +96,26 @@ export default function PrivacyPolicyPage() {
         </section>
 
         <section>
+          <h2 className="text-h3 text-foreground">Courier &amp; Delivery Partners</h2>
+          <div className="mt-3 space-y-3 text-body text-foreground/70">
+            <p>
+              To get your order to you, we share the delivery details for that order — your name, phone number, delivery
+              address, the items and total parcel weight, and the Cash on Delivery amount to collect (if applicable) — with
+              the courier partner handling that delivery. This is only ever the information needed for pickup, delivery,
+              tracking, and handling any return. We do not send your email address, payment/Transaction ID details, or
+              Renvura&apos;s own product costs to a courier partner.
+            </p>
+            <p>
+              Renvura is in the process of integrating directly with courier partners such as Pathao so delivery details can
+              be sent automatically and tracking updates received back; this automated integration is not yet switched on
+              for live customer orders. Today, our team arranges delivery with a courier partner on your order&apos;s behalf
+              and shares only the same delivery details described above to do so. This page will continue to describe
+              accurately whichever courier partner(s) are actually handling deliveries, and how, at any given time.
+            </p>
+          </div>
+        </section>
+
+        <section>
           <h2 className="text-h3 text-foreground">Third-Party Analytics &amp; Advertising</h2>
           <div className="mt-3 space-y-3 text-body text-foreground/70">
             <p>

@@ -48,7 +48,12 @@ async function getFaqItems(): Promise<FaqItem[]> {
       answer: (
         <>
           Yes. Delivery is available nationwide. The delivery fee is {formatBDT(fees.insideDhaka)} inside Dhaka and{" "}
-          {formatBDT(fees.outsideDhaka)} outside Dhaka, added to your order total at checkout.
+          {formatBDT(fees.outsideDhaka)} outside Dhaka, added to your order total at checkout. Delivery may be handled by a
+          third-party courier partner — see our{" "}
+          <Link href="/privacy-policy" className="font-medium text-accent hover:underline">
+            Privacy Policy
+          </Link>{" "}
+          for what delivery information is shared with them.
         </>
       ),
     },

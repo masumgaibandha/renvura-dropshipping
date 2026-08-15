@@ -1,5 +1,7 @@
 import { connectToDatabase } from "@/lib/db";
 import { getConfiguredPathaoStoreId } from "@/lib/courier/config";
+import { MAX_ITEM_WEIGHT_KG as PATHAO_MAX_ITEM_WEIGHT_KG } from "@/lib/courier/providers/pathao";
+import { getPathaoProductReadiness } from "@/lib/courier/readiness";
 import { getProvider, isProviderApiEnabled } from "@/lib/courier/registry";
 import { COURIER_PROVIDER_LABELS } from "@/lib/courier/types";
 import type { ShipmentOrderInput } from "@/lib/courier/types";
@@ -9,7 +11,7 @@ import { OrderModel } from "@/models/Order";
 import { recordAuditLog } from "@/services/audit-log";
 import { findOrderByOrderNumber } from "@/services/orders";
 import { getProductBySlug } from "@/services/products";
-import type { CourierProviderId, NormalizedCourierStatus, OrderStatus } from "@/types/order";
+import { ORDER_STATUS_LABELS, type CourierProviderId, type NormalizedCourierStatus, type OrderStatus } from "@/types/order";
 
 /**
  * Courier data-access + orchestration layer (Phase 13). Mirrors `src/services/inventory.ts`'s
@@ -351,4 +353,77 @@ export async function processPathaoWebhookEvent(payload: PathaoWebhookPayload): 
     return { outcome: "unknown_event_acknowledged", orderNumber: order.orderNumber, normalizedStatusChanged: false };
   }
   return { outcome: "updated", orderNumber: order.orderNumber, normalizedStatusChanged: mappedStatus !== previousNormalizedStatus };
+}
+
+export interface PathaoShipmentReadiness {
+  ready: boolean;
+  /** Human-readable, admin-facing reasons — empty when `ready`. Never a raw stack trace/error object. */
+  reasons: string[];
+  statusEligible: boolean;
+  alreadyCreated: boolean;
+  providerConfigured: boolean;
+  missingWeightProductCount: number;
+  /** Real, unmodified sum of each line item's stored weight × quantity — `null` whenever any item is missing a usable weight, mirroring `buildShipmentOrderInput`'s own `computeTotalWeightGrams`. Never the Pathao-request-floored value (see `providers/pathao.ts`). */
+  totalWeightGrams: number | null;
+}
+
+/**
+ * Read-only pre-flight readiness check for the admin courier UI (Phase 15) — deliberately mirrors
+ * every real precondition `createShipmentForOrder()`/`providers/pathao.ts`'s `createShipment()`
+ * already enforce (order status, not-already-created, provider configured, per-item weight,
+ * Pathao's 10kg maximum), but never mutates anything and never calls Pathao's API. This exists so
+ * an admin can see *why* "Create Shipment" would fail before clicking it, not only after — the
+ * server-side checks in `createShipmentForOrder` remain the sole authoritative gate; this can
+ * never be more permissive than that function, only used to explain it in advance.
+ */
+export async function getPathaoShipmentReadiness(order: OrderRecord): Promise<PathaoShipmentReadiness> {
+  const reasons: string[] = [];
+
+  const statusEligible = isOrderEligibleForShipmentCreation(order.orderStatus);
+  if (!statusEligible) {
+    reasons.push(`Order status must be Confirmed or Processing (currently ${ORDER_STATUS_LABELS[order.orderStatus]}).`);
+  }
+
+  const alreadyCreated = order.courier?.creationStatus === "created";
+  if (alreadyCreated) {
+    reasons.push("A Pathao shipment has already been created for this order.");
+  }
+
+  const providerConfigured = isProviderApiEnabled("pathao");
+  if (!providerConfigured) {
+    reasons.push("Pathao is not configured for API shipment creation.");
+  }
+
+  let missingWeightProductCount = 0;
+  let summedWeightGrams = 0;
+  for (const item of order.items) {
+    const product = await getProductBySlug(item.slug);
+    const weight = product?.inventory.shippingWeightGrams ?? null;
+    if (getPathaoProductReadiness(weight) !== "ready") {
+      missingWeightProductCount += 1;
+    } else {
+      summedWeightGrams += (weight as number) * item.quantity;
+    }
+  }
+  if (missingWeightProductCount > 0) {
+    reasons.push(`${missingWeightProductCount} product${missingWeightProductCount === 1 ? "" : "s"} missing shipping weight.`);
+  }
+
+  const totalWeightGrams = missingWeightProductCount > 0 ? null : summedWeightGrams;
+  if (totalWeightGrams !== null) {
+    const totalKg = totalWeightGrams / 1000;
+    if (totalKg > PATHAO_MAX_ITEM_WEIGHT_KG) {
+      reasons.push(`Parcel weight ${totalKg.toFixed(2)}kg exceeds Pathao's ${PATHAO_MAX_ITEM_WEIGHT_KG}kg maximum.`);
+    }
+  }
+
+  return {
+    ready: reasons.length === 0,
+    reasons,
+    statusEligible,
+    alreadyCreated,
+    providerConfigured,
+    missingWeightProductCount,
+    totalWeightGrams,
+  };
 }

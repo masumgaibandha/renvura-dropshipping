@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent, type ReactNode } from "react";
 
 import { adminCreateProduct, adminUpdateProduct } from "@/actions/admin/products";
+import { PathaoReadinessBadge } from "@/components/admin/StatusBadge";
+import { getPathaoProductReadiness, PATHAO_PRODUCT_READINESS_MESSAGES } from "@/lib/courier/readiness";
 import type { InventoryStatus, ProductStatus } from "@/types/product";
 
 export interface ProductFormCategoryOption {
@@ -229,6 +231,20 @@ export function ProductForm({ mode, slug, categories, initialValues }: ProductFo
             placeholder="Empty = unknown (blocks courier API shipment creation)"
             className="h-9 w-full rounded-lg border border-border bg-background px-3 text-small text-foreground"
           />
+          {(() => {
+            const parsed = toNullableNumber(values.shippingWeightGrams);
+            const readiness = getPathaoProductReadiness(Number.isNaN(parsed) ? -1 : parsed);
+            const message = PATHAO_PRODUCT_READINESS_MESSAGES[readiness];
+            return (
+              <div className="mt-1.5 flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-foreground/70">Pathao Readiness:</span>
+                  <PathaoReadinessBadge readiness={readiness} />
+                </div>
+                {message && <p className="text-xs text-foreground/70">{message}</p>}
+              </div>
+            );
+          })()}
         </Field>
         <Field label="Stock Status">
           <select value={values.inventoryStatus} onChange={(event) => update("inventoryStatus", event.target.value as InventoryStatus)} className="h-9 w-full rounded-lg border border-border bg-background px-2 text-small text-foreground">

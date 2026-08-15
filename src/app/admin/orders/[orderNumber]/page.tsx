@@ -8,8 +8,9 @@ import { OrderStatusActions } from "@/components/admin/OrderStatusActions";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/admin/StatusBadge";
 import { RefundPaymentButton } from "@/components/admin/RefundPaymentButton";
 import { paymentMethodLabels } from "@/config/payment";
+import { getPathaoEnv } from "@/lib/courier/config";
 import { isProviderApiEnabled } from "@/lib/courier/registry";
-import { isOrderEligibleForShipmentCreation } from "@/services/courier";
+import { getPathaoShipmentReadiness, isOrderEligibleForShipmentCreation } from "@/services/courier";
 import { findOrderByOrderNumber, toAdminOrderDetail } from "@/services/orders";
 import { ORDER_STATUS_LABELS, type CourierProviderId } from "@/types/order";
 import { formatBDT } from "@/utils/currency";
@@ -52,6 +53,8 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
   const canRefund = order.payment.status === "paid" && (order.orderStatus === "cancelled" || order.orderStatus === "returned");
   const apiEnabledProviders = Object.fromEntries(COURIER_PROVIDER_IDS.map((id) => [id, isProviderApiEnabled(id)]));
   const showCourierPanel = isOrderEligibleForShipmentCreation(order.orderStatus) || order.orderStatus === "shipped" || order.courier.creationStatus !== "not_created";
+  const pathaoReadiness = showCourierPanel ? await getPathaoShipmentReadiness(record) : null;
+  const pathaoEnv = getPathaoEnv();
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,12 +130,14 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
         )}
       </section>
 
-      {showCourierPanel && (
+      {showCourierPanel && pathaoReadiness && (
         <CourierPanel
           orderNumber={order.orderNumber}
           courier={order.courier}
           apiEnabledProviders={apiEnabledProviders}
           eligibleForCreation={isOrderEligibleForShipmentCreation(order.orderStatus)}
+          pathaoReadiness={pathaoReadiness}
+          pathaoEnv={pathaoEnv}
         />
       )}
 

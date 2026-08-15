@@ -16,6 +16,12 @@
  * a credential being added (e.g. during testing, or copy-pasted into the wrong environment) must
  * never be enough on its own to start sending real, unverified requests to a live courier account.
  * The enable flag is the explicit "a human reviewed the real docs and turned this on" signal.
+ *
+ * Production readiness pass (Phase 15): `isPathaoConfigured()` additionally requires
+ * `isPathaoProductionStoreConfigured()` whenever `PATHAO_ENV=production` — see that function's doc
+ * comment. This closes a distinct gap from the safety-hardening pass above: even with credentials
+ * *and* the enable flag both on, production must never fall back to sandbox-style store
+ * auto-discovery. See `docs/PATHAO-PRODUCTION-READINESS.md` for the full go-live checklist.
  */
 
 export interface PathaoConfig {
@@ -60,9 +66,31 @@ export function isPathaoApiEnabled(): boolean {
   return process.env.COURIER_PATHAO_ENABLED === "true";
 }
 
-/** The one real gate every caller (`providers/pathao.ts`, `registry.ts`) checks before a network call — requires credentials AND the explicit enable flag. */
+/**
+ * Production-only safety check (Phase 15). Sandbox mode is allowed to auto-discover a store via
+ * the Store Info endpoint (`providers/pathao.ts`'s `resolveStoreId()`) — convenient for iterating
+ * against a sandbox account. Production must never do this: an explicit, deliberately-configured
+ * `PATHAO_STORE_ID` is required so a careless flip of `PATHAO_ENV` to `"production"` (e.g. while
+ * sandbox credentials/store are still in place from testing) can never silently resolve to
+ * whatever store the discovery endpoint happens to return on a real merchant account. This never
+ * hardcodes a specific store id (sandbox or production) — it only requires that *some* value has
+ * been deliberately set.
+ */
+export function isPathaoProductionStoreConfigured(): boolean {
+  return Boolean(process.env.PATHAO_STORE_ID);
+}
+
+/**
+ * The one real gate every caller (`providers/pathao.ts`, `registry.ts`) checks before a network
+ * call — requires credentials AND the explicit enable flag, in both sandbox and production.
+ * Production additionally requires `isPathaoProductionStoreConfigured()` — see its doc comment.
+ * Credentials alone, even with the enable flag on, are still never sufficient in production
+ * without that explicit store id.
+ */
 export function isPathaoConfigured(): boolean {
-  return isPathaoCredentialsConfigured() && isPathaoApiEnabled();
+  if (!isPathaoCredentialsConfigured() || !isPathaoApiEnabled()) return false;
+  if (getPathaoEnv() === "production") return isPathaoProductionStoreConfigured();
+  return true;
 }
 
 /** Throws if called while credentials are missing — callers must check `isPathaoCredentialsConfigured()` first (not `isPathaoConfigured()`, since this is also used for error-message redaction even when the enable flag is off). */

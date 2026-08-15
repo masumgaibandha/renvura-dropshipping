@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { PathaoReadinessBadge } from "@/components/admin/StatusBadge";
+import { getPathaoProductReadiness } from "@/lib/courier/readiness";
 import { getAllCategories, listProductsForAdmin } from "@/services/products";
 import type { InventoryStatus, ProductStatus } from "@/types/product";
 import { formatBDT } from "@/utils/currency";
@@ -113,13 +115,14 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
               <th className="p-3 font-medium">Stock</th>
               <th className="p-3 font-medium">Status</th>
               <th className="p-3 font-medium">Featured</th>
+              <th className="p-3 font-medium">Pathao Readiness</th>
               <th className="p-3 font-medium">Action</th>
             </tr>
           </thead>
           <tbody>
             {result.products.length === 0 ? (
               <tr>
-                <td colSpan={10} className="p-6 text-center text-foreground/70">
+                <td colSpan={11} className="p-6 text-center text-foreground/70">
                   No products match these filters.
                 </td>
               </tr>
@@ -145,6 +148,9 @@ export default async function AdminProductsPage({ searchParams }: { searchParams
                   <td className="p-3 text-foreground/70">{product.inventory.stock ?? "—"}</td>
                   <td className="p-3 text-foreground/70">{product.status}</td>
                   <td className="p-3 text-foreground/70">{product.featured ? "Yes" : "—"}</td>
+                  <td className="p-3">
+                    <PathaoReadinessBadge readiness={getPathaoProductReadiness(product.inventory.shippingWeightGrams)} />
+                  </td>
                   <td className="p-3">
                     <Link href={`/admin/products/${product.slug}/edit`} className="font-medium text-accent hover:underline">
                       Edit

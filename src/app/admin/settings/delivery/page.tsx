@@ -1,5 +1,14 @@
 import { StoreSettingsForm } from "@/components/admin/StoreSettingsForm";
-import { isPathaoApiEnabled, isPathaoConfigured, isPathaoCredentialsConfigured, isSteadfastApiEnabled, isSteadfastConfigured, isSteadfastCredentialsConfigured } from "@/lib/courier/config";
+import {
+  getPathaoEnv,
+  isPathaoApiEnabled,
+  isPathaoConfigured,
+  isPathaoCredentialsConfigured,
+  isPathaoProductionStoreConfigured,
+  isSteadfastApiEnabled,
+  isSteadfastConfigured,
+  isSteadfastCredentialsConfigured,
+} from "@/lib/courier/config";
 import { getStoreSettings } from "@/services/settings";
 
 /**
@@ -10,24 +19,38 @@ import { getStoreSettings } from "@/services/settings";
  * is missing without guessing.
  */
 function CourierProviderHealth() {
+  const pathaoEnv = getPathaoEnv();
   const rows = [
-    { label: "Pathao", credentials: isPathaoCredentialsConfigured(), enabled: isPathaoApiEnabled(), apiEnabled: isPathaoConfigured() },
-    { label: "Steadfast", credentials: isSteadfastCredentialsConfigured(), enabled: isSteadfastApiEnabled(), apiEnabled: isSteadfastConfigured() },
+    {
+      label: "Pathao",
+      credentials: isPathaoCredentialsConfigured(),
+      enabled: isPathaoApiEnabled(),
+      apiEnabled: isPathaoConfigured(),
+      env: pathaoEnv === "production" ? "Production" : "Sandbox",
+      // Only meaningful (and only shown) in production — sandbox is allowed to auto-discover a
+      // store; production is not. See `isPathaoProductionStoreConfigured()`'s doc comment.
+      productionStoreConfigured: pathaoEnv === "production" ? isPathaoProductionStoreConfigured() : null,
+    },
+    { label: "Steadfast", credentials: isSteadfastCredentialsConfigured(), enabled: isSteadfastApiEnabled(), apiEnabled: isSteadfastConfigured(), env: null, productionStoreConfigured: null },
   ];
   return (
     <div className="max-w-2xl rounded-xl border border-border bg-surface p-5">
       <h2 className="text-body font-semibold text-foreground">Courier Providers</h2>
       <p className="mt-1 text-small text-foreground/70">
-        Real API shipment creation requires both credentials and an explicit enable flag — neither has been verified against official
-        documentation for either provider yet, see CLAUDE.md.
+        Real API shipment creation requires both credentials and an explicit enable flag — Pathao&apos;s adapter is officially verified
+        against sandbox; Steadfast&apos;s remains unverified, see CLAUDE.md.
       </p>
       <div className="mt-3 flex flex-col gap-4 text-small">
         {rows.map((row) => (
           <div key={row.label}>
-            <p className="font-medium text-foreground">{row.label}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-foreground">{row.label}</p>
+              {row.env && <span className="rounded-full border border-border px-2 py-0.5 text-xs font-medium text-foreground/70">{row.env}</span>}
+            </div>
             <dl className="mt-1 flex flex-col gap-1">
               <StatusRow label="Credentials" ok={row.credentials} />
               <StatusRow label="Enabled" ok={row.enabled} />
+              {row.productionStoreConfigured !== null && <StatusRow label="Production store configured" ok={row.productionStoreConfigured} />}
               <StatusRow label="API shipment creation" ok={row.apiEnabled} okLabel="Available" notOkLabel="Not configured / API unavailable" />
             </dl>
           </div>
