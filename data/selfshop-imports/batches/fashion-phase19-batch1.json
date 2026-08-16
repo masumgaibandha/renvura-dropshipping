@@ -1,0 +1,453 @@
+[
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786522987322",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/georgette-sharee-with-blouse-piece",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Georgette Sharee With Blouse Piece",
+      "wholesalePrice": 1280,
+      "stock": 200,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Stone-work georgette saree with matching blouse piece, stone work on blouse piece too.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1785858825-l-3_X0iNKdQr.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1785858825-l-2_J2T6x6Uo.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1785858825-l-1_sUSX5VBK.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Georgette Sharee With Blouse Piece",
+      "slug": "georgette-sharee-with-blouse-piece",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Stone-work georgette saree with matching blouse piece, stone work on blouse piece...",
+      "description": "Stone-work georgette saree with matching blouse piece, stone work on blouse piece too.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 2720,
+      "sellingPrice": 2370,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786522783833",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/half-silk-butik-sharee-with-blouse-piece",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Half Silk Butik Sharee With Blouse Piece",
+      "wholesalePrice": 1120,
+      "stock": 200,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Tangail premium half silk butik saree, style tradition and beauty combined. Premium half silk fabric, screen print with attractive embroidery, decorative border on the anchal, 14 hand full saree, running blouse piece included, soft and comfortable, suitable for puja, eid, wedding, gaye holud and special occasions.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1786041260-l-3_OSRtvg34.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1786041260-l-1_JzeVIOrs.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1786041260-l-2_8XDDypwW.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Half Silk Butik Sharee With Blouse Piece",
+      "slug": "half-silk-butik-sharee-with-blouse-piece",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Tangail premium half silk butik saree, style tradition and beauty combined. Premium half silk fabric, screen print with attractive embroidery, decorative border on the anchal, 14...",
+      "description": "Tangail premium half silk butik saree, style tradition and beauty combined. Premium half silk fabric, screen print with attractive embroidery, decorative border on the anchal, 14 hand full saree, running blouse piece included, soft and comfortable, suitable for puja, eid, wedding, gaye holud and special occasions.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 2380,
+      "sellingPrice": 2070,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1784184417604",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/pocket-kurti-three-piece",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Pocket Kurti Three Piece",
+      "wholesalePrice": 850,
+      "stock": 600,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Pure cotton screen print and lace work kurti with pockets on both sides, pure cotton lace-work salwar, orna 5 hands, body size M/L/XL.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783946162-l-5_W3Tp0clb.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783946162-l-1_HZNGvP2d.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783946162-l-2_dDF51JJn.jpeg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Pocket Kurti Three Piece",
+      "slug": "pocket-kurti-three-piece",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Pure cotton screen print and lace work kurti with pockets on both sides, pure cotton lace-work salwar, orna 5 hands, body size...",
+      "description": "Pure cotton screen print and lace work kurti with pockets on both sides, pure cotton lace-work salwar, orna 5 hands, body size M/L/XL.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1950,
+      "sellingPrice": 1700,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1783500639235",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/premium-koti-borka-with-hijab",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Premium Koti Borka With Hijab",
+      "wholesalePrice": 2050,
+      "stock": 700,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Luxury premium koti borka, saffron flex fabric, embroidery and stone work, koti and inner adjustable, matching hijab included, free size, length options 50/52/54/56.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783421641-l-2_lpFdvsod.jpeg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Premium Koti Borka With Hijab",
+      "slug": "premium-koti-borka-with-hijab",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Luxury premium koti borka, saffron flex fabric, embroidery and stone work, koti and inner adjustable, matching hijab included, free size, length options...",
+      "description": "Luxury premium koti borka, saffron flex fabric, embroidery and stone work, koti and inner adjustable, matching hijab included, free size, length options 50/52/54/56.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 3890,
+      "sellingPrice": 3380,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1783418206558",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/unstitch-premium-quality-three-piece",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Unstitch Premium Quality Three Piece",
+      "wholesalePrice": 1580,
+      "stock": 200,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Unstitched laser-cut three piece, double layer laser cut under the kameez, full body scattered work, separate sleeve fabric, orna 5 hands with cut work on both sides, salwar two and half yards.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-5_cIJuHDj0.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-6_1bwqwrCD.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-4_nReruU80.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-3_PWMDcCWc.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-1_JBnRT4pw.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783101373-l-2_TTGMhQJZ.jpeg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Unstitch Premium Quality Three Piece",
+      "slug": "unstitch-premium-quality-three-piece",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Unstitched laser-cut three piece, double layer laser cut under the kameez, full body scattered work, separate sleeve fabric, orna 5 hands with cut work on both sides, salwar two...",
+      "description": "Unstitched laser-cut three piece, double layer laser cut under the kameez, full body scattered work, separate sleeve fabric, orna 5 hands with cut work on both sides, salwar two and half yards.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 3000,
+      "sellingPrice": 2610,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1781778874378",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/premium-embroidery-jori-work-ready-made-2-piece-kurti-set",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Premium Embroidery & Jori Work Ready-Made 2-Piece Kurti Set",
+      "wholesalePrice": 330,
+      "stock": 4000,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Olive green 2-piece set, sophisticated kurti with Jori embroidery across neckline front body and sleeves, premium butterfly fabric pant, ready-made fully stitched. Sizes 38,40,42,44,46. 100% original Butterfly brand product.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/5c478b1b-bb53-4361-a6b1-2e6167fc7138_nnVfUJAN.jfif",
+        "https://media.selfshop.com.bd/products/vendor/gallery/whatsapp-image-2026-06-18-at-160105_8HbPY36R.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/whatsapp-image-2026-06-18-at-160103_EpZXG6tU.jpeg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Premium Embroidery & Jori Work Ready-Made 2-Piece Kurti Set",
+      "slug": "premium-embroidery-jori-work-ready-made-2-piece-kurti-set",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Olive green 2-piece set, sophisticated kurti with Jori embroidery across neckline front body and sleeves, premium butterfly fabric pant, ready-made fully stitched. Sizes...",
+      "description": "Olive green 2-piece set, sophisticated kurti with Jori embroidery across neckline front body and sleeves, premium butterfly fabric pant, ready-made fully stitched. Sizes 38,40,42,44,46. 100% original Butterfly brand product.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1220,
+      "sellingPrice": 1060,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1783417915758",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/samusilk-three-piece-gown",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Samusilk Three Piece Gown",
+      "wholesalePrice": 780,
+      "stock": 500,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Purple color Samu silk sequence jori work three piece. Kameez shamu silk sequins jori work, orna shamu silk 2.5 yards, salwar shamu silk. Kameez length 37-38 inch, body size 36 to 46 inch.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783263532-l-3_HsKjc4jB.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783263532-l-2_r3M2dLjm.jpeg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/1783263532-l-1_OoGMSiiW.jpeg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Samusilk Three Piece Gown",
+      "slug": "samusilk-three-piece-gown",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Purple color Samu silk sequence jori work three piece. Kameez shamu silk sequins jori work, orna shamu silk 2.5 yards, salwar shamu silk. Kameez length 37-38 inch, body size 36 to...",
+      "description": "Purple color Samu silk sequence jori work three piece. Kameez shamu silk sequins jori work, orna shamu silk 2.5 yards, salwar shamu silk. Kameez length 37-38 inch, body size 36 to 46 inch.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1790,
+      "sellingPrice": 1560,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1781778566915",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/premium-mustard-gold-indian-fabric-heavy-embroidery-jori-work-ready-made-anarkali-gown",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Premium Mustard Gold Indian Fabric Heavy Embroidery & Jori Work Ready-Made Anarkali Gown",
+      "wholesalePrice": 1570,
+      "stock": 200,
+      "shippingWeightGrams": null,
+      "category": "Women's & Girls' Fashion",
+      "description": "Long Anarkali gown in mustard gold shade for weddings, Haldi, evening parties. Premium Indian fabric, heavy golden embroidery with Jori work. Ready-made fully stitched. Body size free size up to 44 inch bust, gown length 46-52 inches.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/s2cbac8d64ed042ac94292d95ab44ac4ax_38z068mx.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Premium Mustard Gold Indian Fabric Heavy Embroidery & Jori Work Ready-Made Anarkali Gown",
+      "slug": "premium-mustard-gold-indian-fabric-heavy-embroidery-jori-work-ready-made-anarkali-gown",
+      "category": "fashion",
+      "subcategory": "womens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Long Anarkali gown in mustard gold shade for weddings, Haldi, evening parties. Premium Indian fabric, heavy golden embroidery with Jori work. Ready-made fully stitched. Body size...",
+      "description": "Long Anarkali gown in mustard gold shade for weddings, Haldi, evening parties. Premium Indian fabric, heavy golden embroidery with Jori work. Ready-made fully stitched. Body size free size up to 44 inch bust, gown length 46-52 inches.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 2980,
+      "sellingPrice": 2590,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786393119480",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/kemei-km-6330-trimmer",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Kemei KM-6330 Trimmer",
+      "wholesalePrice": 740,
+      "stock": 2000,
+      "shippingWeightGrams": null,
+      "category": "Men's & Boys' Fashion",
+      "description": "Kemei KM-6330 Trimmer, 3-in-1 grooming kit: hair trimmer, shaver, nose trimmer. Charging time approx 8 hours, usage time approx 60 minutes per full charge, ABS plastic and stainless steel blade, voltage 110-240V, high-speed motor, cutting length 3/6/9/12mm with guards, washable blades. Box includes trimmer, shaver head, nose trimmer head, comb guards, cleaning brush, lubricating oil, charging cable, manual.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/c58cadd3-1ff6-40c0-aad0-922403af78ad_B53nLdU7.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/c5f7565e-8e5b-40d8-aeb4-fdca0581b547_7yY7Dg8S.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/3511c7b4-c1d0-4710-bcc3-16cbb3218ed9_qfH2z6Jp.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/f902f112-0681-40c7-8ece-4af2b8b13d54_2l7iTBjY.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Kemei KM-6330 Trimmer",
+      "slug": "kemei-km-6330-trimmer",
+      "category": "fashion",
+      "subcategory": "mens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Kemei KM-6330 Trimmer, 3-in-1 grooming kit: hair trimmer, shaver, nose trimmer. Charging time approx 8 hours, usage time approx 60 minutes per full charge, ABS plastic and...",
+      "description": "Kemei KM-6330 Trimmer, 3-in-1 grooming kit: hair trimmer, shaver, nose trimmer. Charging time approx 8 hours, usage time approx 60 minutes per full charge, ABS plastic and stainless steel blade, voltage 110-240V, high-speed motor, cutting length 3/6/9/12mm with guards, washable blades. Box includes trimmer, shaver head, nose trimmer head, comb guards, cleaning brush, lubricating oil, charging cable, manual.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1700,
+      "sellingPrice": 1480,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1785747614382",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/leather-max-wallet",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Leather Max Wallet",
+      "wholesalePrice": 450,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Men's & Boys' Fashion",
+      "description": "Leather Max Premium Wallet, premium leather finish, slim and stylish design, multiple card slots, spacious cash compartment, lightweight, durable stitching, ideal gift for men. Product type men's bifold wallet, material premium leather finish, color black.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/whatsapp-image-2026-08-03-at-23008-pm_3YR09Ytu.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/whatsapp-image-2026-08-03-at-23022-pm_RUHjnAn2.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Leather Max Wallet",
+      "slug": "leather-max-wallet",
+      "category": "fashion",
+      "subcategory": "mens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Leather Max Premium Wallet, premium leather finish, slim and stylish design, multiple card slots, spacious cash compartment, lightweight, durable stitching, ideal gift for men....",
+      "description": "Leather Max Premium Wallet, premium leather finish, slim and stylish design, multiple card slots, spacious cash compartment, lightweight, durable stitching, ideal gift for men. Product type men's bifold wallet, material premium leather finish, color black.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1240,
+      "sellingPrice": 1080,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1785666408512",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/premium-denim-single-pocket-long-sleeve-shirt-for-men",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "Premium Denim Single Pocket Long Sleeve Shirt For Men",
+      "wholesalePrice": 430,
+      "stock": 799,
+      "shippingWeightGrams": null,
+      "category": "Men's & Boys' Fashion",
+      "description": "Stylish denim long sleeve shirt, 98% denim fabric, soft and comfortable finish, single pocket design, full sleeve regular fit, made in Bangladesh. Sizes M, L, XL, 2XL, 3XL.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/untitled-2400-x-2400-px-1_3TfiiJ3N.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Premium Denim Single Pocket Long Sleeve Shirt For Men",
+      "slug": "premium-denim-single-pocket-long-sleeve-shirt-for-men",
+      "category": "fashion",
+      "subcategory": "mens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "Stylish denim long sleeve shirt, 98% denim fabric, soft and comfortable finish, single pocket design, full sleeve regular fit, made in Bangladesh. Sizes M, L, XL, 2XL,...",
+      "description": "Stylish denim long sleeve shirt, 98% denim fabric, soft and comfortable finish, single pocket design, full sleeve regular fit, made in Bangladesh. Sizes M, L, XL, 2XL, 3XL.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1180,
+      "sellingPrice": 1030,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1785654561770",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/htc-at-538-rechargeable-hair-trimmer-professional-cordless-hair-clipper",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "HTC AT-538 Rechargeable Hair Trimmer – Professional Cordless Hair Clipper",
+      "wholesalePrice": 530,
+      "stock": 1200,
+      "shippingWeightGrams": null,
+      "category": "Men's & Boys' Fashion",
+      "description": "HTC AT-538 Rechargeable Hair Trimmer for everyday hair grooming, rechargeable design, stainless steel cutting blade, easy ON/OFF slide switch, cordless operation. Brand HTC, Model AT-538.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/whatsapp-image-2026-08-02-at-085210_D16q8lyk.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "HTC AT-538 Rechargeable Hair Trimmer – Professional Cordless Hair Clipper",
+      "slug": "htc-at-538-rechargeable-hair-trimmer-professional-cordless-hair-clipper",
+      "category": "fashion",
+      "subcategory": "mens-fashion",
+      "brand": null,
+      "model": null,
+      "shortDescription": "HTC AT-538 Rechargeable Hair Trimmer for everyday hair grooming, rechargeable design, stainless steel cutting blade, easy ON/OFF slide switch, cordless operation. Brand HTC, Model...",
+      "description": "HTC AT-538 Rechargeable Hair Trimmer for everyday hair grooming, rechargeable design, stainless steel cutting blade, easy ON/OFF slide switch, cordless operation. Brand HTC, Model AT-538.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1460,
+      "sellingPrice": 1270,
+      "status": "active"
+    }
+  }
+]

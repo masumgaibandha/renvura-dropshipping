@@ -1,0 +1,77 @@
+[
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1776949148446",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/k8-wireless-microphone-type-c-and-type-b",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "K8 Wireless Microphone Type C And Type B",
+      "wholesalePrice": 308,
+      "stock": 963,
+      "shippingWeightGrams": null,
+      "category": "Electronic Accessories",
+      "description": "K8 Wireless Microphone, hot product for YouTube videos, TikTok, blogs, cooking videos, music videos. At least 90% noise cancellation, records at up to 20 meters distance, 3-5 hours charging backup per charge, lightweight and portable, no wires, Type-C and Type-B connectors included.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/certificate-9-15_45HIXFIA.png",
+        "https://media.selfshop.com.bd/products/vendor/gallery/certificate-9-14_t3J9tHpM.png",
+        "https://media.selfshop.com.bd/products/vendor/gallery/certificate-9-17_XwWg1orF.png",
+        "https://media.selfshop.com.bd/products/vendor/gallery/certificate-9-16_aDC2tRfU.png"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "K8 Wireless Microphone Type C And Type B",
+      "slug": "k8-wireless-microphone-type-c-and-type-b",
+      "category": "electronics-gadgets",
+      "subcategory": "electronic-accessories",
+      "brand": null,
+      "model": null,
+      "shortDescription": "K8 Wireless Microphone, hot product for YouTube videos, TikTok, blogs, cooking videos, music videos. At least 90% noise cancellation, records at up to 20 meters distance, 3-5...",
+      "description": "K8 Wireless Microphone, hot product for YouTube videos, TikTok, blogs, cooking videos, music videos. At least 90% noise cancellation, records at up to 20 meters distance, 3-5 hours charging backup per charge, lightweight and portable, no wires, Type-C and Type-B connectors included.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1140,
+      "sellingPrice": 990,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1774765994451",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/moxx-ms-70-rgb-portable-wireless-bluetooth-speaker",
+      "lastCheckedAt": "2026-08-16T13:00:00.000Z"
+    },
+    "supplierData": {
+      "title": "MOXX MS-70 RGB Portable Wireless Bluetooth Speaker",
+      "wholesalePrice": 790,
+      "stock": 100,
+      "shippingWeightGrams": null,
+      "category": "Electronics Device",
+      "description": "MOXX MS-70 RGB Portable Wireless Bluetooth Speaker, compact high-energy audio companion, immersive 360 degree stereo sound with punchy bass and crisp clarity, travel-ready chassis, RGB lights.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/1757324855_0WxSJmxy.webp"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "MOXX MS-70 RGB Portable Wireless Bluetooth Speaker",
+      "slug": "moxx-ms-70-rgb-portable-wireless-bluetooth-speaker",
+      "category": "electronics-gadgets",
+      "subcategory": "electronics-device",
+      "brand": null,
+      "model": null,
+      "shortDescription": "MOXX MS-70 RGB Portable Wireless Bluetooth Speaker, compact high-energy audio companion, immersive 360 degree stereo sound with punchy bass and crisp clarity, travel-ready...",
+      "description": "MOXX MS-70 RGB Portable Wireless Bluetooth Speaker, compact high-energy audio companion, immersive 360 degree stereo sound with punchy bass and crisp clarity, travel-ready chassis, RGB lights.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1820,
+      "sellingPrice": 1580,
+      "status": "active"
+    }
+  }
+]

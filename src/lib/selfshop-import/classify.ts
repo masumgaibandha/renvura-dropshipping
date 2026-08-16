@@ -17,25 +17,62 @@ import type { ClassificationResult, ClassificationWarning, SelfShopRawProduct } 
  * (a false positive here blocks a possibly-genuine product; a false negative just means a human
  * catches it on review, same as any other exception).
  */
-const WATCHED_TRADEMARK_BRANDS = ["apple", "airpods", "iphone", "jbl", "samsung", "sony", "bose", "nike", "adidas"];
+const WATCHED_TRADEMARK_BRANDS = [
+  "apple", "airpods", "iphone", "jbl", "samsung", "sony", "bose",
+  "nike", "adidas", "jordan", "air jordan", "new balance", "skechers",
+  "louis vuitton", "off-white", "off white", "kaws", "the north face", "supreme", "gucci",
+];
 
 /** Phrases (English + Bengali) that self-admit a listing is a replica/unauthorized copy, not a genuine branded item. */
-const REPLICA_ADMISSION_PATTERNS = [/master\s*copy/i, /মাস্টার\s*কপি/, /styled\s*version/i, /replica/i, /first\s*copy/i, /এএ+\s*quality/i];
+const REPLICA_ADMISSION_PATTERNS = [/master\s*copy/i, /মাস্টার\s*কপি/, /styled\s*version/i, /replica/i, /first\s*copy/i, /এএ+\s*quality/i, /inspired/i, /average\s*quality/i];
 
 export interface CounterfeitCheck {
   risk: boolean;
   reason: string | null;
 }
 
-/** Flags a listing as counterfeit/trademark risk only when it names a watched brand AND the text itself admits it's a copy/styled version — a deliberately narrow, defensible signal (see this module's doc comment), not a broad brand blocklist. */
+/**
+ * Flags counterfeit/trademark risk on either of two independent, defensible signals — never on
+ * brand-name presence alone (see this module's doc comment: a legitimate branded product must not
+ * be over-blocked just because it names a real brand):
+ *
+ * 1. A watched brand is named AND the text itself admits it's a copy/replica/"inspired"/styled
+ *    version — the original Phase 18 signal.
+ * 2. TWO OR MORE distinct watched brands appear in the same listing (e.g. a "Nike" sneaker also
+ *    labeled "Louis Vuitton Monogram Edition", or "Air Jordan x Off-White"). A genuine product is
+ *    never simultaneously two different luxury/sportswear brands — this pattern only appears on
+ *    unauthorized mashup/replica listings (confirmed by direct observation during the Phase 19
+ *    Men's Fashion sneaker cluster: real designer collaborations exist but are never sold in bulk
+ *    wholesale at these price points, so on this specific supplier this pattern is unambiguous).
+ */
+/**
+ * "Inspired" + an explicit quality-tier qualifier ("average quality" / "premium quality") is this
+ * supplier's own house style for its entire replica-fragrance line (confirmed during Phase 19
+ * expansion: Gucci Flora, Dior Sauvage, "Stronger With You", "Vampire Blood" all use this exact
+ * pairing) — a strong signal on its own, independent of whether the referenced name happens to be
+ * on `WATCHED_TRADEMARK_BRANDS`. A brand list can never be exhaustive; this pattern generalizes the
+ * detection to names not yet catalogued.
+ */
+const INSPIRED_QUALITY_TIER_PATTERN = /inspired/i;
+const QUALITY_TIER_QUALIFIER_PATTERN = /average\s*quality|premium\s*quality/i;
+
 export function detectCounterfeitRisk(title: string, description: string | null): CounterfeitCheck {
   const haystack = `${title} ${description ?? ""}`.toLowerCase();
-  const mentionsBrand = WATCHED_TRADEMARK_BRANDS.some((brand) => haystack.includes(brand));
-  if (!mentionsBrand) return { risk: false, reason: null };
+  const mentionedBrands = WATCHED_TRADEMARK_BRANDS.filter((brand) => haystack.includes(brand));
+
+  if (mentionedBrands.length >= 2) {
+    return { risk: true, reason: `Listing references multiple distinct trademarked brands in one product (${mentionedBrands.join(", ")}) — a genuine product is never simultaneously two different brands; this pattern only appears on unauthorized mashup/replica listings.` };
+  }
+
+  if (INSPIRED_QUALITY_TIER_PATTERN.test(haystack) && QUALITY_TIER_QUALIFIER_PATTERN.test(haystack)) {
+    return { risk: true, reason: `Listing pairs "inspired" with an explicit quality-tier qualifier (average/premium quality) — this supplier's own house style for unauthorized replica fragrances, regardless of whether the referenced name is on the watched-brand list.` };
+  }
+
+  if (mentionedBrands.length === 0) return { risk: false, reason: null };
 
   const admission = REPLICA_ADMISSION_PATTERNS.find((pattern) => pattern.test(haystack));
   if (admission) {
-    return { risk: true, reason: `Listing names a watched trademarked brand and self-describes as a copy/styled/replica version (matched ${admission}).` };
+    return { risk: true, reason: `Listing names a watched trademarked brand ("${mentionedBrands[0]}") and self-describes as a copy/styled/replica/inspired version (matched ${admission}).` };
   }
   return { risk: false, reason: null };
 }

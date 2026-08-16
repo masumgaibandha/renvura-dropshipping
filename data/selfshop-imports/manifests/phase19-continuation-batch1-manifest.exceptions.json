@@ -1,0 +1,76 @@
+{
+  "exceptions": [
+    {
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/3d-digital-clock",
+      "productId": "Mahin22",
+      "title": "3D Digital Clock",
+      "status": "BLOCKED",
+      "warnings": [],
+      "blockedReasons": [
+        "SKU \"Mahin22\" does not match SelfShop's expected SKU shape (VP + digits) — likely a broken/mislabeled listing."
+      ]
+    },
+    {
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/pvc-ozambeint-waltebil-lzamp",
+      "productId": "VP1786553861258",
+      "title": "PVC অ্যাম্বেইন্ট ওয়াল/টেবিল ল্যাম্প",
+      "status": "BLOCKED",
+      "warnings": [],
+      "blockedReasons": [
+        "No usable images."
+      ]
+    }
+  ],
+  "potentialDuplicates": [
+    {
+      "a": {
+        "slug": "sonifer-hand-mixer-500w-5-speed-electric-mixer-with-attachments",
+        "title": "Sonifer Hand Mixer – 500W 5-Speed Electric Mixer With Attachments"
+      },
+      "b": {
+        "slug": "sokany-cx-6651-hand-mixer-blender-5-speed-turbo-powerful-copper-motor",
+        "title": "Sokany CX-6651 Hand Mixer Blender – 5-Speed Turbo, Powerful Copper Motor"
+      },
+      "similarity": 0.43,
+      "sharedTokens": [
+        "hand",
+        "mixer",
+        "5-speed"
+      ]
+    },
+    {
+      "a": {
+        "slug": "natural-wood-slices-17-inch",
+        "title": "Natural Wood Slices (17 Inch)"
+      },
+      "b": {
+        "slug": "natural-wood-slices-12-inch",
+        "title": "Natural Wood Slices (12 Inch)"
+      },
+      "similarity": 0.8,
+      "sharedTokens": [
+        "natural",
+        "wood",
+        "slices",
+        "inch"
+      ]
+    },
+    {
+      "a": {
+        "slug": "curtain-holder-hook-2pcs",
+        "title": "Curtain Holder Hook 2pcs"
+      },
+      "b": {
+        "_id": "6a8187a081c741407dd37266",
+        "slug": "vinyl-dumbbell-1kg-pair-2pcs",
+        "title": "Vinyl Dumbbell 1KG Pair ( 2pcs )"
+      },
+      "similarity": 0.25,
+      "sharedTokens": [
+        "2pcs"
+      ]
+    }
+  ],
+  "exactDuplicatesWithinBatch": [],
+  "processingErrors": []
+}
