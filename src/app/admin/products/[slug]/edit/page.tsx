@@ -44,6 +44,16 @@ export default async function AdminEditProductPage({ params }: { params: Promise
         <p className="mt-1 text-small text-foreground/70">
           Wholesale cost (internal only, never shown to customers): <span className="font-medium text-foreground">{formatBDT(product.pricing.wholesalePrice)}</span>
         </p>
+        {product.supplier && (
+          <p className="mt-1 text-small text-foreground/70">
+            Supplier (internal only): <span className="font-medium text-foreground">{product.supplier.provider}</span> · ref{" "}
+            <span className="font-medium text-foreground">{product.supplier.productId}</span> · last checked{" "}
+            <span className="font-medium text-foreground">{product.supplier.lastCheckedAt}</span> ·{" "}
+            <a href={product.supplier.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">
+              source page
+            </a>
+          </p>
+        )}
       </div>
 
       <div className="max-w-2xl rounded-xl border border-border bg-surface p-5">

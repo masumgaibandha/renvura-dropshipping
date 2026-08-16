@@ -10,6 +10,7 @@ import type {
   ProductSourceProvenance,
   ProductSpecification,
   ProductStatus,
+  ProductSupplierSource,
   PublicProduct,
   VerifiedProductRecord,
 } from "@/types/product";
@@ -48,6 +49,7 @@ interface ProductLeanDoc {
   tags?: string[];
   featured: boolean;
   source?: ProductSourceProvenance;
+  supplier?: ProductSupplierSource;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +87,7 @@ function toProduct(doc: ProductLeanDoc): Product {
     status: doc.status,
     tags: doc.tags,
     featured: doc.featured,
+    supplier: doc.supplier ?? null,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
   };
@@ -115,8 +118,10 @@ export const getAllProducts = cache(async (): Promise<Product[]> => {
  * `Product` type must never cross that boundary).
  */
 export function toPublicProduct(product: Product): PublicProduct {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- deliberately destructured out, never spread into the public shape
+  const { supplier: _supplier, ...rest } = product;
   return {
-    ...product,
+    ...rest,
     pricing: {
       currency: product.pricing.currency,
       regularPrice: product.pricing.regularPrice,

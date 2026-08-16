@@ -97,6 +97,27 @@ const sourceProvenanceSchema = new Schema(
   { _id: false },
 );
 
+/**
+ * Supplier traceability for a product imported from a live supplier storefront/browser workflow
+ * (Phase 16 — SelfShop pilot), distinct from `sourceProvenanceSchema` above (which stays reserved
+ * for the original Phase 2 screenshot-extracted catalog only). `provider` is a plain string, not an
+ * enum — a second supplier may exist later without a schema migration. `productId` is that
+ * supplier's own SKU/reference, `sourceUrl` the exact page the data was read from, `lastCheckedAt`
+ * an ISO timestamp for "when was this last re-verified" (re-check/price-drift detection is a
+ * future phase — this field only records the fact, nothing polls it). Admin-only: never rendered
+ * on the storefront, mirrors `pricing.wholesalePrice`'s existing treatment — see
+ * `toPublicProduct()`/`PublicProduct` in src/types/product.ts.
+ */
+const supplierSourceSchema = new Schema(
+  {
+    provider: { type: String, required: true, trim: true },
+    productId: { type: String, required: true, trim: true },
+    sourceUrl: { type: String, required: true, trim: true },
+    lastCheckedAt: { type: String, required: true },
+  },
+  { _id: false },
+);
+
 const productSchema = new Schema(
   {
     // Deliberately equal to `slug` (never a separate generated id) — the
@@ -141,6 +162,7 @@ const productSchema = new Schema(
     featured: { type: Boolean, default: false, required: true, index: true },
 
     source: { type: sourceProvenanceSchema, default: undefined },
+    supplier: { type: supplierSourceSchema, default: undefined },
   },
   { timestamps: true },
 );

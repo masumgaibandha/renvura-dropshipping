@@ -104,6 +104,9 @@ export interface Product {
   /** Admin-controlled homepage placement (Phase 10) — never set by storefront/customer code. Absent/undefined is treated as `false`. */
   featured?: boolean;
 
+  /** Phase 16 — set only for products imported via a live supplier browser workflow (e.g. SelfShop). Admin-only, see `ProductSupplierSource`'s doc comment. */
+  supplier?: ProductSupplierSource | null;
+
   createdAt?: string;
   updatedAt?: string;
 }
@@ -132,6 +135,24 @@ export interface VerifiedProductRecord {
 }
 
 /**
+ * Traceability back to a live supplier storefront a product was imported from via a browser
+ * workflow (Phase 16 — SelfShop pilot) — distinct from `ProductSourceProvenance` above, which
+ * stays reserved for the original Phase 2 screenshot-extracted catalog. Admin-only: stripped from
+ * `PublicProduct` exactly like `pricing.wholesalePrice`, since `sourceUrl`/`productId` reveal
+ * sourcing details that don't belong on the public storefront either.
+ */
+export interface ProductSupplierSource {
+  /** e.g. "selfshop" — a plain string, not an enum, so a second supplier needs no schema change. */
+  provider: string;
+  /** The supplier's own SKU/reference for this product. */
+  productId: string;
+  /** The exact supplier page this data was read from. */
+  sourceUrl: string;
+  /** ISO timestamp of when this data was last verified against the supplier's page. */
+  lastCheckedAt: string;
+}
+
+/**
  * `Product` with `pricing.wholesalePrice` removed. Any Client Component
  * boundary that needs product data must receive this shape instead of the
  * full `Product` — a Client Component's props (and the source of any data
@@ -140,4 +161,4 @@ export interface VerifiedProductRecord {
  * supplier cost to every visitor. See `toPublicProduct` in
  * `src/services/products.ts`.
  */
-export type PublicProduct = Omit<Product, "pricing"> & { pricing: Omit<ProductPricing, "wholesalePrice"> };
+export type PublicProduct = Omit<Product, "pricing" | "supplier"> & { pricing: Omit<ProductPricing, "wholesalePrice"> };
