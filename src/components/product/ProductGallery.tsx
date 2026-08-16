@@ -9,13 +9,14 @@ interface ProductGalleryProps {
 }
 
 /**
- * Product image gallery. The Phase 2 catalog never has more than 2 images
- * for any product (20 of 21 have exactly 1), so this is deliberately one
- * simple horizontal thumbnail row at every breakpoint rather than a
- * desktop-column/mobile-row split — there's no real content to justify
- * that extra complexity. `object-contain` (not `object-cover`, like
- * ProductCard's grid thumbnail uses) so a real supplier photo's full
- * composition is never cropped on its own detail page.
+ * Product image gallery: one simple horizontal thumbnail row at every
+ * breakpoint rather than a desktop-column/mobile-row split. The original
+ * Phase 2 catalog never had more than 2 images per product, but the
+ * Phase 17-22 SelfShop-imported catalog regularly has 4-6 — the thumbnail
+ * row scrolls horizontally (`overflow-x-auto`) once it doesn't fit, rather
+ * than overflowing the page on narrow viewports. `object-contain` (not
+ * `object-cover`, like ProductCard's grid thumbnail uses) so a real
+ * supplier photo's full composition is never cropped on its own detail page.
  */
 export function ProductGallery({ images, title }: ProductGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
@@ -37,7 +38,7 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
       </div>
 
       {hasMultipleImages && (
-        <div className="mt-3 flex gap-2" role="group" aria-label="Product images">
+        <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Product images">
           {images.map((image, index) => (
             <button
               key={image}

@@ -31,7 +31,6 @@ export default function robots(): MetadataRoute.Robots {
         "/cart",
         "/wishlist",
         "/api/",
-        "/ui-preview",
       ],
     },
     ...(isConfigured(brand.urls.site) ? { sitemap: `${brand.urls.site}/sitemap.xml` } : {}),

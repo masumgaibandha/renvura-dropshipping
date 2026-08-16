@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import { Container } from "@/components/layout/Container";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
-import { getAllCategories, getAllProducts, getProductListing } from "@/services/products";
+import { getAllCategories, getAllProducts, getProductListing, toPublicProduct } from "@/services/products";
 import { MobileFilterDrawer } from "./MobileFilterDrawer";
 import { SortSelect } from "./SortSelect";
 
@@ -112,7 +112,7 @@ export async function ProductListingPage({ categorySlug, title, description, sea
 
       <div className="mt-4 md:mt-8">
         {listing.products.length > 0 ? (
-          <ProductGrid products={listing.products} categoryLabels={categoryLabels} />
+          <ProductGrid products={listing.products.map(toPublicProduct)} categoryLabels={categoryLabels} />
         ) : (
           <div className="flex flex-col items-center gap-4 py-16 text-center">
             <p className="text-body text-foreground/70">No products found for the selected filters.</p>

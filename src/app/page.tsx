@@ -8,6 +8,7 @@ import { FeaturedProductsRow } from "@/components/home/FeaturedProductsRow";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { WhyShopWithRenvura } from "@/components/home/WhyShopWithRenvura";
 import { Section } from "@/components/layout/Section";
+import { brand } from "@/config/brand";
 import { getAllCategories, getAllProducts, toPublicProduct } from "@/services/products";
 
 /**
@@ -62,6 +63,11 @@ export default async function Home() {
 
   return (
     <>
+      {/* The visible hero is a single campaign image with no real DOM text (see HeroBanner.tsx's
+          doc comment), which otherwise leaves the homepage with zero <h1> anywhere — a real
+          screen-reader/SEO gap. This sr-only heading gives the page a genuine accessible landmark
+          without changing the approved visual design at all. */}
+      <h1 className="sr-only">{brand.name} — Online Shopping in Bangladesh</h1>
       <Section className="pb-0!">
         <HeroBanner />
       </Section>
