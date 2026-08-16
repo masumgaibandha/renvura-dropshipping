@@ -1,0 +1,609 @@
+[
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786579331317",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/tresemme-expert-selection-keratin-smooth-hair-mask",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "TRESemme Expert Selection Keratin Smooth Hair Mask",
+      "wholesalePrice": 720,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Tresemme Keratin Smooth Mask 500ml. Helps prevent tangling after applying keratin, keeps hair straight with fewer split ends, reduces hair loss, leaves hair silky, soft and shiny, nourishes hair and removes damage. How to use: after shampooing, remove excess water, apply the mask, wait 15 minutes, then rinse with light massage. Use 1-2 times a week.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/73e1715c-9c62-42ac-82a4-96bfced6f922_OS7jrt9X.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/5b164bc9-917a-4b5c-a8f8-12e11e5e97f1_IXCZFRuE.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/4904ff33-da51-46f0-9735-55718c175381_DxoGcmIq.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "TRESemme Expert Selection Keratin Smooth Hair Mask",
+      "slug": "tresemme-expert-selection-keratin-smooth-hair-mask",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Tresemme Keratin Smooth Mask 500ml. Helps prevent tangling after applying keratin, keeps hair straight with fewer split ends, reduces hair loss, leaves hair silky, soft and shiny,...",
+      "description": "Tresemme Keratin Smooth Mask 500ml. Helps prevent tangling after applying keratin, keeps hair straight with fewer split ends, reduces hair loss, leaves hair silky, soft and shiny, nourishes hair and removes damage. How to use: after shampooing, remove excess water, apply the mask, wait 15 minutes, then rinse with light massage. Use 1-2 times a week.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1660,
+      "sellingPrice": 1440,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786555127116",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/fiama-peach-avocado-shower-gel-250ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Fiama Peach & Avocado Shower Gel 250ml",
+      "wholesalePrice": 370,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Fiama Peach & Avocado Shower Gel 250ml, enriched with natural peach and avocado extracts for fresh, moisturised skin. Moisture Lock formula keeps skin moist for hours while cleansing. Suitable for all skin types, for men and women.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/ce811c7d-defd-4edb-a406-aad859751841_YYqrusHX.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/9ae70d74-e310-4933-86df-9f915f6d1961_5oR9VlDG.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Fiama Peach & Avocado Shower Gel 250ml",
+      "slug": "fiama-peach-avocado-shower-gel-250ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Fiama Peach & Avocado Shower Gel 250ml, enriched with natural peach and avocado extracts for fresh, moisturised skin. Moisture Lock formula keeps skin moist for hours while...",
+      "description": "Fiama Peach & Avocado Shower Gel 250ml, enriched with natural peach and avocado extracts for fresh, moisturised skin. Moisture Lock formula keeps skin moist for hours while cleansing. Suitable for all skin types, for men and women.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1020,
+      "sellingPrice": 890,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786554199416",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/fiama-patchouli-macadamia-shower-gel-250ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Fiama Patchouli & Macadamia Shower Gel 250ml",
+      "wholesalePrice": 370,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Fiama Patchouli & Macadamia Shower Gel 250ml with exotic patchouli and macadamia extracts that replenish skin moisture, skin conditioners with Moisture Lock for soft, moisturised skin. Suitable for all skin types, for men and women.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/a62265d3-e48f-494a-aaa1-9149d4a9d123_32hrMrcO.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/ff1ce952-b9aa-4be4-a6bb-b8a041fbb46c_MbPkUKky.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/adc81599-5a71-4bbc-b796-4d50c4324465_LgVA3pAz.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Fiama Patchouli & Macadamia Shower Gel 250ml",
+      "slug": "fiama-patchouli-macadamia-shower-gel-250ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Fiama Patchouli & Macadamia Shower Gel 250ml with exotic patchouli and macadamia extracts that replenish skin moisture, skin conditioners with Moisture Lock for soft, moisturised...",
+      "description": "Fiama Patchouli & Macadamia Shower Gel 250ml with exotic patchouli and macadamia extracts that replenish skin moisture, skin conditioners with Moisture Lock for soft, moisturised skin. Suitable for all skin types, for men and women.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1020,
+      "sellingPrice": 890,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786542505604",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/fiama-radiant-glow-shower-gel-blackcurrant-bearberry-250ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Fiama Radiant Glow Shower Gel BlackCurrant Bearberry 250ml",
+      "wholesalePrice": 370,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Fiama Radiant Glow Shower Gel Blackcurrant Bearberry 250ml. Blackcurrant and bearberry extracts pamper skin for a radiant glow, enriched with skin conditioners and Moisture Lock for softer, smoother skin. Suitable for all skin types, for men and women.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/6c79ab29-2e39-4a95-8c3a-0214300be1bb_52ByQ3rX.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/5aafc70c-a38d-4faa-95ea-d90f184177ce_lKqMVUBj.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/b7e187d1-f607-4c02-bde4-986c2149c03e_A4GyfJi3.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Fiama Radiant Glow Shower Gel BlackCurrant Bearberry 250ml",
+      "slug": "fiama-radiant-glow-shower-gel-blackcurrant-bearberry-250ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Fiama Radiant Glow Shower Gel Blackcurrant Bearberry 250ml. Blackcurrant and bearberry extracts pamper skin for a radiant glow, enriched with skin conditioners and Moisture Lock...",
+      "description": "Fiama Radiant Glow Shower Gel Blackcurrant Bearberry 250ml. Blackcurrant and bearberry extracts pamper skin for a radiant glow, enriched with skin conditioners and Moisture Lock for softer, smoother skin. Suitable for all skin types, for men and women.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1020,
+      "sellingPrice": 890,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786551675266",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/neutrogena-clear-radiant-face-wash-200ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Neutrogena Clear & Radiant Face Wash 200ml",
+      "wholesalePrice": 700,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Neutrogena Clear & Radiant Face Wash 200ml, enriched with vitamin C. Removes dirt, excess oil, makeup, dead skin cells and other impurities, controls excess oil, moisturizes and softens skin, balanced pH, dermatologist-tested, suitable for most skin types. Size 200ml.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/170ad56e-3f4b-427b-ad8a-d9649dc2a3c9_UHPcBGGY.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/0090b4c4-f8d5-4241-a86e-a7f6c4f5d399_uZm4lPcq.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/42768918-2c51-4ac3-9895-f8bd6cff009a_qz4DjAH2.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/103e5396-ee13-4db3-a0b5-266cfc7a3a9c_70i0GlS7.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/f19c4188-62d4-495f-9219-e6887051b711_AEWC0LA1.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Neutrogena Clear & Radiant Face Wash 200ml",
+      "slug": "neutrogena-clear-radiant-face-wash-200ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Neutrogena Clear & Radiant Face Wash 200ml, enriched with vitamin C. Removes dirt, excess oil, makeup, dead skin cells and other impurities, controls excess oil, moisturizes and...",
+      "description": "Neutrogena Clear & Radiant Face Wash 200ml, enriched with vitamin C. Removes dirt, excess oil, makeup, dead skin cells and other impurities, controls excess oil, moisturizes and softens skin, balanced pH, dermatologist-tested, suitable for most skin types. Size 200ml.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1610,
+      "sellingPrice": 1400,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786549688792",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/neutrogena-deep-clean-facial-cleanser-gel-wash-200ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml",
+      "wholesalePrice": 700,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml combines a gentle acne treatment and cleanser, contains Salicylic Acid to help address breakouts. Oil-free formula, cleanses pores, residue-free, non-comedogenic (won't clog pores).",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/0b15d9a7-e794-47f9-903d-df9fe5daff41_VSbrIZP5.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/bfcd97a0-abc0-4e6a-bd40-d2047bdc74e0_iLqqZZOp.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/5d99c44d-bc7f-4d7a-b763-67115a4beb72_AsB2xtTT.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/ed0169ff-7c65-47aa-97e6-5081f75c9f80_L4LUhpMJ.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/30b8ac0e-d096-4312-926f-78bb7671fe16_kAmxkEzc.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml",
+      "slug": "neutrogena-deep-clean-facial-cleanser-gel-wash-200ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml combines a gentle acne treatment and cleanser, contains Salicylic Acid to help address breakouts. Oil-free formula, cleanses...",
+      "description": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml combines a gentle acne treatment and cleanser, contains Salicylic Acid to help address breakouts. Oil-free formula, cleanses pores, residue-free, non-comedogenic (won't clog pores).",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1610,
+      "sellingPrice": 1400,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786548930731",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/xhc-tea-tree-essential-oil-30ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "XHC Tea Tree Essential Oil 30ml",
+      "wholesalePrice": 700,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "XHC Tea Tree Essential Oil 30ml, 100% pure tea tree essential oil. Helps cleanse and refresh skin. Size 30ml, developed in UK, imported.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/2db69745-caa6-4e40-b3bf-11ef3a65b018_gK8gxhS1.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/69c97d04-6f75-4ddf-b57a-c81e589818e0_qw1o1OvE.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/a097806f-c0f7-43be-95f2-004db6708b82_5G2mkulf.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "XHC Tea Tree Essential Oil 30ml",
+      "slug": "xhc-tea-tree-essential-oil-30ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "XHC Tea Tree Essential Oil 30ml, 100% pure tea tree essential oil. Helps cleanse and refresh skin. Size 30ml, developed in UK,...",
+      "description": "XHC Tea Tree Essential Oil 30ml, 100% pure tea tree essential oil. Helps cleanse and refresh skin. Size 30ml, developed in UK, imported.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1610,
+      "sellingPrice": 1400,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786547827336",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/makkah-madina-hand-made-black-soap-100g",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Makkah Madina Hand Made Black Soap 100g",
+      "wholesalePrice": 100,
+      "stock": 300,
+      "shippingWeightGrams": 100,
+      "category": "Health & Beauty",
+      "description": "Makkah Madina Hand Made Black Soap 100g. Gently cleans skin, provides freshness, tightens pores, makes skin smooth, controls oil, helps reduce acne and blackheads. Net weight 100g.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/0274ce3b-b127-40f2-b9b9-7d6d8e62d09c_gm7tVKIo.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/d681e8cc-fcaf-4b74-bd17-775330f023bd_bIx2efCE.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Makkah Madina Hand Made Black Soap 100g",
+      "slug": "makkah-madina-hand-made-black-soap-100g",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Makkah Madina Hand Made Black Soap 100g. Gently cleans skin, provides freshness, tightens pores, makes skin smooth, controls oil, helps reduce acne and blackheads. Net weight...",
+      "description": "Makkah Madina Hand Made Black Soap 100g. Gently cleans skin, provides freshness, tightens pores, makes skin smooth, controls oil, helps reduce acne and blackheads. Net weight 100g.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 460,
+      "sellingPrice": 400,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786541873802",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/bt-conditioner-r-style-protein-500ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "B.T Conditioner R Style Protein 500ml",
+      "wholesalePrice": 970,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "B-xin R-style protein conditioner for healthy hair. Apply after shampoo on wet hair, mid-section to tips, avoid scalp, leave 3-5 minutes then rinse. Restores moisture balance, repairs cuticle damage, good for chemically treated and normal hair prone to damage.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/b187524b-2b6b-4440-b1fe-cf78ee303e52_uZZyrwW8.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/2d3ce2e7-0f11-42ae-af50-4ea3617a810e_cROLtSgP.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/d4755f9e-b25f-4e11-a2ae-cf79e0a07c96_YHo7UAuI.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/f64cbb2b-b3e3-44d9-8fe1-8b89a7706475_Zjd2wgzU.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "B.T Conditioner R Style Protein 500ml",
+      "slug": "bt-conditioner-r-style-protein-500ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "B-xin R-style protein conditioner for healthy hair. Apply after shampoo on wet hair, mid-section to tips, avoid scalp, leave 3-5 minutes then rinse. Restores moisture balance,...",
+      "description": "B-xin R-style protein conditioner for healthy hair. Apply after shampoo on wet hair, mid-section to tips, avoid scalp, leave 3-5 minutes then rinse. Restores moisture balance, repairs cuticle damage, good for chemically treated and normal hair prone to damage.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 2060,
+      "sellingPrice": 1790,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786541299938",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/ucanbe-pretty-all-set-eye-shadow-palate-80-color-eye-shadow-palate",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Ucanbe Pretty All Set Eye Shadow Palate 80 Color Eye Shadow Palate",
+      "wholesalePrice": 1070,
+      "stock": 300,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "UCANBE Pretty All Set eye shadow palette: 80 eyeshadows, 2 highlighters, 2 contours, 2 blushes in an all-in-one, foldable, 3-layer tray. Matte, shimmer and glitter finishes. Size 7.4 x 6.1 x 0.9 inches.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/d8db4283-dd91-4f86-8160-1c9205d9abcf_prwlppD5.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/4da285af-ccac-400b-aef6-8d759b008522_DGETTLrv.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/21240542-e8e7-4482-a4e2-d1d37f8127c1_yayo48ku.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Ucanbe Pretty All Set Eye Shadow Palate 80 Color Eye Shadow Palate",
+      "slug": "ucanbe-pretty-all-set-eye-shadow-palate-80-color-eye-shadow-palate",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "UCANBE Pretty All Set eye shadow palette: 80 eyeshadows, 2 highlighters, 2 contours, 2 blushes in an all-in-one, foldable, 3-layer tray. Matte, shimmer and glitter finishes. Size...",
+      "description": "UCANBE Pretty All Set eye shadow palette: 80 eyeshadows, 2 highlighters, 2 contours, 2 blushes in an all-in-one, foldable, 3-layer tray. Matte, shimmer and glitter finishes. Size 7.4 x 6.1 x 0.9 inches.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 2280,
+      "sellingPrice": 1980,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786441295912",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/ponds-face-wash-bright-beauty-size-100gm",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Ponds Face Wash Bright Beauty Size 100gm",
+      "wholesalePrice": 249,
+      "stock": 99,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Pond's White Beauty Face Wash with vitamin B3+, cleanses skin and helps remove dead skin cells for a brighter-looking complexion. Everyday face wash.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/6fddb69a-3696-4fe2-8679-ca207932524f_GpW8Dccq.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Ponds Face Wash Bright Beauty Size 100gm",
+      "slug": "ponds-face-wash-bright-beauty-size-100gm",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Pond's White Beauty Face Wash with vitamin B3+, cleanses skin and helps remove dead skin cells for a brighter-looking complexion. Everyday face...",
+      "description": "Pond's White Beauty Face Wash with vitamin B3+, cleanses skin and helps remove dead skin cells for a brighter-looking complexion. Everyday face wash.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 920,
+      "sellingPrice": 800,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786212123214",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/swiss-beautys-blemish-balm-bb-foundation-shade-04",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Swiss Beauty's Blemish Balm BB Foundation Shade 04",
+      "wholesalePrice": 1999,
+      "stock": 99,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Swiss Beauty's Blemish Balm BB Foundation — an all-in-one BB cream for a natural, luminous finish. Non-greasy formula with SPF 15 protection, evens out skin tone. Shade 04.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/45ddf46e-e61e-4054-b8d8-25953b90d323_KmL2t6kz.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/ca561999-d642-438a-a306-c4bf36b715f9_05XspoV5.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/b0d59125-646b-44f7-ac44-3ed3a12d0fa4_FG1ZV0Hz.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Swiss Beauty's Blemish Balm BB Foundation Shade 04",
+      "slug": "swiss-beautys-blemish-balm-bb-foundation-shade-04",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Swiss Beauty's Blemish Balm BB Foundation — an all-in-one BB cream for a natural, luminous finish. Non-greasy formula with SPF 15 protection, evens out skin tone. Shade...",
+      "description": "Swiss Beauty's Blemish Balm BB Foundation — an all-in-one BB cream for a natural, luminous finish. Non-greasy formula with SPF 15 protection, evens out skin tone. Shade 04.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 3790,
+      "sellingPrice": 3300,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786210780295",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/topface-perfect-coverage-foundation-2",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Topface Perfect Coverage Foundation - 2",
+      "wholesalePrice": 1999,
+      "stock": 99,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Topface Perfect Coverage Foundation with high coverage and long wear, contains Palmaria Palmata Extract, SPF 20 protection. Suitable for all skin types.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/de44bdea-6592-40f7-9f7b-6a4e17ae1c44_rvnrVjnW.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/c84130a5-167b-43e4-b72d-ec0d096dad96_kFgpAfHl.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Topface Perfect Coverage Foundation - 2",
+      "slug": "topface-perfect-coverage-foundation-2",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Topface Perfect Coverage Foundation with high coverage and long wear, contains Palmaria Palmata Extract, SPF 20 protection. Suitable for all skin...",
+      "description": "Topface Perfect Coverage Foundation with high coverage and long wear, contains Palmaria Palmata Extract, SPF 20 protection. Suitable for all skin types.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 3790,
+      "sellingPrice": 3300,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786090349677",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/absolute-new-york-3d-cover-concealer-mfdc01-neutral-porcelain-size-55ml",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Absolute New York 3D Cover Concealer - MFDC01 Neutral Porcelain Size 5.5ml",
+      "wholesalePrice": 799,
+      "stock": 99,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Absolute New York 3D Cover Concealer for coverage of dark circles and blemishes. Crease-proof, water-resistant formula, lightweight, satin finish. Shade MFDC01 Neutral Porcelain, size 5.5ml.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/6954c16e-253e-4651-9346-8eefd35b31ad_3jVczVcB.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/938c8256-113c-4bf2-a3f3-71fc210d39d8_DF2F4D4L.jpg",
+        "https://media.selfshop.com.bd/products/vendor/gallery/cc6cce74-b0c1-4778-95a1-debbd83fb39d_5ZJWzrnG.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Absolute New York 3D Cover Concealer - MFDC01 Neutral Porcelain Size 5.5ml",
+      "slug": "absolute-new-york-3d-cover-concealer-mfdc01-neutral-porcelain-size-55ml",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Absolute New York 3D Cover Concealer for coverage of dark circles and blemishes. Crease-proof, water-resistant formula, lightweight, satin finish. Shade MFDC01 Neutral Porcelain,...",
+      "description": "Absolute New York 3D Cover Concealer for coverage of dark circles and blemishes. Crease-proof, water-resistant formula, lightweight, satin finish. Shade MFDC01 Neutral Porcelain, size 5.5ml.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 1840,
+      "sellingPrice": 1600,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1786083985111",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/sheglam-good-grip-hydrating-primer",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Sheglam Good Grip Hydrating Primer",
+      "wholesalePrice": 1499,
+      "stock": 99,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "Sheglam Good Grip Hydrating Primer. Oil- and silicone-free gel formula, hydrating and moisturising, helps makeup wear stay put longer. Vegan, paraben-free, talc-free, cruelty-free.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/40578-1_oTn5spLd.jpg"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Sheglam Good Grip Hydrating Primer",
+      "slug": "sheglam-good-grip-hydrating-primer",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "Sheglam Good Grip Hydrating Primer. Oil- and silicone-free gel formula, hydrating and moisturising, helps makeup wear stay put longer. Vegan, paraben-free, talc-free,...",
+      "description": "Sheglam Good Grip Hydrating Primer. Oil- and silicone-free gel formula, hydrating and moisturising, helps makeup wear stay put longer. Vegan, paraben-free, talc-free, cruelty-free.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 3180,
+      "sellingPrice": 2770,
+      "status": "active"
+    }
+  },
+  {
+    "supplier": {
+      "provider": "selfshop",
+      "productId": "VP1785325213762",
+      "sourceUrl": "https://api-v1.selfshop.com.bd/product/nature-soothing-gel-99-aloe-vera-moisture-gel-for-skin-hydration-and-relief",
+      "lastCheckedAt": "2026-08-16T08:38:35.135Z"
+    },
+    "supplierData": {
+      "title": "Nature Soothing Gel - 99% Aloe Vera Moisture Gel For Skin Hydration And Relief",
+      "wholesalePrice": 250,
+      "stock": 100,
+      "shippingWeightGrams": null,
+      "category": "Health & Beauty",
+      "description": "99% Aloe Vera Soothing & Moisture Gel that deeply hydrates, soothes sunburn and dryness, leaves skin soft and fresh. Usable on face, hands, hair, and body.",
+      "specifications": [],
+      "images": [
+        "https://media.selfshop.com.bd/products/vendor/gallery/80ce8ad21a5cf3569cbf708e52d9a2c3jpg-720x720q80jpg_k0N5gg98.webp",
+        "https://media.selfshop.com.bd/products/vendor/gallery/da7f019a619e425c3f49fdfb3cf860bapng-720x720q80png_RSpjDgx8.webp",
+        "https://media.selfshop.com.bd/products/vendor/gallery/50bd71dd53dacfb51dfefe440a1f1784png-720x720q80png_Q9bxQDwn.webp",
+        "https://media.selfshop.com.bd/products/vendor/gallery/4286bb935e91766fb00e2203553d65f7png-720x720q80png_UZcAFFvd.webp"
+      ],
+      "variants": []
+    },
+    "renvura": {
+      "title": "Nature Soothing Gel - 99% Aloe Vera Moisture Gel For Skin Hydration And Relief",
+      "slug": "nature-soothing-gel-99-aloe-vera-moisture-gel-for-skin-hydration-and-relief",
+      "category": "health-beauty",
+      "subcategory": null,
+      "brand": null,
+      "model": null,
+      "shortDescription": "99% Aloe Vera Soothing & Moisture Gel that deeply hydrates, soothes sunburn and dryness, leaves skin soft and fresh. Usable on face, hands, hair, and...",
+      "description": "99% Aloe Vera Soothing & Moisture Gel that deeply hydrates, soothes sunburn and dryness, leaves skin soft and fresh. Usable on face, hands, hair, and body.",
+      "features": [],
+      "specifications": [],
+      "regularPrice": 920,
+      "sellingPrice": 800,
+      "status": "active"
+    }
+  }
+]

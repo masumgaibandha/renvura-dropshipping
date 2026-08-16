@@ -1,0 +1,595 @@
+{
+  "summary": {
+    "totalProcessed": 47,
+    "byStatus": {
+      "IMPORTABLE_WITH_WARNINGS": 37,
+      "BLOCKED": 6,
+      "CATEGORY_MAPPING_REQUIRED": 4
+    },
+    "potentialDuplicates": [],
+    "manifestFiles": [
+      "data/selfshop-imports/batches/electronics-gadgets-batch1.json (21 products)",
+      "data/selfshop-imports/batches/health-beauty-batch1.json (16 products)"
+    ]
+  },
+  "results": [
+    {
+      "slug": "hoco-eq24-true-wireless-bluetooth-earbuds",
+      "title": "HOCO EQ24 True Wireless Bluetooth Earbuds",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 710,
+      "sellingPrice": 1420,
+      "regularPrice": 1630,
+      "grossMarginPct": 50,
+      "imageCount": 3
+    },
+    {
+      "slug": "kw68-mini-smart-watch-3ti-extra-strap-sh",
+      "title": "KW68 Mini Smart Watch | 3টি Extra Strap সহ",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 690,
+      "sellingPrice": 1380,
+      "regularPrice": 1590,
+      "grossMarginPct": 50,
+      "imageCount": 5
+    },
+    {
+      "slug": "y80-ultra-germany-81-smart-watch",
+      "title": "Y80 ULTRA Germany 8+1 Smart Watch",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 720,
+      "sellingPrice": 1440,
+      "regularPrice": 1660,
+      "grossMarginPct": 50,
+      "imageCount": 3
+    },
+    {
+      "slug": "laxasfit-s9-pro-smartwatch",
+      "title": "LAXASFIT S9 Pro SmartWatch",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 590,
+      "sellingPrice": 1420,
+      "regularPrice": 1630,
+      "grossMarginPct": 58.5,
+      "imageCount": 4
+    },
+    {
+      "slug": "ven-dens-20000-mah-premium-power-bank",
+      "title": "Ven-Dens 20,000 mAh Premium Power Bank",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1000,
+      "sellingPrice": 1850,
+      "regularPrice": 2130,
+      "grossMarginPct": 45.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "jbl-bhm-01-wireless-earbuds",
+      "title": "JBL BHM-01 Wireless Earbuds",
+      "status": "BLOCKED",
+      "reasons": [
+        "Counterfeit/unauthorized-trademark risk"
+      ]
+    },
+    {
+      "slug": "apple-airpods-pro",
+      "title": "Apple AirPods Pro",
+      "status": "BLOCKED",
+      "reasons": [
+        "Counterfeit/unauthorized-trademark risk"
+      ]
+    },
+    {
+      "slug": "airpoods-pro-2nd-gen",
+      "title": "Airpoods Pro 2nd Gen",
+      "status": "BLOCKED",
+      "reasons": [
+        "Counterfeit/unauthorized-trademark risk"
+      ]
+    },
+    {
+      "slug": "airpods-pro-2nd-generation",
+      "title": "AirPods Pro 2nd Generation",
+      "status": "BLOCKED",
+      "reasons": [
+        "Counterfeit/unauthorized-trademark risk"
+      ]
+    },
+    {
+      "slug": "ulanzi-a200-mini-wireless-microphone-with-charging-case",
+      "title": "Ulanzi A200 Mini Wireless Microphone With Charging Case",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 4260,
+      "sellingPrice": 6600,
+      "regularPrice": 7590,
+      "grossMarginPct": 35.5,
+      "imageCount": 1
+    },
+    {
+      "slug": "boya-by-m1-lavalier-microphone-35mm-omnidirectional-clip-on-mic-for-smartphone-dslr-pc",
+      "title": "BOYA BY-M1 Lavalier Microphone 3.5mm Omnidirectional Clip-On Mic For Smartphone, DSLR & PC",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 450,
+      "sellingPrice": 1080,
+      "regularPrice": 1240,
+      "grossMarginPct": 58.3,
+      "imageCount": 1
+    },
+    {
+      "slug": "sx9-wireless-microphone-dual-transmitter-system-2-tx-1-rx",
+      "title": "SX9 Wireless Microphone Dual Transmitter System (2 TX + 1 RX)",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1070,
+      "sellingPrice": 1980,
+      "regularPrice": 2280,
+      "grossMarginPct": 46,
+      "imageCount": 1
+    },
+    {
+      "slug": "t1-pro-tws-wireless-bluetooth-earbuds-v50",
+      "title": "T1 Pro TWS Wireless Bluetooth Earbuds V5.0",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 560,
+      "sellingPrice": 1340,
+      "regularPrice": 1540,
+      "grossMarginPct": 58.2,
+      "imageCount": 1
+    },
+    {
+      "slug": "oraimo-spacebuds-neo-otw-323-true-wireless-bluetooth-earbuds",
+      "title": "Oraimo SpaceBuds Neo OTW-323 True Wireless Bluetooth Earbuds",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1380,
+      "sellingPrice": 2550,
+      "regularPrice": 2930,
+      "grossMarginPct": 45.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "oraimo-spacebuds-lite-otw-324-true-wireless-bluetooth-earbuds-with-sound360-spatial-audio",
+      "title": "Oraimo SpaceBuds Lite OTW-324 True Wireless Bluetooth Earbuds With Sound360 Spatial Audio",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1260,
+      "sellingPrice": 2330,
+      "regularPrice": 2680,
+      "grossMarginPct": 45.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "awei-tz30-open-design-tws-wireless-earbuds",
+      "title": "Awei TZ30 Open Design TWS Wireless Earbuds",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1500,
+      "sellingPrice": 2780,
+      "regularPrice": 3200,
+      "grossMarginPct": 46,
+      "imageCount": 1
+    },
+    {
+      "slug": "oraimo-i12-wireless-bluetooth-headset",
+      "title": "Oraimo I12 Wireless Bluetooth Headset",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)",
+        "thin description"
+      ],
+      "wholesaleCost": 440,
+      "sellingPrice": 1060,
+      "regularPrice": 1220,
+      "grossMarginPct": 58.5,
+      "imageCount": 1
+    },
+    {
+      "slug": "q86-true-wireless-stereo-earphones",
+      "title": "Q86 True Wireless Stereo Earphones",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 350,
+      "sellingPrice": 1120,
+      "regularPrice": 1290,
+      "grossMarginPct": 68.8,
+      "imageCount": 6
+    },
+    {
+      "slug": "universal-360-car-mobile-phone-holder-with-strong-suction-cup-one-touch-lock-for-40-69-smartphones",
+      "title": "Universal 360 Car Mobile Phone Holder With Strong Suction Cup & One-Touch Lock For 4.0-6.9 Smartphones",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 280,
+      "sellingPrice": 900,
+      "regularPrice": 1030,
+      "grossMarginPct": 68.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "foldable-adjustable-laptop-stand-ergonomic-portable-laptop-holder-for-10-173-laptops",
+      "title": "Foldable Adjustable Laptop Stand - Ergonomic Portable Laptop Holder For 10-17.3 Laptops",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 440,
+      "sellingPrice": 1060,
+      "regularPrice": 1220,
+      "grossMarginPct": 58.5,
+      "imageCount": 1
+    },
+    {
+      "slug": "hoco-3004-gaming-wireless-bluetooth-headset-with-charging-case",
+      "title": "Hoco 3004 Gaming Wireless Bluetooth Headset With Charging Case",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 440,
+      "sellingPrice": 1060,
+      "regularPrice": 1220,
+      "grossMarginPct": 58.5,
+      "imageCount": 1
+    },
+    {
+      "slug": "selilo-r1-true-wireless-earbuds-with-ai-voice-command-active-enc-bluetooth-60",
+      "title": "Selilo R1 True Wireless Earbuds With AI Voice Command, Active ENC & Bluetooth 6.0",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1020,
+      "sellingPrice": 1890,
+      "regularPrice": 2170,
+      "grossMarginPct": 46,
+      "imageCount": 1
+    },
+    {
+      "slug": "rechargeable-mini-fan-with-led-light-display",
+      "title": "Rechargeable Mini Fan With Led Light & Display",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 270,
+      "sellingPrice": 860,
+      "regularPrice": 990,
+      "grossMarginPct": 68.6,
+      "imageCount": 4
+    },
+    {
+      "slug": "remax-f23-icying-series-bladeless-neckband-fan-portable-wearable-cooling-fan-adjustable-angle-rechargeable-neck-fan",
+      "title": "REMAX F23 Icying Series Bladeless Neckband Fan",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 1950,
+      "sellingPrice": 3220,
+      "regularPrice": 3700,
+      "grossMarginPct": 39.4,
+      "imageCount": 1
+    },
+    {
+      "slug": "120mm-rgb-cooling-fan-for-desktop-pc-case-led-computer-cooling-fan",
+      "title": "120mm RGB Cooling Fan For Desktop PC Case - LED Computer Cooling Fan",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)"
+      ],
+      "wholesaleCost": 400,
+      "sellingPrice": 960,
+      "regularPrice": 1100,
+      "grossMarginPct": 58.3,
+      "imageCount": 1
+    },
+    {
+      "slug": "tresemme-expert-selection-keratin-smooth-hair-mask",
+      "title": "TRESemme Expert Selection Keratin Smooth Hair Mask",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 720,
+      "sellingPrice": 1440,
+      "regularPrice": 1660,
+      "grossMarginPct": 50,
+      "imageCount": 3
+    },
+    {
+      "slug": "fiama-peach-avocado-shower-gel-250ml",
+      "title": "Fiama Peach & Avocado Shower Gel 250ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 370,
+      "sellingPrice": 890,
+      "regularPrice": 1020,
+      "grossMarginPct": 58.4,
+      "imageCount": 2
+    },
+    {
+      "slug": "fiama-patchouli-macadamia-shower-gel-250ml",
+      "title": "Fiama Patchouli & Macadamia Shower Gel 250ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 370,
+      "sellingPrice": 890,
+      "regularPrice": 1020,
+      "grossMarginPct": 58.4,
+      "imageCount": 3
+    },
+    {
+      "slug": "fiama-radiant-glow-shower-gel-blackcurrant-bearberry-250ml",
+      "title": "Fiama Radiant Glow Shower Gel BlackCurrant Bearberry 250ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 370,
+      "sellingPrice": 890,
+      "regularPrice": 1020,
+      "grossMarginPct": 58.4,
+      "imageCount": 3
+    },
+    {
+      "slug": "neutrogena-clear-radiant-face-wash-200ml",
+      "title": "Neutrogena Clear & Radiant Face Wash 200ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 700,
+      "sellingPrice": 1400,
+      "regularPrice": 1610,
+      "grossMarginPct": 50,
+      "imageCount": 5
+    },
+    {
+      "slug": "neutrogena-deep-clean-facial-cleanser-gel-wash-200ml",
+      "title": "Neutrogena Deep Clean Facial Cleanser Gel Wash 200ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 700,
+      "sellingPrice": 1400,
+      "regularPrice": 1610,
+      "grossMarginPct": 50,
+      "imageCount": 5
+    },
+    {
+      "slug": "xhc-tea-tree-essential-oil-30ml",
+      "title": "XHC Tea Tree Essential Oil 30ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin description"
+      ],
+      "wholesaleCost": 700,
+      "sellingPrice": 1400,
+      "regularPrice": 1610,
+      "grossMarginPct": 50,
+      "imageCount": 3
+    },
+    {
+      "slug": "makkah-madina-hand-made-black-soap-100g",
+      "title": "Makkah Madina Hand Made Black Soap 100g",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "thin description"
+      ],
+      "wholesaleCost": 100,
+      "sellingPrice": 400,
+      "regularPrice": 460,
+      "grossMarginPct": 75,
+      "imageCount": 2
+    },
+    {
+      "slug": "bt-conditioner-r-style-protein-500ml",
+      "title": "B.T Conditioner R Style Protein 500ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 970,
+      "sellingPrice": 1790,
+      "regularPrice": 2060,
+      "grossMarginPct": 45.8,
+      "imageCount": 4
+    },
+    {
+      "slug": "ucanbe-pretty-all-set-eye-shadow-palate-80-color-eye-shadow-palate",
+      "title": "Ucanbe Pretty All Set Eye Shadow Palate 80 Color Eye Shadow Palate",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight"
+      ],
+      "wholesaleCost": 1070,
+      "sellingPrice": 1980,
+      "regularPrice": 2280,
+      "grossMarginPct": 46,
+      "imageCount": 3
+    },
+    {
+      "slug": "ponds-face-wash-bright-beauty-size-100gm",
+      "title": "Ponds Face Wash Bright Beauty Size 100gm",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)",
+        "thin description"
+      ],
+      "wholesaleCost": 249,
+      "sellingPrice": 800,
+      "regularPrice": 920,
+      "grossMarginPct": 68.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "swiss-beautys-blemish-balm-bb-foundation-shade-04",
+      "title": "Swiss Beauty's Blemish Balm BB Foundation Shade 04",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin description"
+      ],
+      "wholesaleCost": 1999,
+      "sellingPrice": 3300,
+      "regularPrice": 3790,
+      "grossMarginPct": 39.4,
+      "imageCount": 3
+    },
+    {
+      "slug": "topface-perfect-coverage-foundation-2",
+      "title": "Topface Perfect Coverage Foundation - 2",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin description"
+      ],
+      "wholesaleCost": 1999,
+      "sellingPrice": 3300,
+      "regularPrice": 3790,
+      "grossMarginPct": 39.4,
+      "imageCount": 2
+    },
+    {
+      "slug": "absolute-new-york-3d-cover-concealer-mfdc01-neutral-porcelain-size-55ml",
+      "title": "Absolute New York 3D Cover Concealer - MFDC01 Neutral Porcelain Size 5.5ml",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin description"
+      ],
+      "wholesaleCost": 799,
+      "sellingPrice": 1600,
+      "regularPrice": 1840,
+      "grossMarginPct": 50.1,
+      "imageCount": 3
+    },
+    {
+      "slug": "sheglam-good-grip-hydrating-primer",
+      "title": "Sheglam Good Grip Hydrating Primer",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin image set (1 image)",
+        "thin description"
+      ],
+      "wholesaleCost": 1499,
+      "sellingPrice": 2770,
+      "regularPrice": 3180,
+      "grossMarginPct": 45.9,
+      "imageCount": 1
+    },
+    {
+      "slug": "nature-soothing-gel-99-aloe-vera-moisture-gel-for-skin-hydration-and-relief",
+      "title": "Nature Soothing Gel - 99% Aloe Vera Moisture Gel For Skin Hydration And Relief",
+      "status": "IMPORTABLE_WITH_WARNINGS",
+      "warnings": [
+        "missing shipping weight",
+        "thin description"
+      ],
+      "wholesaleCost": 250,
+      "sellingPrice": 800,
+      "regularPrice": 920,
+      "grossMarginPct": 68.8,
+      "imageCount": 4
+    },
+    {
+      "slug": "al-islami-oats-bar-suswadu-cklet-oots-bar-200-gram",
+      "title": "Al Islami Oats Bar",
+      "status": "BLOCKED",
+      "reasons": [
+        "Invalid SKU field and/or product category mismatch (food item listed under Health & Beauty)"
+      ]
+    },
+    {
+      "slug": "saffron-handmade-soap-100-gm",
+      "title": "Saffron Handmade Soap-100 Gm",
+      "status": "BLOCKED",
+      "reasons": [
+        "Impossible pricing: listed selling price exceeds listed regular price"
+      ]
+    },
+    {
+      "slug": "chanderi-silk-sharee-with-blause-pcs",
+      "title": "Chanderi Silk Sharee With Blause Pcs",
+      "status": "CATEGORY_MAPPING_REQUIRED",
+      "selfshopCategory": "Women's & Girls' Fashion"
+    },
+    {
+      "slug": "mens-formal-official-cotton-shirt-23",
+      "title": "Men's Formal Official Cotton Shirt",
+      "status": "CATEGORY_MAPPING_REQUIRED",
+      "selfshopCategory": "Men's & Boys' Fashion"
+    },
+    {
+      "slug": "luxury-arabian-dial-wrist-watch-complete-gift-set",
+      "title": "Luxury Arabian Dial Wrist Watch Complete Gift Set",
+      "status": "CATEGORY_MAPPING_REQUIRED",
+      "selfshopCategory": "Watches, Bags, Jewellery"
+    },
+    {
+      "slug": "white-sapphire-butterfly-non-piercing-ear-cuff",
+      "title": "White Sapphire Butterfly Non-Piercing Ear Cuff",
+      "status": "CATEGORY_MAPPING_REQUIRED",
+      "selfshopCategory": "Watches, Bags, Jewellery"
+    }
+  ]
+}

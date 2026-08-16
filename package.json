@@ -11,7 +11,10 @@
     "admin:demote": "tsx scripts/promote-admin.ts",
     "seed:catalog": "tsx scripts/seed-catalog.ts",
     "import:selfshop": "tsx scripts/import-selfshop-products.ts",
-    "verify:public-product": "tsx scripts/verify-public-product-no-leak.ts"
+    "selfshop:build-manifest": "tsx scripts/build-selfshop-manifest.ts",
+    "verify:public-product": "tsx scripts/verify-public-product-no-leak.ts",
+    "verify:selfshop-pricing": "tsx scripts/verify-selfshop-pricing.ts",
+    "verify:selfshop-duplicates": "tsx scripts/verify-selfshop-duplicates.ts"
   },
   "dependencies": {
     "@heroui/react": "^3.2.4",

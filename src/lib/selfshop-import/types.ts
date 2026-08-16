@@ -69,6 +69,63 @@ export interface SelfShopImportManifestEntry {
 
 export type SelfShopImportManifest = SelfShopImportManifestEntry[];
 
+/**
+ * Normalized SelfShop product data (Phase 18) — the generic input shape
+ * `src/lib/selfshop-import/classify.ts` and `scripts/build-selfshop-manifest.ts` accept. This is
+ * deliberately provider-shaped, not batch-shaped: nothing here names or hardcodes any specific
+ * product. A human/Claude reading a logged-in SelfShop page produces one of these per product —
+ * never invented, only what the page actually shows. `regularPrice`/`sellingPrice` are SelfShop's
+ * own two displayed prices (the lower one becomes Renvura's wholesale cost basis) — kept as two
+ * separate raw numbers here, rather than pre-resolved, so `classify.ts` can itself detect
+ * inverted/impossible pricing before deriving a cost.
+ */
+export interface SelfShopRawProduct {
+  sourceUrl: string;
+  productId: string;
+  title: string;
+  /** SelfShop's own category label, exactly as shown (e.g. "Electronic Accessories") — see `categoryMapping.ts`. */
+  selfshopCategory: string;
+  /** SelfShop's crossed-out "was" price, if shown. */
+  regularPrice: number | null;
+  /** SelfShop's highlighted price — what Renvura actually pays, before any sanity check. */
+  sellingPrice: number | null;
+  stock: number | null;
+  /** `null` when the page doesn't state a trustworthy weight — never estimated. */
+  shippingWeightGrams: number | null;
+  description: string | null;
+  specifications: { label: string; value: string }[];
+  /** Supplier CDN image URLs, own-gallery only (never a related-product thumbnail). */
+  images: string[];
+  variants: unknown[];
+  /** ISO timestamp of when this data was read/verified. */
+  lastCheckedAt: string;
+}
+
+export type ClassificationStatus = "IMPORTABLE" | "IMPORTABLE_WITH_WARNINGS" | "BLOCKED" | "CATEGORY_MAPPING_REQUIRED" | "PRICE_REVIEW_REQUIRED";
+
+export type ClassificationWarningCode = "MISSING_WEIGHT" | "THIN_IMAGES" | "THIN_DESCRIPTION" | "COPY_REVIEW_RECOMMENDED";
+
+export interface ClassificationWarning {
+  code: ClassificationWarningCode;
+  message: string;
+}
+
+export interface ClassificationResult {
+  sourceUrl: string;
+  productId: string;
+  title: string;
+  status: ClassificationStatus;
+  warnings: ClassificationWarning[];
+  /** Present only when `status` is `BLOCKED`. */
+  blockedReasons?: string[];
+  /** Present only when `status` is `CATEGORY_MAPPING_REQUIRED`. */
+  selfshopCategory?: string;
+  /** Present whenever pricing was computed (IMPORTABLE / IMPORTABLE_WITH_WARNINGS / PRICE_REVIEW_REQUIRED). */
+  pricing?: { wholesaleCost: number; sellingPrice: number; regularPrice: number; grossMarginPct: number };
+  /** Present only when `status` is IMPORTABLE or IMPORTABLE_WITH_WARNINGS — ready to drop into a manifest file. */
+  manifestEntry?: SelfShopImportManifestEntry;
+}
+
 export type SelfShopImportOutcome =
   | { status: "VALIDATION_ERROR"; productId: string | null; sourceUrl: string | null; errors: string[] }
   | { status: "CREATED"; slug: string; productId: string; imagesWritten: number }
