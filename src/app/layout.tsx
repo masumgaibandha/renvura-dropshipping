@@ -32,6 +32,12 @@ export const metadata: Metadata = {
   icons: {
     icon: brand.assets.favicon.light,
   },
+  // No page sets its own `twitter` metadata — this single site-wide default makes X/Twitter read
+  // each page's `openGraph` tags with the correct large-image card layout, without adding a
+  // duplicate `twitter` block to every route that already sets `openGraph` (product/shop/category).
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

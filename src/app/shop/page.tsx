@@ -5,7 +5,7 @@ import { isConfigured, brand } from "@/config/brand";
 
 export const metadata: Metadata = {
   title: "Shop",
-  description: "Browse all Renvura products — electronics, gadgets, and health & beauty essentials, with Cash on Delivery nationwide.",
+  description: "Browse all Renvura products — electronics, fashion, home & lifestyle, health & beauty, and more, with Cash on Delivery nationwide.",
   ...(isConfigured(brand.urls.site) ? { alternates: { canonical: "/shop" } } : {}),
 };
 
@@ -17,7 +17,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   return (
     <ProductListingPage
       title="Shop"
-      description="Every product currently in the Renvura catalog — electronics, gadgets, and health & beauty essentials."
+      description="Every product currently in the Renvura catalog — electronics, fashion, home & lifestyle, health & beauty, and more."
       searchParams={searchParams}
     />
   );

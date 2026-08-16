@@ -1,6 +1,7 @@
 "use client";
 
 import { Tabs } from "@heroui/react";
+import Link from "next/link";
 
 import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import type { Category } from "@/types/category";
@@ -43,14 +44,26 @@ export function CategoryTabs({ products, categories, categoryLabels }: CategoryT
       <Tabs.Panel id="all">
         <ProductGrid products={products} categoryLabels={categoryLabels} />
       </Tabs.Panel>
-      {categories.map((category) => (
-        <Tabs.Panel key={category.id} id={category.slug}>
-          <ProductGrid
-            products={products.filter((product) => product.category === category.slug)}
-            categoryLabels={categoryLabels}
-          />
-        </Tabs.Panel>
-      ))}
+      {categories.map((category) => {
+        const categoryProducts = products.filter((product) => product.category === category.slug);
+        return (
+          <Tabs.Panel key={category.id} id={category.slug}>
+            {categoryProducts.length > 0 ? (
+              <ProductGrid products={categoryProducts} categoryLabels={categoryLabels} />
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-12 text-center">
+                <p className="text-small text-foreground/70">No {category.name} picks featured here yet.</p>
+                <Link
+                  href={`/shop?category=${category.slug}`}
+                  className="inline-flex h-9 items-center rounded-full border border-border bg-surface px-4 text-small font-medium text-foreground transition-colors hover:border-accent"
+                >
+                  Browse {category.name}
+                </Link>
+              </div>
+            )}
+          </Tabs.Panel>
+        );
+      })}
     </Tabs.Root>
   );
 }

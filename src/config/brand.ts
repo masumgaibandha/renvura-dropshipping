@@ -11,7 +11,7 @@ export const brand = {
   tagline: "Authority, Refined",
   legalName: "TODO: legal/registered business name",
   description:
-    "Renvura is a premium Bangladesh-focused e-commerce store for electronics, gadgets, and health & beauty products.",
+    "Renvura is a Bangladesh-focused e-commerce store for electronics, fashion, home & lifestyle, health & beauty, and more, with Cash on Delivery available nationwide.",
 
   locale: "en-BD",
   country: "BD",
@@ -41,7 +41,7 @@ export const brand = {
   },
 
   urls: {
-    site: "TODO: production domain (e.g. https://renvura.com)",
+    site: "https://www.renvura.com",
     github: "https://github.com/masumgaibandha/renvura-dropshipping",
   },
 

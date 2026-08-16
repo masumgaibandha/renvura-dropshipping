@@ -16,8 +16,8 @@ import { getAllCategories, getAllProducts, toPublicProduct } from "@/services/pr
  * doesn't become "...| Renvura" twice.
  */
 export const metadata: Metadata = {
-  title: { absolute: "Renvura — Gadgets, Electronics & Health and Beauty in Bangladesh" },
-  description: "Shop electronics, gadgets, and health & beauty essentials in Bangladesh, with Cash on Delivery available nationwide.",
+  title: { absolute: "Renvura — Online Shopping in Bangladesh" },
+  description: "Shop electronics, fashion, home & lifestyle, health & beauty, and more in Bangladesh, with Cash on Delivery available nationwide.",
 };
 
 /**
@@ -43,11 +43,18 @@ export default async function Home() {
   const topCategories = allCategories.filter((category) => !category.parentSlug && category.isActive);
 
   // CategoryTabs/FeaturedProductsRow are Client Components — sanitize before crossing that boundary.
-  // "Popular Products" = every active, in-catalog product (original array order); "Featured Picks" is
-  // admin-curated via /admin/homepage (Phase 10) — falls back to the next products in line so the
-  // section never sits empty before an admin has picked anything.
+  // "Popular Products" is sampled per top-level category (not a flat first-N slice) so every
+  // category tab has real content — a flat slice would only ever surface whichever categories
+  // happen to sort first in the DB, silently starving every category added after the original
+  // catalog (see CLAUDE.md's category-navigation note). "Featured Picks" is admin-curated via
+  // /admin/homepage (Phase 10) — falls back to the next products in line so the section never sits
+  // empty before an admin has picked anything.
+  const PRODUCTS_PER_CATEGORY_HOMEPAGE = 4;
   const activeProducts = allProducts.filter((product) => product.status === "active");
-  const popularProducts = activeProducts.slice(0, 10).map(toPublicProduct);
+  const popularProductsSource = topCategories.flatMap((category) =>
+    activeProducts.filter((product) => product.category === category.slug).slice(0, PRODUCTS_PER_CATEGORY_HOMEPAGE),
+  );
+  const popularProducts = popularProductsSource.map(toPublicProduct);
   const featuredSource = activeProducts.filter((product) => product.featured);
   const featuredProducts = (featuredSource.length > 0 ? featuredSource : activeProducts.slice(10, 18)).map(toPublicProduct);
   const promoCategory = allCategories.find((category) => category.slug === "health-beauty") ?? topCategories[0];
@@ -78,7 +85,7 @@ export default async function Home() {
       )}
 
       <Section>
-        <CategoryHighlights categories={topCategories} />
+        <CategoryHighlights categories={topCategories} products={popularProducts} />
       </Section>
 
       <Section className="bg-background-secondary">

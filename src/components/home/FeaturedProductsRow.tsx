@@ -55,7 +55,7 @@ export function FeaturedProductsRow({ products, promoCategory, categoryLabels }:
 
       <div ref={scrollerRef} className="flex items-stretch gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <Link
-          href={`/${promoCategory.slug}`}
+          href={`/shop?category=${promoCategory.slug}`}
           className="flex w-56 shrink-0 flex-col justify-end rounded-2xl border border-border bg-surface-warm p-5 text-foreground shadow-card transition-colors hover:border-accent sm:w-64"
         >
           <span className="text-label text-accent uppercase">Shop the category</span>

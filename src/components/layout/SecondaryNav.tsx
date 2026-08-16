@@ -28,7 +28,7 @@ export async function SecondaryNav() {
           <Dropdown.Popover placement="bottom start" className="min-w-56">
             <Dropdown.Menu aria-label="Categories">
               {categories.map((category) => (
-                <Dropdown.Item key={category.id} href={`/${category.slug}`} textValue={category.name}>
+                <Dropdown.Item key={category.id} href={`/shop?category=${category.slug}`} textValue={category.name}>
                   {category.name}
                 </Dropdown.Item>
               ))}

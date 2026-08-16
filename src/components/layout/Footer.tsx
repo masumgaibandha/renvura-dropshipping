@@ -45,6 +45,8 @@ const informationLinks: FooterLink[] = [
   { label: "Contact Us", href: "/contact" },
   { label: "About Us", href: "/about" },
   { label: "FAQ", href: "/faq" },
+  { label: "Terms & Conditions", href: "/terms" },
+  { label: "Shipping & Delivery", href: "/shipping-policy" },
   { label: "Privacy Policy", href: "/privacy-policy" },
 ];
 
@@ -55,11 +57,19 @@ const socialLinks = [
   { key: "youtube", href: brand.social.youtube, Icon: IconYoutube, label: "YouTube" },
 ].filter((social) => isConfigured(social.href));
 
-const contactCandidates: ({ label: string; href: string } | null)[] = [
-  isConfigured(brand.contact.phone) ? { label: brand.contact.phone, href: `tel:${brand.contact.phone}` } : null,
-  isConfigured(brand.contact.email) ? { label: brand.contact.email, href: `mailto:${brand.contact.email}` } : null,
-];
-const contactItems = contactCandidates.filter((item): item is { label: string; href: string } => item !== null);
+/**
+ * Support email comes from `CONTACT_EMAIL_TO` (server-only env var), same source `/contact`
+ * already uses — never `brand.contact.email`, which stays reserved for a future customer-facing
+ * value and is currently unconfigured. Phone/WhatsApp only ever come from `brand.contact`, which
+ * is `isConfigured()`-gated the same way — nothing here ever renders a literal "TODO" placeholder.
+ */
+function getContactItems(): { label: string; href: string }[] {
+  const candidates: ({ label: string; href: string } | null)[] = [
+    isConfigured(brand.contact.phone) ? { label: brand.contact.phone, href: `tel:${brand.contact.phone}` } : null,
+    process.env.CONTACT_EMAIL_TO ? { label: process.env.CONTACT_EMAIL_TO, href: `mailto:${process.env.CONTACT_EMAIL_TO}` } : null,
+  ];
+  return candidates.filter((item): item is { label: string; href: string } => item !== null);
+}
 
 /** Payment methods actually accepted today — see note below about manual processing. */
 const paymentMethods = ["Cash on Delivery", "bKash", "Nagad", "Rocket"];
@@ -75,6 +85,7 @@ function Divider(): ReactNode {
  */
 export function Footer() {
   const year = new Date().getFullYear();
+  const contactItems = getContactItems();
 
   return (
     <footer className="bg-ink text-white">
