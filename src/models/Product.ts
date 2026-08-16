@@ -114,6 +114,13 @@ const supplierSourceSchema = new Schema(
     productId: { type: String, required: true, trim: true },
     sourceUrl: { type: String, required: true, trim: true },
     lastCheckedAt: { type: String, required: true },
+    // Phase 17 — sha256 of the supplier's own raw {title, description, images} at last check,
+    // computed by the importer (src/lib/selfshop-import). Lets a re-check detect "the supplier's
+    // raw listing changed" without comparing against Renvura's deliberately-rewritten title/
+    // description, which never literally matches the supplier's text by design. `null` for a
+    // product that predates this field — the importer treats that as "no baseline yet" (backfills
+    // silently) rather than a false-positive change.
+    contentHash: { type: String, default: null },
   },
   { _id: false },
 );

@@ -150,6 +150,8 @@ export interface ProductSupplierSource {
   sourceUrl: string;
   /** ISO timestamp of when this data was last verified against the supplier's page. */
   lastCheckedAt: string;
+  /** sha256 of the supplier's raw {title, description, images} at last check — see `src/models/Product.ts`'s doc comment. `null` for a product that predates this field. */
+  contentHash: string | null;
 }
 
 /**

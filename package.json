@@ -9,7 +9,9 @@
     "lint": "eslint",
     "admin:promote": "tsx scripts/promote-admin.ts",
     "admin:demote": "tsx scripts/promote-admin.ts",
-    "seed:catalog": "tsx scripts/seed-catalog.ts"
+    "seed:catalog": "tsx scripts/seed-catalog.ts",
+    "import:selfshop": "tsx scripts/import-selfshop-products.ts",
+    "verify:public-product": "tsx scripts/verify-public-product-no-leak.ts"
   },
   "dependencies": {
     "@heroui/react": "^3.2.4",
