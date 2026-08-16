@@ -88,7 +88,67 @@ interface TokenGrantSuccess {
   tokenType: string | null;
   expiresIn: number | null;
 }
-type TokenGrantResult = TokenGrantSuccess | { ok: false; error: string };
+
+/**
+ * Best-effort, non-authoritative classification of why an auth request failed — derived only from
+ * the safe fields below, never from anything that could carry a submitted credential value. Labeled
+ * "best-effort" deliberately: Pathao's issue-token error response shape has never been confirmed
+ * against official documentation (no error-case screenshot has ever been supplied for this
+ * endpoint), so this is pattern-matching on whatever text actually comes back, not a verified
+ * contract. Treat it as a hint for a human to investigate, not a certainty.
+ */
+export type PathaoAuthFailureCategory = "invalid_client" | "invalid_credentials" | "missing_or_invalid_field" | "malformed_request" | "network_error" | "unrecognized";
+
+export interface SanitizedPathaoAuthError {
+  httpStatus: number | null;
+  /** Extracted from a small allowlist of top-level fields (message/error/error_description/type) — never the raw response body. */
+  pathaoMessage: string | null;
+  pathaoErrorCode: string | null;
+  /** Field NAMES only (e.g. "username", "client_id") from a validation-errors object, if present — never the associated message text, which could defensively echo a submitted value. */
+  validationFields: string[];
+  category: PathaoAuthFailureCategory;
+}
+
+type TokenGrantResult = TokenGrantSuccess | { ok: false; error: string; details?: SanitizedPathaoAuthError };
+
+/**
+ * Extracts only safe, non-secret fields from a Pathao error response body for diagnostic display.
+ * Defensive against an unconfirmed error shape — reads only a small allowlist of top-level fields
+ * extremely unlikely to ever carry a secret value, and never returns anything else from the body.
+ * Every extracted string is still run through `sanitizeError()` as a final safety net even though
+ * none of these fields should ever contain a credential.
+ */
+function extractSafePathaoErrorFields(body: unknown): { pathaoMessage: string | null; pathaoErrorCode: string | null; validationFields: string[] } {
+  if (typeof body !== "object" || body === null) {
+    return { pathaoMessage: null, pathaoErrorCode: null, validationFields: [] };
+  }
+  const b = body as Record<string, unknown>;
+  const messageCandidate = [b.message, b.error_description, b.error, b.type].find((value) => typeof value === "string") as string | undefined;
+  const codeCandidate = [b.code, b.error].find((value) => typeof value === "string" || typeof value === "number");
+  const validationFields: string[] = [];
+  if (typeof b.errors === "object" && b.errors !== null && !Array.isArray(b.errors)) {
+    validationFields.push(...Object.keys(b.errors as Record<string, unknown>));
+  }
+  return {
+    pathaoMessage: messageCandidate ? sanitizeError(messageCandidate) : null,
+    pathaoErrorCode: codeCandidate !== undefined ? sanitizeError(String(codeCandidate)) : null,
+    validationFields,
+  };
+}
+
+/** Simple keyword-based heuristic over already-sanitized, non-secret fields only — see `PathaoAuthFailureCategory`'s doc comment. */
+function categorizePathaoAuthFailure(httpStatus: number | null, pathaoMessage: string | null, validationFields: string[]): PathaoAuthFailureCategory {
+  if (httpStatus === null) return "network_error";
+  const lowerFields = validationFields.map((field) => field.toLowerCase());
+  const text = (pathaoMessage ?? "").toLowerCase();
+  if (lowerFields.some((field) => field.includes("client")) || text.includes("client")) return "invalid_client";
+  if (lowerFields.some((field) => field.includes("username") || field.includes("password")) || text.includes("password") || text.includes("username") || text.includes("credential") || text.includes("invalid grant") || text.includes("unauthorized")) {
+    return "invalid_credentials";
+  }
+  if (validationFields.length > 0 || text.includes("required") || text.includes("missing")) return "missing_or_invalid_field";
+  if (httpStatus === 400) return "malformed_request";
+  return "unrecognized";
+}
 
 /** Shared response parsing for both grant types — same success shape either way. */
 function parseTokenResponse(body: { token_type?: string; expires_in?: number; access_token?: string; refresh_token?: string }): TokenGrantResult {
@@ -115,12 +175,30 @@ async function requestTokenViaPassword(): Promise<TokenGrantResult> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_id: config.clientId, client_secret: config.clientSecret, grant_type: "password", username: config.username, password: config.password }),
     });
-    if (!response.ok) return { ok: false, error: sanitizeError(`Pathao auth failed: HTTP ${response.status}`) };
+    if (!response.ok) return { ok: false, error: sanitizeError(`Pathao auth failed: HTTP ${response.status}`), details: await buildSanitizedAuthError(response) };
     return parseTokenResponse(await response.json());
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return { ok: false, error: sanitizeError(`Pathao auth request failed: ${message}`) };
+    return { ok: false, error: sanitizeError(`Pathao auth request failed: ${message}`), details: { httpStatus: null, pathaoMessage: null, pathaoErrorCode: null, validationFields: [], category: "network_error" } };
   }
+}
+
+/** Shared by both grant types — reads and sanitizes the error response body, never throws even on a non-JSON body. */
+async function buildSanitizedAuthError(response: Response): Promise<SanitizedPathaoAuthError> {
+  let bodyJson: unknown = null;
+  try {
+    bodyJson = await response.json();
+  } catch {
+    // Non-JSON error body — fields stay null/empty, category falls back to HTTP-status-only logic.
+  }
+  const { pathaoMessage, pathaoErrorCode, validationFields } = extractSafePathaoErrorFields(bodyJson);
+  return {
+    httpStatus: response.status,
+    pathaoMessage,
+    pathaoErrorCode,
+    validationFields,
+    category: categorizePathaoAuthFailure(response.status, pathaoMessage, validationFields),
+  };
 }
 
 /**
@@ -139,11 +217,11 @@ async function requestTokenViaRefresh(refreshToken: string): Promise<TokenGrantR
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ client_id: config.clientId, client_secret: config.clientSecret, grant_type: "refresh_token", refresh_token: refreshToken }),
     });
-    if (!response.ok) return { ok: false, error: sanitizeError(`Pathao token refresh failed: HTTP ${response.status}`) };
+    if (!response.ok) return { ok: false, error: sanitizeError(`Pathao token refresh failed: HTTP ${response.status}`), details: await buildSanitizedAuthError(response) };
     return parseTokenResponse(await response.json());
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    return { ok: false, error: sanitizeError(`Pathao token refresh request failed: ${message}`) };
+    return { ok: false, error: sanitizeError(`Pathao token refresh request failed: ${message}`), details: { httpStatus: null, pathaoMessage: null, pathaoErrorCode: null, validationFields: [], category: "network_error" } };
   }
 }
 
@@ -187,10 +265,10 @@ async function getAccessToken(): Promise<{ ok: true; token: string } | { ok: fal
   return { ok: false, error: passwordResult.error };
 }
 
-/** Sanitized diagnostic result for `checkPathaoAuth()` — never the actual token values, only presence/metadata. */
+/** Sanitized diagnostic result for `checkPathaoAuth()` — never the actual token values, only presence/metadata. `details` (on failure) is the sanitized Pathao error breakdown — see `SanitizedPathaoAuthError`. */
 export type PathaoAuthCheckResult =
   | { ok: true; tokenType: string | null; expiresIn: number | null; hasAccessToken: boolean; hasRefreshToken: boolean }
-  | { ok: false; error: string };
+  | { ok: false; error: string; details?: SanitizedPathaoAuthError };
 
 /** One-shot diagnostic that calls the real password-grant token endpoint and reports only sanitized metadata — used for admin/manual verification, never returns or logs a token value. Replaces the process cache on success, same as `getAccessToken()`. */
 export async function checkPathaoAuth(): Promise<PathaoAuthCheckResult> {
@@ -321,7 +399,7 @@ const KNOWN_PRODUCTION_STORE_ID = 435082;
 export type PathaoProductionConnectionCheck =
   | { outcome: "wrong_env"; resolvedEnv: PathaoEnv }
   | { outcome: "not_configured"; resolvedEnv: PathaoEnv }
-  | { outcome: "auth_failed"; resolvedEnv: PathaoEnv; error: string }
+  | { outcome: "auth_failed"; resolvedEnv: PathaoEnv; error: string; details?: SanitizedPathaoAuthError }
   | { outcome: "stores_failed"; resolvedEnv: PathaoEnv; error: string }
   | {
       outcome: "success";
@@ -361,7 +439,7 @@ export async function checkPathaoProductionConnection(): Promise<PathaoProductio
 
   const authResult = await checkPathaoAuth();
   if (!authResult.ok) {
-    return { outcome: "auth_failed", resolvedEnv, error: authResult.error };
+    return { outcome: "auth_failed", resolvedEnv, error: authResult.error, details: authResult.details };
   }
 
   const storesResult = await checkPathaoStores();

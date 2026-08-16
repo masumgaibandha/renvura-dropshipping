@@ -3,6 +3,16 @@
 import { useState, useTransition } from "react";
 
 import { adminCheckPathaoProductionConnection, type AdminPathaoProductionConnectionResult } from "@/actions/admin/courier";
+import type { PathaoAuthFailureCategory } from "@/lib/courier/providers/pathao";
+
+const CATEGORY_LABELS: Record<PathaoAuthFailureCategory, string> = {
+  invalid_client: "Invalid client (client_id/client_secret likely wrong)",
+  invalid_credentials: "Invalid username/password",
+  missing_or_invalid_field: "Missing or invalid required field",
+  malformed_request: "Malformed request",
+  network_error: "Network/connection error (no HTTP response received)",
+  unrecognized: "Unrecognized — see Pathao message above",
+};
 
 /**
  * Admin-only, read-only Pathao production connectivity check (Phase 17) — `/admin/settings/delivery`
@@ -73,10 +83,24 @@ function ResultBody({ result }: { result: AdminPathaoProductionConnectionResult 
   }
 
   if (result.outcome === "auth_failed") {
+    const d = result.details;
     return (
       <div className="text-red-700">
         <p className="font-semibold">Authentication failed.</p>
         <p className="mt-1 text-xs">{result.error}</p>
+        {d && (
+          <dl className="mt-2 flex flex-col gap-1 text-xs text-red-800">
+            <Row label="HTTP status" value={d.httpStatus !== null ? String(d.httpStatus) : "—"} />
+            <Row label="Pathao message" value={d.pathaoMessage ?? "—"} />
+            <Row label="Pathao error code" value={d.pathaoErrorCode ?? "—"} />
+            <Row label="Validation fields" value={d.validationFields.length > 0 ? d.validationFields.join(", ") : "—"} />
+            <Row label="Best-effort category" value={CATEGORY_LABELS[d.category]} />
+          </dl>
+        )}
+        <p className="mt-2 text-[11px] italic text-red-700/70">
+          Category is a best-effort read of Pathao&apos;s own response text — not an officially confirmed error vocabulary. No
+          submitted credential value is ever included here.
+        </p>
       </div>
     );
   }
@@ -133,6 +157,15 @@ function ResultBody({ result }: { result: AdminPathaoProductionConnectionResult 
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <dt className="opacity-80">{label}</dt>
+      <dd className="text-right font-medium">{value}</dd>
     </div>
   );
 }
