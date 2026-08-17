@@ -53,6 +53,22 @@
 
   /* Soft, premium card shadow, exposed as the `shadow-card` utility below. */
   --card-shadow: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 24px -16px rgba(17, 24, 39, 0.18);
+  /* Elevated hover state for interactive cards (ProductCard, category tiles) — one step up from
+   * --card-shadow, never used as the resting state. */
+  --card-shadow-hover: 0 4px 8px rgba(17, 24, 39, 0.06), 0 20px 32px -16px rgba(17, 24, 39, 0.22);
+
+  /*
+   * Phase 24 redesign: the primary interactive/surface color moves from the Phase 3 indigo
+   * (#5046e5) to Renvura's own brand navy — every button/link/focus-ring/tab in the storefront
+   * reads off this one token (plus HeroUI's own color-mix()-derived --accent-soft/--accent-hover/
+   * --focus, see node_modules/@heroui/styles), so retheming it here is what removes purple from
+   * the whole site in one place rather than per-component patches. Gold is exposed separately
+   * (--color-accent-gold below) as the one secondary premium accent — badges, dividers, small
+   * highlight touches — never the dominant CTA color.
+   */
+  --accent: var(--brand-navy);
+  --accent-foreground: #ffffff;
+  --accent-hover: #0b1c2f;
 }
 
 .dark {
@@ -61,11 +77,11 @@
 
   --background-secondary: var(--storefront-ink-secondary);
 
-  /* Indigo has enough contrast on the new dark ink background, so unlike the old navy/gold
-   * scheme, the accent doesn't need to swap between themes. */
-  --accent: #5046e5;
+  /* Same navy accent as light mode — navy already has strong contrast on the dark ink
+   * background, so unlike the old indigo scheme there's no need to swap it per theme. */
+  --accent: var(--brand-navy);
   --accent-foreground: #ffffff;
-  --accent-hover: #4338ca;
+  --accent-hover: #0b1c2f;
 
   --border: color-mix(in oklab, #f8fafc 16%, transparent);
 }
@@ -81,6 +97,13 @@
   --color-secondary-text: var(--secondary-text);
   --color-surface-soft: var(--surface-soft);
   --color-surface-warm: var(--surface-warm);
+  /* Secondary premium accent (gold) — small restrained highlights (dividers, active-tab
+   * underline, icon touches) only, never a button/link/CTA background. See CLAUDE.md's
+   * "Branding rules" — gold/navy are secondary accents, the interface should stay
+   * commerce-focused, not jewelry/luxury pastiche. */
+  --color-accent-gold: var(--brand-gold);
+
+  --shadow-card-hover: var(--card-shadow-hover);
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);

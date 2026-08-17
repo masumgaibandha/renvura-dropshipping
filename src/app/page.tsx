@@ -6,6 +6,10 @@ import { CategoryHighlights } from "@/components/home/CategoryHighlights";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { FeaturedProductsRow } from "@/components/home/FeaturedProductsRow";
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { HeroTrustStrip } from "@/components/home/HeroTrustStrip";
+import { NewArrivals } from "@/components/home/NewArrivals";
+import { PromoBanner } from "@/components/home/PromoBanner";
+import { ShopByCategory } from "@/components/home/ShopByCategory";
 import { WhyShopWithRenvura } from "@/components/home/WhyShopWithRenvura";
 import { Section } from "@/components/layout/Section";
 import { brand } from "@/config/brand";
@@ -61,6 +65,17 @@ export default async function Home() {
   const promoCategory = allCategories.find((category) => category.slug === "health-beauty") ?? topCategories[0];
   const categoryLabels = Object.fromEntries(allCategories.map((category) => [category.slug, category.name]));
 
+  // "New Arrivals" — genuinely sorted by the real `createdAt` timestamp (see NewArrivals.tsx's doc
+  // comment), never a fabricated "new" flag. Excludes whatever's already shown in Featured Picks
+  // immediately above it so the two sections don't just repeat each other.
+  const NEW_ARRIVALS_COUNT = 10;
+  const featuredIds = new Set(featuredProducts.map((product) => product.id));
+  const newArrivalsSource = activeProducts
+    .filter((product) => product.createdAt && !featuredIds.has(product.id))
+    .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+    .slice(0, NEW_ARRIVALS_COUNT);
+  const newArrivals = newArrivalsSource.map(toPublicProduct);
+
   return (
     <>
       {/* The visible hero is a single campaign image with no real DOM text (see HeroBanner.tsx's
@@ -72,25 +87,48 @@ export default async function Home() {
         <HeroBanner />
       </Section>
 
-      <Section>
+      <Section className="py-6 sm:py-8">
+        <HeroTrustStrip />
+      </Section>
+
+      {topCategories.length > 0 && (
+        <Section className="pt-0!">
+          <ShopByCategory categories={topCategories} products={popularProducts} />
+        </Section>
+      )}
+
+      <Section className="bg-background-secondary">
         <CategoryTabs products={popularProducts} categories={topCategories} categoryLabels={categoryLabels} />
         <div className="mt-10 text-center">
           <Link
             href="/shop"
-            className="inline-flex h-11 items-center rounded-full bg-accent px-6 text-small font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+            className="inline-flex h-12 items-center rounded-full bg-accent px-7 text-small font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
           >
             View All Products
           </Link>
         </div>
       </Section>
 
+      <Section className="py-6 sm:py-8">
+        <PromoBanner />
+      </Section>
+
       {promoCategory && featuredProducts.length > 0 && (
-        <Section className="bg-background-secondary">
+        <Section>
           <FeaturedProductsRow products={featuredProducts} promoCategory={promoCategory} categoryLabels={categoryLabels} />
         </Section>
       )}
 
+      {newArrivals.length > 0 && (
+        <Section className="bg-background-secondary">
+          <NewArrivals products={newArrivals} categoryLabels={categoryLabels} />
+        </Section>
+      )}
+
       <Section>
+        <div className="mb-8 text-center">
+          <h2 className="text-h2 text-foreground">Explore Our Categories</h2>
+        </div>
         <CategoryHighlights categories={topCategories} products={popularProducts} />
       </Section>
 

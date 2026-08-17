@@ -28,14 +28,16 @@ export function WhyShopWithRenvura() {
   return (
     <div>
       <h2 className="text-h2 text-center text-foreground">Why Shop With Renvura</h2>
-      <div className="mt-8 grid grid-cols-2 gap-6 lg:grid-cols-4">
+      <div className="mt-10 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
         {trustItems.map(({ Icon, label, description }) => (
-          <div key={label} className="flex flex-col items-center gap-2 text-center">
-            <span className="inline-flex size-11 items-center justify-center rounded-full bg-accent-soft text-accent">
-              <Icon className="size-5" />
+          <div key={label} className="flex flex-col items-center gap-3 text-center">
+            <span className="inline-flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <Icon className="size-6" />
             </span>
-            <p className="text-small font-medium text-foreground">{label}</p>
-            <p className="text-small text-foreground/70">{description}</p>
+            <div>
+              <p className="text-body font-semibold text-foreground">{label}</p>
+              <p className="mt-1 text-small text-foreground/70">{description}</p>
+            </div>
           </div>
         ))}
       </div>

@@ -85,17 +85,20 @@ export function MobileDrawer() {
               </nav>
             </Drawer.Body>
 
-            <Drawer.Footer className="border-t border-border px-2 py-3">
+            <Drawer.Footer className="border-t border-border bg-surface-soft px-2 py-3">
               <div className="flex items-center justify-around">
-                <IconLinkButton href="/wishlist" aria-label="Wishlist" className="relative">
+                <IconLinkButton href="/wishlist" aria-label="Wishlist" className="relative h-12 min-w-12 flex-col gap-1 text-xs">
                   <IconHeart className="size-5" />
+                  Wishlist
                   <WishlistCountBadge />
                 </IconLinkButton>
-                <IconLinkButton href={session ? "/account" : "/login"} aria-label="Account">
+                <IconLinkButton href={session ? "/account" : "/login"} aria-label="Account" className="h-12 min-w-12 flex-col gap-1 text-xs">
                   <IconUser className="size-5" />
+                  Account
                 </IconLinkButton>
-                <IconLinkButton href="/cart" aria-label="Cart" className="relative">
+                <IconLinkButton href="/cart" aria-label="Cart" className="relative h-12 min-w-12 flex-col gap-1 text-xs">
                   <IconBag className="size-5" />
+                  Cart
                   <CartCountBadge />
                 </IconLinkButton>
               </div>

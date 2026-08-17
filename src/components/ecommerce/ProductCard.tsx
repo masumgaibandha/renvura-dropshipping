@@ -45,7 +45,9 @@ export function ProductCard({ product, categoryLabel, className }: ProductCardPr
       : null;
 
   return (
-    <article className={`group flex flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-card md:rounded-2xl ${className ?? ""}`}>
+    <article
+      className={`group flex flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card transition-shadow duration-300 hover:shadow-card-hover ${className ?? ""}`}
+    >
       <div className="relative aspect-square bg-surface-soft">
         {image ? (
           <Link href={productHref} tabIndex={-1} aria-hidden="true" className="block size-full">
@@ -53,15 +55,15 @@ export function ProductCard({ product, categoryLabel, className }: ProductCardPr
               src={image}
               alt={product.title}
               fill
-              sizes="(min-width: 1280px) 20vw, (min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+              sizes="(min-width: 1280px) 23vw, (min-width: 1024px) 30vw, (min-width: 640px) 45vw, 50vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.04]"
             />
           </Link>
         ) : (
           <div className="flex size-full items-center justify-center text-small text-foreground/70">No image</div>
         )}
 
-        <div className="absolute top-2 left-2 flex flex-col items-start gap-1">
+        <div className="absolute top-2.5 left-2.5 flex flex-col items-start gap-1.5 md:top-3 md:left-3">
           <SaleBadge discountPercentage={discountPercentage} />
           {inventory.status === "out_of_stock" && <StockBadge status="out_of_stock" />}
         </div>
@@ -71,20 +73,20 @@ export function ProductCard({ product, categoryLabel, className }: ProductCardPr
           title={product.title}
           price={pricing.sellingPrice}
           category={product.subcategory ?? product.category}
-          className="absolute top-2 right-2 bg-surface/85 backdrop-blur"
+          className="absolute top-2.5 right-2.5 size-9 bg-surface/90 text-foreground/70 shadow-sm backdrop-blur hover:text-accent md:top-3 md:right-3"
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-2 md:gap-1.5 md:p-3">
-        {categoryLabel && <p className="hidden text-label text-foreground/70 uppercase md:block">{categoryLabel}</p>}
+      <div className="flex flex-1 flex-col gap-1.5 p-3 md:gap-2 md:p-4">
+        {categoryLabel && <p className="text-label text-accent/80 uppercase">{categoryLabel}</p>}
 
-        <h3 className="line-clamp-2 text-xs leading-snug font-medium md:min-h-10 md:text-small md:leading-normal">
+        <h3 className="line-clamp-2 min-h-9 text-small leading-snug font-medium text-foreground md:min-h-11 md:text-base">
           <Link href={productHref} className="hover:text-accent">
             {product.title}
           </Link>
         </h3>
 
-        <div className="mt-auto flex flex-col gap-1 pt-0.5 md:gap-2 md:pt-1">
+        <div className="mt-auto flex flex-col gap-2 pt-1 md:gap-3 md:pt-1.5">
           <Price sellingPrice={pricing.sellingPrice} regularPrice={pricing.regularPrice} size="sm" showDiscountBadge={false} />
 
           <AddToCartButton
@@ -99,7 +101,7 @@ export function ProductCard({ product, categoryLabel, className }: ProductCardPr
             disabled={!canPurchase}
             label="Add to Cart"
             ariaLabel={`Add ${product.title} to cart`}
-            className="text-xs md:text-small"
+            className="text-small font-semibold md:text-base"
           />
         </div>
       </div>

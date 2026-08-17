@@ -32,13 +32,16 @@ export function FeaturedProductsRow({ products, promoCategory, categoryLabels }:
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
-        <h2 className="text-h2">Featured Picks</h2>
-        <div className="flex gap-2">
+        <div>
+          <h2 className="text-h2 text-foreground">Featured Picks</h2>
+          <p className="mt-1 text-small text-foreground/70">Hand-picked from across the catalog.</p>
+        </div>
+        <div className="hidden gap-2 sm:flex">
           <button
             type="button"
             aria-label="Scroll left"
             onClick={() => scrollBy(-1)}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:text-accent"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-accent hover:text-accent"
           >
             <IconArrowLeft className="size-4" />
           </button>
@@ -46,24 +49,33 @@ export function FeaturedProductsRow({ products, promoCategory, categoryLabels }:
             type="button"
             aria-label="Scroll right"
             onClick={() => scrollBy(1)}
-            className="inline-flex size-9 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:text-accent"
+            className="inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground/70 transition-colors hover:border-accent hover:text-accent"
           >
             <IconArrowRight className="size-4" />
           </button>
         </div>
       </div>
 
-      <div ref={scrollerRef} className="flex items-stretch gap-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/*
+        Mobile: one large card at a time (~85vw, matching ProductGrid's mobileCarousel width)
+        bleeding to the screen edge (negative margin cancels Container's own px-4 gutter) so a
+        deliberate peek of the next card shows past the viewport edge. sm:+ reverts to the
+        original smaller multi-card strip.
+      */}
+      <div
+        ref={scrollerRef}
+        className="-mx-4 flex snap-x snap-mandatory items-stretch gap-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+      >
         <Link
           href={`/shop?category=${promoCategory.slug}`}
-          className="flex w-56 shrink-0 flex-col justify-end rounded-2xl border border-border bg-surface-warm p-5 text-foreground shadow-card transition-colors hover:border-accent sm:w-64"
+          className="flex w-[85vw] max-w-sm shrink-0 snap-center flex-col justify-end rounded-2xl border border-border bg-surface-warm p-6 text-foreground shadow-card transition-colors hover:border-accent sm:w-60"
         >
           <span className="text-label text-accent uppercase">Shop the category</span>
-          <span className="text-h3 mt-1">{promoCategory.name}</span>
+          <span className="text-h3 mt-1.5">{promoCategory.name}</span>
         </Link>
 
         {products.map((product) => (
-          <div key={product.id} className="w-44 shrink-0 sm:w-52">
+          <div key={product.id} className="w-[85vw] max-w-sm shrink-0 snap-center sm:w-60">
             <ProductCard product={product} categoryLabel={categoryLabels?.[product.subcategory ?? product.category]} />
           </div>
         ))}

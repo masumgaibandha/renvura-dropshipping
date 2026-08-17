@@ -17,7 +17,7 @@ const labelClass = "text-small font-medium text-foreground";
 /** Full name, mobile number (validated/normalized server-side), optional email — never required. */
 export function CustomerInfoSection({ value, onChange, errors }: CustomerInfoSectionProps) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="rounded-2xl border border-border bg-surface p-6">
       <h2 className="text-h3 text-foreground">Customer Information</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-1.5 sm:col-span-2">

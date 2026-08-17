@@ -46,7 +46,7 @@ export function SortSelect({ currentSort, availableSorts, className }: SortSelec
       aria-label="Sort products"
       value={currentSort}
       onChange={handleChange}
-      className={`h-10 rounded-full border border-border bg-surface px-4 text-small text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${className ?? ""}`}
+      className={`h-10 rounded-full border border-border bg-surface px-4 text-small font-medium text-foreground transition-colors hover:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus ${className ?? ""}`}
     >
       {availableSorts.map((option) => (
         <option key={option} value={option}>

@@ -25,14 +25,14 @@ export function OrderSummary({ items, subtotal, district, deliveryFees }: OrderS
   const total = deliveryFee !== null ? subtotal + deliveryFee : null;
 
   return (
-    <div className="h-fit rounded-2xl border border-border bg-surface-soft p-5">
+    <div className="h-fit rounded-2xl border border-border bg-surface-soft p-6 lg:sticky lg:top-24">
       <h2 className="text-h3 text-foreground">Order Summary</h2>
 
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="mt-4 flex flex-col gap-3.5">
         {items.map((item) => (
           <li key={item.productId} className="flex items-center gap-3">
-            <div className="relative size-14 shrink-0 overflow-hidden rounded-lg border border-border bg-surface">
-              {item.image ? <Image src={item.image} alt={item.title} fill sizes="56px" className="object-contain" /> : null}
+            <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-border bg-surface">
+              {item.image ? <Image src={item.image} alt={item.title} fill sizes="64px" className="object-contain" /> : null}
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-small font-medium text-foreground">{item.title}</p>
@@ -43,7 +43,7 @@ export function OrderSummary({ items, subtotal, district, deliveryFees }: OrderS
         ))}
       </ul>
 
-      <dl className="mt-4 space-y-2 border-t border-border pt-4 text-small">
+      <dl className="mt-5 space-y-2.5 border-t border-border pt-4 text-small">
         <div className="flex justify-between text-foreground/70">
           <dt>Subtotal</dt>
           <dd className="tabular-nums text-foreground">{formatBDT(subtotal)}</dd>
@@ -54,7 +54,7 @@ export function OrderSummary({ items, subtotal, district, deliveryFees }: OrderS
         </div>
       </dl>
 
-      <div className="mt-3 flex justify-between border-t border-border pt-3 text-body font-semibold text-foreground">
+      <div className="mt-4 flex justify-between border-t border-border pt-4 text-h3 font-semibold text-foreground">
         <span>Total</span>
         <span className="tabular-nums">{total !== null ? formatBDT(total) : "—"}</span>
       </div>

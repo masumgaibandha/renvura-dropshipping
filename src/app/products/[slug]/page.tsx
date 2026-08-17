@@ -116,7 +116,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
       {related.length > 0 && (
         <div className="mt-12">
           <h2 className="text-h2 mb-6">Related Products</h2>
-          <ProductGrid products={related} categoryLabels={categoryLabels} />
+          <ProductGrid products={related} categoryLabels={categoryLabels} mobileCarousel />
         </div>
       )}
     </Container>

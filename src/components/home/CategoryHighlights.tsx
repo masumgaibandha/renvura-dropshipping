@@ -78,24 +78,27 @@ export function CategoryHighlights({ categories, products }: CategoryHighlightsP
   if (cards.length === 0) return null;
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {cards.map(({ category, highlight }) => (
-        <div key={category.slug} className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
-          <div className="relative aspect-[16/10]">
+        <div
+          key={category.slug}
+          className="group overflow-hidden rounded-2xl border border-border bg-surface shadow-card transition-shadow hover:shadow-card-hover"
+        >
+          <div className="relative aspect-[16/9]">
             <Image
               src={highlight.image}
               alt={highlight.imageAlt}
               fill
-              sizes="(min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             />
           </div>
-          <div className="p-6">
+          <div className="p-5">
             <h3 className="text-h3 text-foreground">{category.name}</h3>
-            <p className="mt-2 text-small text-foreground/70">{highlight.description}</p>
+            <p className="mt-1.5 text-small text-foreground/70">{highlight.description}</p>
             <Link
               href={`/shop?category=${category.slug}`}
-              className="mt-4 inline-flex h-10 items-center rounded-full bg-accent px-5 text-small font-medium text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
+              className="mt-4 inline-flex h-10 items-center rounded-full bg-accent px-5 text-small font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus"
             >
               {highlight.ctaLabel}
             </Link>

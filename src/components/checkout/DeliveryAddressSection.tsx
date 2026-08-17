@@ -22,7 +22,7 @@ interface DeliveryAddressSectionProps {
  */
 export function DeliveryAddressSection({ value, onChange, errors }: DeliveryAddressSectionProps) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="rounded-2xl border border-border bg-surface p-6">
       <h2 className="text-h3 text-foreground">Delivery Address</h2>
       <div className="mt-4">
         <BangladeshAddressFields value={value} onChange={onChange} errors={errors} />

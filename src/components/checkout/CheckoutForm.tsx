@@ -148,8 +148,24 @@ export function CheckoutForm({ initialCustomer, savedAddresses = [], deliveryFee
 
   return (
     <form onSubmit={handleSubmit} noValidate className="mt-6">
+      {/*
+        IMPORTANT: `min-w-0` on both direct grid children is required, not optional decoration.
+        CSS Grid items default to `min-width: auto` — their minimum size is computed from their
+        content's own min-content width, walking the *entire* subtree, and this is a genuinely
+        different mechanism from flexbox's identical-sounding gotcha: a `min-w-0` deep inside a
+        nested flex row (like `OrderSummary`'s `<div className="min-w-0 flex-1">` around each
+        item's truncated title) only fixes sizing *within that flex context* — it does not stop
+        the outer CSS Grid item from still reporting that same nowrap/truncated text's full
+        un-wrapped width as its own min-content contribution. Below the `lg:` breakpoint (where
+        `grid-template-columns` isn't set), the grid falls back to a single implicit auto-sized
+        column holding both children — without `min-w-0` here, that column (and the whole page)
+        was measured ballooning to ~900px+ at narrow widths because of `OrderSummary`'s truncated
+        item titles, even though every relevant descendant already had `min-w-0`/`truncate`
+        correctly applied. Root-caused via runtime DOM measurement (an injected same-origin
+        iframe at real narrow widths); confirmed fixed the same way — do not remove.
+      */}
       <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="flex flex-col gap-6">
+        <div className="min-w-0 flex flex-col gap-6">
           <CustomerInfoSection
             value={customer}
             onChange={setCustomer}
@@ -196,11 +212,11 @@ export function CheckoutForm({ initialCustomer, savedAddresses = [], deliveryFee
           />
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="min-w-0 flex flex-col gap-4">
           <OrderSummary items={items} subtotal={subtotal} district={address.district} deliveryFees={deliveryFees} />
 
           {formError && (
-            <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-small text-red-700">
+            <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-small text-red-700">
               {formError}
             </p>
           )}
@@ -208,10 +224,11 @@ export function CheckoutForm({ initialCustomer, savedAddresses = [], deliveryFee
           <button
             type="submit"
             disabled={isPending}
-            className="flex h-12 w-full items-center justify-center rounded-full bg-accent text-small font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-13 w-full items-center justify-center rounded-full bg-accent text-body font-semibold text-white shadow-sm transition-colors hover:bg-accent-hover hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Placing Order…" : "Place Order"}
           </button>
+          <p className="-mt-2 text-center text-xs text-foreground/60">Cash on Delivery available — pay when your order arrives.</p>
         </div>
       </div>
     </form>

@@ -14,7 +14,7 @@ interface SavedAddressSelectorProps {
 /** Shown instead of `DeliveryAddressSection` when a logged-in customer has saved addresses — never forces address saving, "Enter a new address" always falls back to the manual form. */
 export function SavedAddressSelector({ addresses, selectedId, onSelect, onUseNewAddress }: SavedAddressSelectorProps) {
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="rounded-2xl border border-border bg-surface p-6">
       <h2 className="text-h3 text-foreground">Delivery Address</h2>
       <div className="mt-4 flex flex-col gap-2">
         {addresses.map((address) => (

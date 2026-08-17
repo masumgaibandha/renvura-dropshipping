@@ -98,19 +98,19 @@ export async function ProductListingPage({ categorySlug, title, description, sea
       <Breadcrumbs items={breadcrumbItems} className="mb-2 md:mb-4" />
 
       <h1 className="text-h1 text-foreground">{title}</h1>
-      <p className="mt-1 max-w-2xl text-body text-foreground/70 md:mt-2">{description}</p>
-      <p className="mt-1.5 text-small text-foreground/70 md:mt-3">
+      <p className="mt-1.5 max-w-2xl text-body text-foreground/70 md:mt-2">{description}</p>
+      <p className="mt-2 text-small font-medium text-foreground/70">
         {listing.total} {listing.total === 1 ? "product" : "products"}
       </p>
 
-      <div className="mt-4 flex items-center justify-between gap-4 border-y border-border py-2 md:mt-6 md:py-3">
+      <div className="mt-4 flex items-center justify-between gap-4 border-y border-border py-3 md:mt-6 md:py-4">
         <div className="hidden md:flex">{filterControls}</div>
         <div className="md:hidden">
           <MobileFilterDrawer>{filterControls}</MobileFilterDrawer>
         </div>
       </div>
 
-      <div className="mt-4 md:mt-8">
+      <div className="mt-5 md:mt-8">
         {listing.products.length > 0 ? (
           <ProductGrid products={listing.products.map(toPublicProduct)} categoryLabels={categoryLabels} />
         ) : (
@@ -162,7 +162,9 @@ function CategoryPill({ href, label, active }: { href: string; label: string; ac
       href={href}
       aria-current={active ? "true" : undefined}
       className={`inline-flex h-10 items-center rounded-full px-4 text-small font-medium transition-colors ${
-        active ? "bg-accent text-white" : "border border-border bg-surface text-foreground hover:border-accent"
+        active
+          ? "bg-accent text-white shadow-sm"
+          : "border border-border bg-surface text-foreground hover:border-accent hover:text-accent"
       }`}
     >
       {label}

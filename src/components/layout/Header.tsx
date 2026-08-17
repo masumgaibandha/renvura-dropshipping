@@ -18,21 +18,26 @@ import { MobileDrawer, MobileMenuTrigger, MobileNavProvider, MobileSearchTrigger
  * SecondaryNav.tsx. Mobile shows a hamburger + search trigger that open
  * the shared drawer in MobileNav.tsx. See docs/DESIGN-SYSTEM.md for the
  * header rules (logo variant choice, sticky behavior, icon set).
+ *
+ * Phase 24 redesign: taller/more premium proportions (h-16→h-20 desktop),
+ * a subtle shadow instead of relying on the border alone for depth, and a
+ * bordered/elevated search field so it reads as the header's dominant
+ * element rather than blending into the row.
  */
 export function Header() {
   return (
     <MobileNavProvider>
-      <header className="sticky top-0 z-40 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <header className="sticky top-0 z-40 border-b border-border bg-white/95 shadow-[0_1px_0_rgba(17,24,39,0.04)] backdrop-blur supports-[backdrop-filter]:bg-white/85">
         <Container>
-          <div className="flex h-16 items-center gap-3 md:h-18 md:gap-6">
+          <div className="flex h-16 items-center gap-3 md:h-20 md:gap-8">
             <MobileMenuTrigger className="lg:hidden" />
 
             <Link href="/" aria-label={`${brand.name} home`} className="shrink-0">
-              <Image src={brand.assets.logo.light} alt={brand.name} width={150} height={45} priority className="h-8 w-auto md:h-10" />
+              <Image src={brand.assets.logo.light} alt={brand.name} width={150} height={45} priority className="h-8 w-auto md:h-11" />
             </Link>
 
             <div className="hidden flex-1 md:block md:max-w-2xl">
-              <SearchBar />
+              <SearchBar className="[&_[data-slot=search-field-group]]:h-11 [&_[data-slot=search-field-group]]:rounded-full [&_[data-slot=search-field-group]]:border-border [&_[data-slot=search-field-group]]:bg-surface-soft [&_[data-slot=search-field-group]]:shadow-none" />
             </div>
 
             <div className="ml-auto flex items-center gap-1 md:gap-2">

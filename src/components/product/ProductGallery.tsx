@@ -33,12 +33,12 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
 
   return (
     <div>
-      <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-soft">
+      <div className="relative aspect-square overflow-hidden rounded-2xl border border-border bg-surface-soft shadow-card">
         <Image src={activeImage} alt={title} fill priority sizes="(min-width: 1024px) 45vw, 100vw" className="object-contain" />
       </div>
 
       {hasMultipleImages && (
-        <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Product images">
+        <div className="mt-4 flex gap-2.5 overflow-x-auto pb-1" role="group" aria-label="Product images">
           {images.map((image, index) => (
             <button
               key={image}
@@ -46,8 +46,8 @@ export function ProductGallery({ images, title }: ProductGalleryProps) {
               onClick={() => setActiveIndex(index)}
               aria-label={`View image ${index + 1} of ${images.length} for ${title}`}
               aria-current={index === activeIndex}
-              className={`relative size-16 shrink-0 overflow-hidden rounded-lg border bg-surface-soft transition-colors md:size-20 ${
-                index === activeIndex ? "border-accent" : "border-border hover:border-accent"
+              className={`relative size-16 shrink-0 overflow-hidden rounded-xl border-2 bg-surface-soft transition-colors md:size-20 ${
+                index === activeIndex ? "border-accent" : "border-border hover:border-accent/50"
               }`}
             >
               <Image src={image} alt="" fill sizes="80px" className="object-contain" />

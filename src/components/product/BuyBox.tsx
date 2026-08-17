@@ -104,14 +104,34 @@ export function BuyBox({ product, categoryLabel, className }: BuyBoxProps) {
         <QuantitySelector value={quantity} onChange={setQuantity} max={inventory.stock} />
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-        <Button variant="outline" size="lg" fullWidth isDisabled={!canPurchase} aria-label={`Add ${product.title} to cart`} onPress={handleAddToCart}>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <Button
+          variant="outline"
+          size="lg"
+          fullWidth
+          isDisabled={!canPurchase}
+          aria-label={`Add ${product.title} to cart`}
+          onPress={handleAddToCart}
+          className="h-13 rounded-full border-2 font-semibold"
+        >
           Add to Cart
         </Button>
-        <Button variant="primary" size="lg" fullWidth isDisabled={!canPurchase} aria-label={`Buy ${product.title} now`} onPress={handleBuyNow}>
+        <Button
+          variant="primary"
+          size="lg"
+          fullWidth
+          isDisabled={!canPurchase}
+          aria-label={`Buy ${product.title} now`}
+          onPress={handleBuyNow}
+          className="h-13 rounded-full font-semibold shadow-sm hover:shadow-md"
+        >
           Buy Now
         </Button>
       </div>
+
+      {canPurchase && (
+        <p className="mt-3 text-xs text-foreground/60">Cash on Delivery available — pay when your order arrives.</p>
+      )}
     </div>
   );
 }

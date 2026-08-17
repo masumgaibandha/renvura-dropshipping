@@ -18,10 +18,12 @@ const items = [
  */
 export function DeliveryPaymentInfo({ className }: DeliveryPaymentInfoProps) {
   return (
-    <div className={`space-y-3 rounded-2xl border border-border bg-surface-soft p-4 ${className ?? ""}`}>
+    <div className={`space-y-4 rounded-2xl border border-border bg-surface-soft p-5 ${className ?? ""}`}>
       {items.map(({ Icon, label, description }) => (
         <div key={label} className="flex items-start gap-3">
-          <Icon className="mt-0.5 size-4 shrink-0 text-accent" />
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Icon className="size-4" />
+          </span>
           <div>
             <p className="text-small font-medium text-foreground">{label}</p>
             <p className="text-xs text-foreground/70">{description}</p>

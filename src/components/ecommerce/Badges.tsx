@@ -1,4 +1,5 @@
 import { Chip } from "@heroui/react";
+import { clsx } from "clsx";
 
 import type { InventoryStatus } from "@/types/product";
 
@@ -24,7 +25,7 @@ export function StockBadge({ status, className }: StockBadgeProps) {
 
   if (status === "out_of_stock") {
     return (
-      <Chip color="danger" variant="soft" size="sm" className={className}>
+      <Chip color="danger" variant="soft" size="sm" className={clsx("font-semibold", className)}>
         Out of Stock
       </Chip>
     );
@@ -45,7 +46,7 @@ export function SaleBadge({ discountPercentage, className }: SaleBadgeProps) {
   }
 
   return (
-    <Chip color="warning" variant="primary" size="sm" className={className}>
+    <Chip color="warning" variant="primary" size="sm" className={clsx("font-bold shadow-sm", className)}>
       -{Math.round(discountPercentage)}%
     </Chip>
   );

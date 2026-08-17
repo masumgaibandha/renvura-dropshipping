@@ -30,7 +30,7 @@ export function HeroBanner() {
       href="/shop"
       aria-label="Shop Renvura products"
       style={{ aspectRatio: "3 / 1" }}
-      className="relative block w-full overflow-hidden rounded-2xl bg-background"
+      className="relative block w-full overflow-hidden rounded-2xl bg-background shadow-card"
     >
       <Image
         src="/images/home/hero.png"

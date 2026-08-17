@@ -1,7 +1,9 @@
 "use client";
 
 import { Button } from "@heroui/react";
+import { clsx } from "clsx";
 
+import { IconBag } from "@/components/ui/icons";
 import { useCart } from "@/contexts/CartContext";
 import { trackGaAddToCart } from "@/lib/analytics/ga4-client";
 import { trackMetaAddToCart } from "@/lib/analytics/meta-client";
@@ -39,7 +41,16 @@ export function AddToCartButton({ item, disabled, quantity = 1, label, ariaLabel
   }
 
   return (
-    <Button variant="primary" size="sm" fullWidth isDisabled={disabled} className={className} aria-label={ariaLabel} onPress={handleAdd}>
+    <Button
+      variant="primary"
+      size="md"
+      fullWidth
+      isDisabled={disabled}
+      className={clsx("gap-1.5 rounded-full font-semibold shadow-sm transition-shadow hover:shadow-md", className)}
+      aria-label={ariaLabel}
+      onPress={handleAdd}
+    >
+      <IconBag className="size-4 shrink-0" />
       {label}
     </Button>
   );

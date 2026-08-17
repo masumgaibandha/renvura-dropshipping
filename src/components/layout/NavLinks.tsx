@@ -26,9 +26,13 @@ function isGroupActive(pathname: string, item: NavItem) {
 
 const linkClass = (isVertical: boolean, active: boolean) =>
   clsx(
-    "rounded-sm text-small font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
+    "relative rounded-sm py-1 text-small font-medium transition-colors hover:text-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus",
     isVertical && "block px-3 py-2",
     active ? "text-accent" : "text-foreground/70",
+    // Thin underline on the active desktop link — a small ecommerce-standard "you are here"
+    // signal that doesn't rely on color alone. Not applied in the mobile drawer, where the
+    // active state already reads clearly from the vertical list context.
+    !isVertical && active && "after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-accent",
   );
 
 /**
@@ -47,7 +51,7 @@ export function NavLinks({ orientation = "horizontal", onNavigate, className }: 
   const isVertical = orientation === "vertical";
 
   return (
-    <ul className={clsx("flex", isVertical ? "flex-col gap-1" : "items-center gap-6", className)}>
+    <ul className={clsx("flex", isVertical ? "flex-col gap-1" : "items-center gap-4 xl:gap-6", className)}>
       {mainNavItems.map((item) => {
         if (item.children && item.children.length > 0) {
           const active = isGroupActive(pathname, item);

@@ -26,7 +26,7 @@ export function PaymentMethodSection({ method, transactionId, onMethodChange, on
   const manualConfig = isManual ? manualPaymentMethods[method] : null;
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="rounded-2xl border border-border bg-surface p-6">
       <h2 className="text-h3 text-foreground">Payment Method</h2>
 
       <div className="mt-4 flex flex-col gap-2">
