@@ -1,11 +1,9 @@
+import { clsx } from "clsx";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 
-import { brand, isConfigured } from "@/config/brand";
-import { IconFacebook, IconInstagram, IconTiktok, IconYoutube } from "@/components/ui/icons";
+import { brand } from "@/config/brand";
 import { Container } from "./Container";
-import { NewsletterSignup } from "./NewsletterSignup";
 
 interface FooterLink {
   label: string;
@@ -16,10 +14,10 @@ function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) 
   return (
     <div>
       <h3 className="text-label text-white/90 uppercase">{title}</h3>
-      <ul className="mt-2.5 space-y-1.5 md:mt-4 md:space-y-2.5">
+      <ul className="mt-4 space-y-2.5">
         {links.map((link) => (
           <li key={link.label}>
-            <Link href={link.href} className="text-xs text-white/70 transition-colors hover:text-white md:text-small">
+            <Link href={link.href} className="text-small text-white/65 transition-colors hover:text-white">
               {link.label}
             </Link>
           </li>
@@ -42,8 +40,8 @@ const shopLinks: FooterLink[] = [
 ];
 
 const informationLinks: FooterLink[] = [
-  { label: "Contact Us", href: "/contact" },
   { label: "About Us", href: "/about" },
+  { label: "Contact Us", href: "/contact" },
   { label: "Order Tracking", href: "/track-order" },
   { label: "FAQ", href: "/faq" },
   { label: "Terms & Conditions", href: "/terms" },
@@ -51,117 +49,60 @@ const informationLinks: FooterLink[] = [
   { label: "Privacy Policy", href: "/privacy-policy" },
 ];
 
-const socialLinks = [
-  { key: "facebook", href: brand.social.facebook, Icon: IconFacebook, label: "Facebook" },
-  { key: "instagram", href: brand.social.instagram, Icon: IconInstagram, label: "Instagram" },
-  { key: "tiktok", href: brand.social.tiktok, Icon: IconTiktok, label: "TikTok" },
-  { key: "youtube", href: brand.social.youtube, Icon: IconYoutube, label: "YouTube" },
-].filter((social) => isConfigured(social.href));
+/** Payment methods actually accepted today — see CLAUDE.md's "Checkout & order rules" for the manual-verification detail this line deliberately doesn't spell out; the bottom bar is not the place for that level of process detail. */
+const paymentMethods = "Cash on Delivery · bKash · Nagad · Rocket";
 
 /**
- * Support email comes from `CONTACT_EMAIL_TO` (server-only env var), same source `/contact`
- * already uses — never `brand.contact.email`, which stays reserved for a future customer-facing
- * value and is currently unconfigured. Phone/WhatsApp only ever come from `brand.contact`, which
- * is `isConfigured()`-gated the same way — nothing here ever renders a literal "TODO" placeholder.
- */
-function getContactItems(): { label: string; href: string }[] {
-  const candidates: ({ label: string; href: string } | null)[] = [
-    isConfigured(brand.contact.phone) ? { label: brand.contact.phone, href: `tel:${brand.contact.phone}` } : null,
-    process.env.CONTACT_EMAIL_TO ? { label: process.env.CONTACT_EMAIL_TO, href: `mailto:${process.env.CONTACT_EMAIL_TO}` } : null,
-  ];
-  return candidates.filter((item): item is { label: string; href: string } => item !== null);
-}
-
-/** Payment methods actually accepted today — see note below about manual processing. */
-const paymentMethods = ["Cash on Delivery", "bKash", "Nagad", "Rocket"];
-
-function Divider(): ReactNode {
-  return <span aria-hidden="true" className="h-1 w-1 rounded-full bg-brand-gold/60" />;
-}
-
-/**
- * Site footer. Deliberately dark — the one place besides the announcement
- * bar that leans into a dark treatment, and the correct background for the
- * dark logo lockup. See docs/DESIGN-SYSTEM.md.
+ * Site footer. Deliberately dark — the one place besides the hero's dark
+ * slides that leans into a dark treatment, and the correct background for
+ * the dark logo lockup. Phase 25 redesign: premium/minimal pass — see
+ * CLAUDE.md's footer-redesign brief. Removed entirely: the non-functional
+ * newsletter form (no subscription backend ever existed behind it — see
+ * git history for `NewsletterSignup.tsx`, deleted), the social icon row
+ * (every `brand.social.*` value is still unconfigured today, so it never
+ * rendered anything anyway — the config itself is untouched, so it can
+ * come back the moment a real account exists), and the payment section's
+ * explanatory sentence (the fact itself — manual verification, no gateway
+ * — belongs in policy pages, not repeated in the global footer). The
+ * "Contact" column only ever renders when a real email is configured
+ * (`CONTACT_EMAIL_TO`, the same server-only source `/contact` already
+ * uses) — no placeholder, no fabricated phone/WhatsApp/address, and the
+ * grid itself drops to 3 columns rather than leaving an empty one when
+ * that email isn't set. See docs/DESIGN-SYSTEM.md.
  */
 export function Footer() {
   const year = new Date().getFullYear();
-  const contactItems = getContactItems();
+  const contactEmail = process.env.CONTACT_EMAIL_TO;
 
   return (
     <footer className="bg-ink text-white">
       <Container>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-7 py-10 md:grid-cols-4 md:gap-x-8 md:gap-y-10 md:py-14">
-          <div className="col-span-2 md:col-span-4 lg:col-span-1">
-            <Image src={brand.assets.logo.dark} alt={brand.name} width={150} height={45} className="h-9 w-auto md:h-10" />
-            <p className="mt-3 max-w-xs text-xs text-white/70 md:mt-4 md:text-small">{brand.description}</p>
-            {socialLinks.length > 0 && (
-              <div className="mt-4 flex items-center gap-2.5">
-                {socialLinks.map(({ key, href, Icon, label }) => (
-                  <a
-                    key={key}
-                    href={href}
-                    aria-label={label}
-                    className="inline-flex size-9 items-center justify-center rounded-full bg-ink-secondary text-white/80 transition-colors hover:bg-accent-gold hover:text-ink"
-                  >
-                    <Icon className="size-4" />
-                  </a>
-                ))}
-              </div>
-            )}
+        <div className={clsx("grid grid-cols-1 gap-x-10 gap-y-10 py-14 sm:grid-cols-2 lg:py-20", contactEmail ? "md:grid-cols-4" : "md:grid-cols-3")}>
+          <div className="sm:col-span-2 md:col-span-1">
+            <Image src={brand.assets.logo.dark} alt={brand.name} width={1000} height={300} className="h-9 w-auto" />
+            <p className="mt-4 max-w-xs text-small text-white/65">
+              Electronics, fashion, and lifestyle essentials — delivered across Bangladesh with Cash on Delivery.
+            </p>
           </div>
 
           <FooterColumn title="Shop" links={shopLinks} />
           <FooterColumn title="Information" links={informationLinks} />
 
-          <div>
-            <h3 className="text-label text-white/90 uppercase">Get in touch</h3>
-            <ul className="mt-2.5 space-y-1.5 text-xs text-white/70 md:mt-4 md:space-y-2.5 md:text-small">
-              {contactItems.length > 0 ? (
-                contactItems.map((item) => (
-                  <li key={item.href}>
-                    <a href={item.href} className="transition-colors hover:text-white">
-                      {item.label}
-                    </a>
-                  </li>
-                ))
-              ) : (
-                <li>
-                  <Link href="/contact" className="transition-colors hover:text-white">
-                    Contact Us
-                  </Link>
-                </li>
-              )}
-            </ul>
-          </div>
+          {contactEmail && (
+            <div>
+              <h3 className="text-label text-white/90 uppercase">Contact</h3>
+              <a href={`mailto:${contactEmail}`} className="mt-4 block text-small text-white/65 transition-colors hover:text-white">
+                {contactEmail}
+              </a>
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-col gap-6 border-t border-white/10 py-6 md:flex-row md:items-center md:justify-between md:py-7">
-          <div>
-            <h3 className="text-small font-semibold text-white">Stay in the loop</h3>
-            <p className="mt-0.5 text-xs text-white/60">New drops, offers, and stories — once a month.</p>
-          </div>
-          <NewsletterSignup />
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-white/10 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/70">
-            {paymentMethods.map((method, index) => (
-              <li key={method} className="flex items-center gap-3">
-                {method}
-                {index < paymentMethods.length - 1 && <span className="text-white/25">/</span>}
-              </li>
-            ))}
-          </ul>
-          <p className="text-[0.7rem] text-white/50">Mobile-wallet payments are received and verified manually — no automated gateway yet.</p>
-        </div>
-
-        <div className="flex flex-col items-center gap-2 border-t border-white/10 py-4 text-xs text-white/60 sm:flex-row sm:justify-center">
-          <span>
+        <div className="flex flex-col items-center gap-3 border-t border-white/10 py-6 text-xs text-white/50 sm:flex-row sm:justify-between">
+          <p>
             © {year} {brand.name}. All rights reserved.
-          </span>
-          <Divider />
-          <span>Made for Bangladesh</span>
+          </p>
+          <p>{paymentMethods}</p>
         </div>
       </Container>
     </footer>
