@@ -1,6 +1,7 @@
 /**
- * Shared main-navigation structure, used by both the desktop header and
- * the mobile drawer so link targets are defined in exactly one place.
+ * Shared main-navigation structure, used by both the single-layer header
+ * (src/components/layout/Header.tsx) and the mobile drawer so link targets
+ * are defined in exactly one place.
  *
  * `href: null` on a top-level item with no `children` marks an item that
  * has no real destination yet (see "Offers" precedent) — components must
@@ -9,13 +10,19 @@
  * marks a pure dropdown/group trigger ("Categories") — never a link
  * itself, only a container for its children.
  *
- * Kept deliberately short at the top level (5 items) even though the
- * catalog now spans 8+ categories — "Categories" is the one dropdown that
- * absorbs the long tail, so the visible nav never grows into an
- * unscannable 10+-item row. Every child link points at `/shop?category=`,
- * the one route confirmed to resolve for both top-level categories and
- * subcategories (see CLAUDE.md's category-navigation note) — never a
- * `/${slug}` guess that only some categories have a dedicated route for.
+ * Kept deliberately short at the top level (3 items: Home, Shop,
+ * Categories) even though the catalog spans 8+ categories — "Categories"
+ * is the one dropdown that absorbs the long tail, so the visible nav never
+ * grows into an unscannable row. The header redesign removed the separate
+ * "Electronics & Gadgets"/"Health & Beauty" top-level shortcuts that used
+ * to sit alongside this dropdown — they're redundant with "Categories"
+ * now that there's no second row to spread items across; their own routes
+ * (`/electronics-gadgets`, `/health-beauty`) still exist and still work,
+ * just aren't linked directly from the main nav anymore. Every child link
+ * points at `/shop?category=`, the one route confirmed to resolve for both
+ * top-level categories and subcategories (see CLAUDE.md's
+ * category-navigation note) — never a `/${slug}` guess that only some
+ * categories have a dedicated route for.
  */
 
 export interface NavChildItem {
@@ -49,6 +56,4 @@ export const mainNavItems: NavItem[] = [
       { label: "Automotive", href: "/shop?category=automotive" },
     ],
   },
-  { label: "Electronics & Gadgets", href: "/electronics-gadgets" },
-  { label: "Health & Beauty", href: "/health-beauty" },
 ];

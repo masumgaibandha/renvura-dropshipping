@@ -30,21 +30,26 @@ const linkClass = (isVertical: boolean, active: boolean) =>
     isVertical && "block px-3 py-2",
     active ? "text-accent" : "text-foreground/70",
     // Thin underline on the active desktop link — a small ecommerce-standard "you are here"
-    // signal that doesn't rely on color alone. Not applied in the mobile drawer, where the
-    // active state already reads clearly from the vertical list context.
-    !isVertical && active && "after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-accent",
+    // signal that doesn't rely on color alone. Gold, not navy — the one restrained accent touch
+    // in the new single-layer header, per the redesign's "subtle gold accents only where useful"
+    // direction. Not applied in the mobile drawer, where the active state already reads clearly
+    // from the vertical list context.
+    !isVertical && active && "after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-accent-gold",
   );
 
 /**
- * Shared main-nav link list — used by the desktop header row and the
- * mobile drawer body, so link targets and active-state logic live once.
- * Needs to be a Client Component for usePathname()-driven active styling.
+ * Shared main-nav link list — used directly inside the single-layer
+ * Header.tsx (desktop) and the mobile drawer body, so link targets and
+ * active-state logic live once. Needs to be a Client Component for
+ * usePathname()-driven active styling.
  *
  * An item with `children` (currently just "Categories") renders as a
- * HeroUI dropdown on desktop (matching `SecondaryNav`'s existing "Browse
- * All Categories" pattern) and as a native `<details>` disclosure on
+ * HeroUI dropdown on desktop and as a native `<details>` disclosure on
  * mobile — no extra JS state needed, and `<details>` is the right primitive
- * for "one collapsible section inside an already-scrollable drawer."
+ * for "one collapsible section inside an already-scrollable drawer." This
+ * is the *only* categories dropdown in the storefront — the header
+ * redesign removed the separate "Browse All Categories" button that used
+ * to live in its own row.
  */
 export function NavLinks({ orientation = "horizontal", onNavigate, className }: NavLinksProps) {
   const pathname = usePathname();

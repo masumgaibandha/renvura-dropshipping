@@ -44,6 +44,7 @@ const shopLinks: FooterLink[] = [
 const informationLinks: FooterLink[] = [
   { label: "Contact Us", href: "/contact" },
   { label: "About Us", href: "/about" },
+  { label: "Order Tracking", href: "/track-order" },
   { label: "FAQ", href: "/faq" },
   { label: "Terms & Conditions", href: "/terms" },
   { label: "Shipping & Delivery", href: "/shipping-policy" },

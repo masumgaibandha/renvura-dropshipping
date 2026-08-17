@@ -5,11 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { createContext, use, type ReactNode } from "react";
 
-import { CartCountBadge } from "@/components/cart/CartCountBadge";
-import { IconLinkButton } from "@/components/ui/IconLinkButton";
-import { IconBag, IconHeart, IconMenu, IconUser } from "@/components/ui/icons";
+import { IconMenu } from "@/components/ui/icons";
 import { SearchBar } from "@/components/ecommerce/SearchBar";
-import { WishlistCountBadge } from "@/components/wishlist/WishlistCountBadge";
 import { brand } from "@/config/brand";
 import { useSession } from "@/lib/auth-client";
 import { NavLinks } from "./NavLinks";
@@ -54,6 +51,16 @@ export function MobileSearchTrigger({ className }: { className?: string }) {
   );
 }
 
+const secondaryLinkClass = "block rounded-sm px-3 py-2 text-small font-medium text-foreground/70 transition-colors hover:text-accent";
+
+/**
+ * Wishlist and Cart are deliberately not repeated in here — the compact
+ * mobile header row (Header.tsx) already shows both at every width, so a
+ * duplicate shortcut in the drawer would just be redundant. Account,
+ * Contact Us, and Order Tracking don't have a persistent header icon (the
+ * header redesign keeps Account desktop-only, see Header.tsx), so this is
+ * the one place they're reachable on mobile.
+ */
 export function MobileDrawer() {
   const state = useMobileNav();
   const { data: session } = useSession();
@@ -83,26 +90,24 @@ export function MobileDrawer() {
               <nav aria-label="Main">
                 <NavLinks orientation="vertical" onNavigate={state.close} />
               </nav>
+              <ul className="mt-2 flex flex-col gap-1 border-t border-border pt-2">
+                <li>
+                  <Link href={session ? "/account" : "/login"} onClick={state.close} className={secondaryLinkClass}>
+                    {session ? "My Account" : "Login / Sign Up"}
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" onClick={state.close} className={secondaryLinkClass}>
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/track-order" onClick={state.close} className={secondaryLinkClass}>
+                    Order Tracking
+                  </Link>
+                </li>
+              </ul>
             </Drawer.Body>
-
-            <Drawer.Footer className="border-t border-border bg-surface-soft px-2 py-3">
-              <div className="flex items-center justify-around">
-                <IconLinkButton href="/wishlist" aria-label="Wishlist" className="relative h-12 min-w-12 flex-col gap-1 text-xs">
-                  <IconHeart className="size-5" />
-                  Wishlist
-                  <WishlistCountBadge />
-                </IconLinkButton>
-                <IconLinkButton href={session ? "/account" : "/login"} aria-label="Account" className="h-12 min-w-12 flex-col gap-1 text-xs">
-                  <IconUser className="size-5" />
-                  Account
-                </IconLinkButton>
-                <IconLinkButton href="/cart" aria-label="Cart" className="relative h-12 min-w-12 flex-col gap-1 text-xs">
-                  <IconBag className="size-5" />
-                  Cart
-                  <CartCountBadge />
-                </IconLinkButton>
-              </div>
-            </Drawer.Footer>
           </Drawer.Dialog>
         </Drawer.Content>
       </Drawer.Backdrop>

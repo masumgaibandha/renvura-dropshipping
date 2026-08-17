@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 const breadcrumbItems: BreadcrumbItem[] = [{ label: "Home", href: "/" }, { label: "Track Order" }];
 
-/** The route AnnouncementBar already links to. Server Component shell around the Client lookup form. */
+/** The route the footer's "Order Tracking" link and the mobile nav drawer both point to. Server Component shell around the Client lookup form. */
 export default function TrackOrderPage() {
   return (
     <Container>
