@@ -12,9 +12,11 @@
  * source. See docs/DESIGN-SYSTEM.md for the reasoning behind each choice.
  */
 :root {
-  /* Phase 3 premium color refinement: a warm off-white body instead of pure white, so sections
-   * read as subtly layered rather than flat. See docs/DESIGN-SYSTEM.md §3. */
-  --background: #fcfbf8;
+  /* Phase 24 premium refinement: deepened slightly from the original Phase 3 value (#fcfbf8),
+   * which read as too close to pure white to feel premium once the rest of the navy/gold/cream
+   * palette was in place. Still light and ecommerce-friendly, just perceptibly warm/cream rather
+   * than "white with a tint." See docs/DESIGN-SYSTEM.md §3. */
+  --background: #faf7f0;
   --foreground: #111827;
 
   /* Renvura brand primitives, sampled from assets/ (see docs/DESIGN-SYSTEM.md). Secondary
@@ -36,9 +38,12 @@
   --accent-foreground: #ffffff;
   --accent-hover: #4338ca;
 
-  /* Cool, faint surface — Featured Picks section background, and any other "next surface up"
-   * from the warm body background. */
-  --background-secondary: #f7f8fa;
+  /* Phase 24: a warm sand/cream "next surface up" from the body background, replacing the
+   * original cool grey (#f7f8fa) — that cool tone fought against the warm navy/gold/cream
+   * direction and read as flat next to it. Used for alternating section bands (Popular Products,
+   * New Arrivals, Why Shop With Renvura) so the page has a visible but still light, non-heavy
+   * rhythm between sections instead of one flat wash of near-white. */
+  --background-secondary: #f2ead9;
   /* Neutral soft surface for small in-component wells (e.g. ProductCard's image placeholder) —
    * distinct from the section-level warm/cool backgrounds above. */
   --surface-soft: #f3f4f6;

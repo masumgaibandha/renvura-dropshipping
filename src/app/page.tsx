@@ -5,7 +5,7 @@ import { BrandStory } from "@/components/home/BrandStory";
 import { CategoryHighlights } from "@/components/home/CategoryHighlights";
 import { CategoryTabs } from "@/components/home/CategoryTabs";
 import { FeaturedProductsRow } from "@/components/home/FeaturedProductsRow";
-import { HeroBanner } from "@/components/home/HeroBanner";
+import { HeroSlider } from "@/components/home/HeroSlider";
 import { HeroTrustStrip } from "@/components/home/HeroTrustStrip";
 import { NewArrivals } from "@/components/home/NewArrivals";
 import { PromoBanner } from "@/components/home/PromoBanner";
@@ -78,14 +78,15 @@ export default async function Home() {
 
   return (
     <>
-      {/* The visible hero is a single campaign image with no real DOM text (see HeroBanner.tsx's
-          doc comment), which otherwise leaves the homepage with zero <h1> anywhere — a real
-          screen-reader/SEO gap. This sr-only heading gives the page a genuine accessible landmark
-          without changing the approved visual design at all. */}
+      {/* The hero slider's own slide headlines are real DOM text (see HeroSlider.tsx), but they're
+          promotional per-category copy, not a statement of what the page/site itself is — this
+          sr-only heading is still the one genuine page-level <h1> landmark for
+          screen-readers/SEO. Rendered outside `Section`/`Container` on purpose: the hero is
+          deliberately full-bleed (100vw, no rounded "card" corners, no vertical padding above
+          it) so it starts immediately under the navbar with no gap and no side gutters — see
+          HeroSlider.tsx's own doc comment. */}
       <h1 className="sr-only">{brand.name} — Online Shopping in Bangladesh</h1>
-      <Section className="pb-0!">
-        <HeroBanner />
-      </Section>
+      <HeroSlider />
 
       <Section className="py-6 sm:py-8">
         <HeroTrustStrip />

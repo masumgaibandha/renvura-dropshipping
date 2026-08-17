@@ -10,9 +10,7 @@ const items = [
  * Compact one-line trust signal directly beneath the hero — same truthful
  * claims `WhyShopWithRenvura` covers in full further down the page, just
  * surfaced immediately so the top of the homepage isn't a large empty gap
- * between the hero image and the first product section. Deliberately not
- * DOM text baked into the hero image itself (see HeroBanner.tsx's doc
- * comment on why that stays a single flat image).
+ * between the hero slider and the first product section.
  */
 export function HeroTrustStrip() {
   return (

@@ -197,6 +197,39 @@ export function IconLogOut(props: SVGProps<SVGSVGElement>) {
 }
 
 /* -------------------------------------------------------------------- */
+/* Homepage hero category icons (Phase 24 hero redesign) — same          */
+/* 24x24/1.75-stroke idiom, one per hero slide's category identity.      */
+/* -------------------------------------------------------------------- */
+
+export function IconBolt(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12.5 2.5 4 14h6.5L11 21.5 20 10h-6.5L12.5 2.5Z" />
+    </svg>
+  );
+}
+
+export function IconSparkle(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M9.5 9.5 6 6M18 18l-3.5-3.5M14.5 9.5 18 6M6 18l3.5-3.5" />
+    </svg>
+  );
+}
+
+export function IconHanger(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <circle cx="12" cy="4.3" r="1.3" />
+      <path d="M12 5.6v2.2" />
+      <path d="M12 7.8 3.5 14.5a1.6 1.6 0 0 0 1 2.9h15a1.6 1.6 0 0 0 1-2.9L12 7.8Z" />
+      <path d="M7 19.5h10" />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------- */
 /* Admin dashboard icon set (Phase 10) — same 24x24/1.75-stroke idiom.  */
 /* -------------------------------------------------------------------- */
 
