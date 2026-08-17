@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ProductGrid } from "@/components/ecommerce/ProductGrid";
 import { Container } from "@/components/layout/Container";
 import { Breadcrumbs, type BreadcrumbItem } from "@/components/ui/Breadcrumbs";
+import { IconArrowLeft, IconArrowRight } from "@/components/ui/icons";
 import { getAllCategories, getAllProducts, getProductListing, toPublicProduct } from "@/services/products";
 import { MobileFilterDrawer } from "./MobileFilterDrawer";
 import { SortSelect } from "./SortSelect";
@@ -67,6 +68,14 @@ export async function ProductListingPage({ categorySlug, title, description, sea
   }
 
   const clearFiltersHref = basePath;
+
+  // Pagination is windowed to at most 4 visible page numbers at once (never the old "show every
+  // page" row), aligned to fixed blocks — 1-4, then 5-8, then 9-12 — so the window only advances
+  // when the user actually crosses into the next block, not on every single page click.
+  const PAGE_WINDOW_SIZE = 4;
+  const pageWindowStart = Math.floor((listing.page - 1) / PAGE_WINDOW_SIZE) * PAGE_WINDOW_SIZE + 1;
+  const pageWindowEnd = Math.min(pageWindowStart + PAGE_WINDOW_SIZE - 1, listing.totalPages);
+  const visiblePageNumbers = Array.from({ length: pageWindowEnd - pageWindowStart + 1 }, (_, index) => pageWindowStart + index);
 
   // Only rendered once real out-of-stock products exist — with today's catalog (all in_stock)
   // this toggle would remove nothing, so it stays hidden rather than showing a no-op control.
@@ -137,22 +146,64 @@ export async function ProductListingPage({ categorySlug, title, description, sea
       </div>
 
       {listing.totalPages > 1 && (
-        <nav aria-label="Pagination" className="mt-4 flex items-center justify-center gap-2 md:mt-10">
-          {Array.from({ length: listing.totalPages }, (_, index) => index + 1).map((pageNumber) => (
+        <nav aria-label="Pagination" className="mt-4 flex items-center justify-center gap-1.5 sm:gap-2 md:mt-10">
+          <PaginationArrow direction="previous" href={listing.page > 1 ? pageHref(listing.page - 1) : undefined} />
+          {visiblePageNumbers.map((pageNumber) => (
             <Link
               key={pageNumber}
               href={pageHref(pageNumber)}
               aria-current={pageNumber === listing.page ? "page" : undefined}
-              className={`inline-flex size-9 items-center justify-center rounded-full text-small font-medium transition-colors md:size-10 ${
-                pageNumber === listing.page ? "bg-accent text-white" : "border border-border bg-surface text-foreground hover:border-accent"
+              className={`inline-flex size-10 items-center justify-center rounded-full text-small font-medium transition-colors md:size-11 ${
+                pageNumber === listing.page
+                  ? "bg-accent text-white shadow-sm"
+                  : "border border-border bg-surface text-foreground hover:border-accent"
               }`}
             >
               {pageNumber}
             </Link>
           ))}
+          <PaginationArrow direction="next" href={listing.page < listing.totalPages ? pageHref(listing.page + 1) : undefined} />
         </nav>
       )}
     </Container>
+  );
+}
+
+/**
+ * Previous/Next pagination control. Icon-only on mobile (keeps the whole
+ * pagination row — 2 arrows + up to 4 page numbers — comfortably within a
+ * 375px viewport with no overflow); text label reappears at `sm:`. Renders
+ * as an inert `<span>` (not a disabled `<Link>`, which can't truly disable
+ * navigation) on the first/last page.
+ */
+function PaginationArrow({ href, direction }: { href?: string; direction: "previous" | "next" }) {
+  const label = direction === "previous" ? "Previous page" : "Next page";
+  const Icon = direction === "previous" ? IconArrowLeft : IconArrowRight;
+  const content = (
+    <>
+      {direction === "previous" && <Icon className="size-4 sm:hidden" />}
+      <span className="hidden sm:inline">{direction === "previous" ? "Previous" : "Next"}</span>
+      {direction === "next" && <Icon className="size-4 sm:hidden" />}
+    </>
+  );
+  const sharedClassName = "inline-flex h-10 items-center justify-center gap-1 rounded-full px-3 text-small font-medium sm:px-4 md:h-11";
+
+  if (!href) {
+    return (
+      <span aria-disabled="true" aria-label={label} className={`${sharedClassName} border border-border text-foreground/40`}>
+        {content}
+      </span>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={`${sharedClassName} border border-border bg-surface text-foreground transition-colors hover:border-accent hover:text-accent`}
+    >
+      {content}
+    </Link>
   );
 }
 
